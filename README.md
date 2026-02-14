@@ -61,6 +61,7 @@ The GUI includes in-app instructions and buttons for:
   - `all` (all PDFs in `pdfs/`)
   - `custom` (specific files)
 - contextual query
+- pre-LLM query parsing (tokens, years, phrases, author terms) with multi-channel retrieval
 - stop/cancel for sync, ingest, and query jobs
 - grounded ChatGPT Q&A with configurable RAG context size
 - export of answer reports (Markdown, CSV, PDF via pandoc)
@@ -77,6 +78,7 @@ Notes:
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
 - LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
 - LLM answers are rendered as Markdown in the UI.
+- Retrieval is two-pass: broader candidate recall (vector + token + author channels) followed by stricter reranking on chunk/title/author/year/phrase and citation-neighborhood signals.
 
 PDF export dependency:
 
