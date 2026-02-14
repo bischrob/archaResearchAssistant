@@ -61,7 +61,7 @@ def ask_openai_grounded(
     model: str | None = None,
     enforce_citations: bool = True,
 ) -> dict[str, Any]:
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    api_key = os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("OpenAPIKey", "").strip()
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
 
@@ -73,7 +73,7 @@ def ask_openai_grounded(
             "all_citations": [],
         }
 
-    selected_model = (model or os.getenv("OPENAI_MODEL", "gpt-5")).strip()
+    selected_model = (model or os.getenv("OPENAI_MODEL", "gpt-5.1")).strip()
     system = (
         "You are a strict RAG answer assistant. "
         "Only use facts in the provided context blocks. "
@@ -97,7 +97,6 @@ def ask_openai_grounded(
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            "temperature": 0.0,
         },
         timeout=120,
     )

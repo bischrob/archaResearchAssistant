@@ -287,6 +287,21 @@ def test_ask_export_markdown_and_csv(client):
     assert "C1,Paper A" in csv_resp.text
 
 
+def test_ask_export_pdf(client, monkeypatch):
+    report = {
+        "question": "Q?",
+        "model": "gpt-test",
+        "rag_results_count": 1,
+        "answer": "A [C1]",
+        "used_citations": [],
+    }
+    monkeypatch.setattr(webmain, "markdown_to_pdf_bytes", lambda _md: b"%PDF-1.7\nfake\n")
+    resp = client.post("/api/ask/export", json={"report": report, "format": "pdf"})
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/pdf")
+    assert resp.content.startswith(b"%PDF")
+
+
 def test_diagnostics_endpoint_reports_pass(monkeypatch, tmp_path: Path, client):
     monkeypatch.chdir(tmp_path)
     pdf_root = tmp_path / "pdfs"

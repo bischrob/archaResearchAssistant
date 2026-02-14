@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import csv
 import io
+import shutil
+import subprocess
+import tempfile
 from datetime import datetime, UTC
+from pathlib import Path
 from typing import Any
 
 
@@ -60,3 +64,30 @@ def citations_to_csv(report: dict[str, Any]) -> str:
         )
     return buf.getvalue()
 
+
+def markdown_to_pdf_bytes(markdown_text: str) -> bytes:
+    if not shutil.which("pandoc"):
+        raise RuntimeError("Pandoc is not installed or not in PATH.")
+
+    with tempfile.TemporaryDirectory(prefix="rag_report_") as tmpdir:
+        tmp = Path(tmpdir)
+        md_path = tmp / "report.md"
+        pdf_path = tmp / "report.pdf"
+        md_path.write_text(markdown_text, encoding="utf-8")
+
+        engine_candidates = [None, "wkhtmltopdf", "weasyprint", "xelatex", "pdflatex"]
+        errors: list[str] = []
+        for engine in engine_candidates:
+            if engine and not shutil.which(engine):
+                continue
+            cmd = ["pandoc", str(md_path), "-o", str(pdf_path)]
+            if engine:
+                cmd.extend(["--pdf-engine", engine])
+            proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if proc.returncode == 0 and pdf_path.exists():
+                return pdf_path.read_bytes()
+            err = (proc.stderr or proc.stdout or "").strip()
+            label = engine or "default"
+            errors.append(f"{label}: {err[:300]}")
+
+    raise RuntimeError("Failed to generate PDF via pandoc. " + " | ".join(errors))
