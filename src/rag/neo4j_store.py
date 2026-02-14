@@ -385,6 +385,47 @@ class GraphStore:
             )
             return [dict(r) for r in result]
 
+    def author_query(self, query_terms: list[str], limit: int) -> list[dict]:
+        terms = [t.strip().lower() for t in query_terms if t and t.strip()]
+        if not terms:
+            return []
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (auth:Author)-[w:WROTE]->(a:Article)<-[:IN_ARTICLE]-(c:Chunk)
+                WHERE any(term IN $terms WHERE auth.name_norm CONTAINS term)
+                WITH c, a,
+                     collect(auth.name) AS authors,
+                     sum(CASE WHEN any(term IN $terms WHERE auth.name_norm CONTAINS term) THEN 1 ELSE 0 END) AS author_score
+                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                WITH c, a, authors, author_score,
+                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
+                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                RETURN c.id AS chunk_id,
+                       c.text AS chunk_text,
+                       c.index AS chunk_index,
+                       c.page_start AS page_start,
+                       c.page_end AS page_end,
+                       a.id AS article_id,
+                       a.title AS article_title,
+                       a.year AS article_year,
+                       a.citekey AS article_citekey,
+                       a.doi AS article_doi,
+                       a.source_path AS article_source_path,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..8] AS authors,
+                       toFloat(author_score) AS author_score,
+                       cites_out,
+                       cited_by
+                ORDER BY author_score DESC, article_year DESC
+                LIMIT $limit
+                """,
+                terms=terms,
+                limit=limit,
+            )
+            return [dict(r) for r in result]
+
     def graph_stats(self) -> dict:
         query = """
         MATCH (a:Article) WITH count(a) AS articles

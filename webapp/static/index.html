@@ -119,10 +119,12 @@
       <section class="panel">
         <h2>How Query Works</h2>
         <ol>
-          <li><strong>Candidate retrieval:</strong> the query is encoded and matched against chunk vectors plus lexical token overlap to collect candidate <code>Chunk</code> nodes.</li>
+          <li><strong>Pre-LLM query parsing:</strong> the query is parsed into likely terms (tokens, years, quoted phrases, author-like terms).</li>
+          <li><strong>Candidate retrieval:</strong> the parsed query is matched through multiple channels: chunk vectors, token overlap, and author-node matches.</li>
           <li><strong>Relationship expansion:</strong> each chunk is connected to its parent <code>Article</code> and related <code>Author</code> nodes, and article citation links are inspected through <code>(Article)-[:CITES]-&gt;(Article)</code>.</li>
           <li><strong>Context enrichment:</strong> results include citation neighborhood signals (what the source cites and what cites it) so highly connected, contextually relevant work is easier to surface.</li>
-          <li><strong>Reranking:</strong> candidates are reranked using lexical overlap and graph-aware features to produce a final combined score.</li>
+          <li><strong>Reranking:</strong> candidates are reranked using chunk/title/author overlap, year and phrase matches, and graph-aware features to produce a final combined score.</li>
+          <li><strong>Low-confidence fallback:</strong> if top results do not strongly match title/author signals, author-channel candidates are force-merged and reranked before final context is selected.</li>
           <li><strong>Grounded answering:</strong> selected chunks are passed to the LLM as numbered citation blocks (<code>[C1]</code>, <code>[C2]</code>, ...), and final answers are expected to cite those blocks inline.</li>
         </ol>
         <p>
