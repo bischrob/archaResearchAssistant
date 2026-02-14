@@ -6,7 +6,7 @@ set -euo pipefail
 # - Deletes local files not present remotely
 # - Skips files that already exist locally
 
-REMOTE_PATH="${REMOTE_PATH:-gdrive:My Drive/Library/Paperpile/allPapers}"
+REMOTE_PATH="${REMOTE_PATH:-gdrive:Library/Paperpile/allPapers}"
 LOCAL_DIR="${LOCAL_DIR:-pdfs}"
 
 DRY_RUN_FLAG=""
@@ -36,4 +36,3 @@ rclone sync \
   ${DRY_RUN_FLAG}
 
 echo "Sync complete."
-
