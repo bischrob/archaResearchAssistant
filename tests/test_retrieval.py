@@ -44,6 +44,20 @@ class FakeStore:
             }
         ]
 
+    def title_query(self, terms, limit: int):
+        return [
+            {
+                "chunk_id": "c4",
+                "chunk_text": "This work introduces ArchMatNet.",
+                "article_title": "ArchMatNet: Archaeological Materials Network",
+                "article_year": 2023,
+                "authors": ["R. Bischoff"],
+                "title_score": 2.0,
+                "cites_out": [],
+                "cited_by": [],
+            }
+        ]
+
 
 def test_parse_query_terms_extracts_tokens_years_and_phrases():
     plan = parse_query_terms('Bischoff chronology "northern Utah" 2021')
@@ -61,3 +75,9 @@ def test_contextual_retrieve_includes_author_channel_and_reranks():
     assert "retrieval_sources" in top
     # Author-match rows should be favored for author-name queries.
     assert any("bischoff" in " ".join(r.get("authors") or []).lower() for r in rows)
+
+
+def test_contextual_retrieve_prefers_must_term_acronym_hits():
+    rows = contextual_retrieve(FakeStore(), "Summarize ArchMatNet in simple terms", limit=3)
+    assert rows
+    assert any("archmatnet" in (r.get("article_title", "") + " " + r.get("chunk_text", "")).lower() for r in rows)

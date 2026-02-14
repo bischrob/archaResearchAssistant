@@ -135,13 +135,15 @@ def preprocess_search_query(question: str, model: str | None = None) -> str:
 
     selected_model = (model or os.getenv("OPENAI_MODEL", "gpt-5.1")).strip()
     system = (
-        "You rewrite user questions into compact retrieval queries for academic search. "
-        "Preserve key entities (authors, place names, years, methods, concepts). "
-        "Return one plain-text line only, no explanation."
+        "You rewrite user questions into compact retrieval directives for a Neo4j academic graph. "
+        "Graph fields are: Author names, Article title/year, and Chunk text terms. "
+        "Do NOT use boolean operators (AND/OR/NOT), parentheses, or pseudo-logic. "
+        "Return exactly one line in this format: "
+        "authors: <names or none> | years: <years or none> | title_terms: <terms or none> | content_terms: <terms or none>"
     )
     user = (
         f"Question:\n{question}\n\n"
-        "Return a single retrieval query string suitable for database search."
+        "Return only the single-line directive in the required format."
     )
 
     resp = requests.post(
@@ -167,4 +169,33 @@ def preprocess_search_query(question: str, model: str | None = None) -> str:
     )
     line = (text.splitlines()[0] if text else "").strip().strip('"').strip("'")
     line = re.sub(r"\s+", " ", line)
-    return line or question
+
+    # Convert the directive into a clean retrieval query string optimized for our
+    # parser (tokens/years/phrases), while removing boolean syntax.
+    def _extract(field: str) -> str:
+        m = re.search(rf"{field}\s*:\s*([^|]+)", line, flags=re.IGNORECASE)
+        return (m.group(1).strip() if m else "")
+
+    authors = _extract("authors")
+    years = _extract("years")
+    title_terms = _extract("title_terms")
+    content_terms = _extract("content_terms")
+
+    parts = []
+    for value in (authors, years, title_terms, content_terms):
+        if not value or value.lower() == "none":
+            continue
+        cleaned = re.sub(r"\b(and|or|not)\b", " ", value, flags=re.IGNORECASE)
+        cleaned = re.sub(r"[(){}\[\]]", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            parts.append(cleaned)
+
+    if parts:
+        return " ".join(parts)
+
+    # Fallback if model did not follow format.
+    fallback = re.sub(r"\b(and|or|not)\b", " ", line, flags=re.IGNORECASE)
+    fallback = re.sub(r"[(){}\[\]|:]", " ", fallback)
+    fallback = re.sub(r"\s+", " ", fallback).strip()
+    return fallback or question

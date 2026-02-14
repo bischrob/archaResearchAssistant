@@ -71,7 +71,7 @@ class SyncRequest(BaseModel):
 
 
 class IngestRequest(BaseModel):
-    mode: str = Field(default="test3", pattern="^(test3|all|custom)$")
+    mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
     source_dir: str = "pdfs"
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
@@ -97,7 +97,7 @@ class AskExportRequest(BaseModel):
 
 
 class IngestPreviewRequest(BaseModel):
-    mode: str = Field(default="test3", pattern="^(test3|all|custom)$")
+    mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
     source_dir: str = "pdfs"
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
@@ -411,34 +411,110 @@ def sync_stop() -> dict:
 @app.post("/api/ingest")
 def ingest(req: IngestRequest) -> dict:
     def run(job: JobState) -> dict:
+        mode = "batch" if req.mode == "test3" else req.mode
         jobs.set_progress("ingest", 0.0, "Selecting files")
         selected = choose_pdfs(
-            mode=req.mode,
+            mode=mode,
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,
             require_metadata=True,
             partial_count=req.partial_count,
         )
-        summary = ingest_pdfs(
-            selected_pdfs=selected,
-            wipe=False,
-            settings=Settings(),
-            should_cancel=lambda: job.cancel_event.is_set(),
-            skip_existing=not req.override_existing,
-            progress_callback=lambda percent, message: jobs.set_progress("ingest", percent, message),
-        )
+        settings = Settings()
+        batch_size = max(1, int(req.partial_count))
+        all_batch_summaries: list[dict[str, Any]] = []
+        agg = {
+            "ingested_articles": 0,
+            "total_chunks": 0,
+            "total_references": 0,
+            "selected_pdfs": [],
+            "skipped_existing_pdfs": [],
+            "skipped_no_metadata_pdfs": [],
+            "failed_pdfs": [],
+        }
+
+        if mode == "all":
+            batches = [selected[i : i + batch_size] for i in range(0, len(selected), batch_size)]
+        else:
+            batches = [selected]
+
+        total_batches = max(1, len(batches))
+        for idx, batch in enumerate(batches, start=1):
+            if job.cancel_event.is_set():
+                raise RuntimeError("Ingest cancelled by user.")
+
+            def on_batch_progress(percent: float, message: str) -> None:
+                overall = ((idx - 1) + (percent / 100.0)) / total_batches * 100.0
+                jobs.set_progress("ingest", overall, f"Batch {idx}/{total_batches} - {message}")
+
+            summary = ingest_pdfs(
+                selected_pdfs=batch,
+                wipe=False,
+                settings=settings,
+                should_cancel=lambda: job.cancel_event.is_set(),
+                skip_existing=not req.override_existing,
+                progress_callback=on_batch_progress,
+            )
+            all_batch_summaries.append(
+                {
+                    "batch_number": idx,
+                    "batch_total": total_batches,
+                    "input_pdfs": len(batch),
+                    "ingested_articles": summary.ingested_articles,
+                    "total_chunks": summary.total_chunks,
+                    "total_references": summary.total_references,
+                    "failed_count": len(summary.failed_pdfs),
+                    "skipped_existing_count": len(summary.skipped_existing_pdfs),
+                    "skipped_no_metadata_count": len(summary.skipped_no_metadata_pdfs),
+                }
+            )
+            agg["ingested_articles"] += summary.ingested_articles
+            agg["total_chunks"] += summary.total_chunks
+            agg["total_references"] += summary.total_references
+            agg["selected_pdfs"].extend(summary.selected_pdfs)
+            agg["skipped_existing_pdfs"].extend(summary.skipped_existing_pdfs)
+            agg["skipped_no_metadata_pdfs"].extend(summary.skipped_no_metadata_pdfs)
+            agg["failed_pdfs"].extend(summary.failed_pdfs)
+            partial_summary = {
+                "mode": mode,
+                "batch_size": batch_size,
+                "batch_total": total_batches,
+                "batch_results": list(all_batch_summaries),
+                "ingested_articles": agg["ingested_articles"],
+                "total_chunks": agg["total_chunks"],
+                "total_references": agg["total_references"],
+                "selected_pdfs": list(agg["selected_pdfs"]),
+                "skipped_existing_pdfs": list(agg["skipped_existing_pdfs"]),
+                "skipped_no_metadata_pdfs": list(agg["skipped_no_metadata_pdfs"]),
+                "failed_pdfs": list(agg["failed_pdfs"]),
+            }
+            with jobs._lock:
+                job.result = {"ok": True, "summary": partial_summary}
+            jobs.set_progress(
+                "ingest",
+                (idx / total_batches) * 100.0,
+                (
+                    f"Completed batch {idx}/{total_batches}: "
+                    f"ingested {summary.ingested_articles}, failed {len(summary.failed_pdfs)}"
+                ),
+            )
+
         jobs.set_progress("ingest", 100.0, "Ingest complete")
         return {
             "ok": True,
             "summary": {
-                "ingested_articles": summary.ingested_articles,
-                "total_chunks": summary.total_chunks,
-                "total_references": summary.total_references,
-                "selected_pdfs": summary.selected_pdfs,
-                "skipped_existing_pdfs": summary.skipped_existing_pdfs,
-                "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
-                "failed_pdfs": summary.failed_pdfs,
+                "mode": mode,
+                "batch_size": batch_size,
+                "batch_total": total_batches,
+                "batch_results": all_batch_summaries,
+                "ingested_articles": agg["ingested_articles"],
+                "total_chunks": agg["total_chunks"],
+                "total_references": agg["total_references"],
+                "selected_pdfs": agg["selected_pdfs"],
+                "skipped_existing_pdfs": agg["skipped_existing_pdfs"],
+                "skipped_no_metadata_pdfs": agg["skipped_no_metadata_pdfs"],
+                "failed_pdfs": agg["failed_pdfs"],
             },
         }
 
@@ -448,9 +524,10 @@ def ingest(req: IngestRequest) -> dict:
 @app.post("/api/ingest/preview")
 def ingest_preview(req: IngestPreviewRequest) -> dict:
     try:
+        mode = "batch" if req.mode == "test3" else req.mode
         settings = Settings()
         resolved = choose_pdfs(
-            mode=req.mode,
+            mode=mode,
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,
@@ -460,7 +537,7 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
         )
         try:
             selected_for_ingest = choose_pdfs(
-                mode=req.mode,
+                mode=mode,
                 source_dir=req.source_dir,
                 explicit_pdfs=req.pdfs,
                 skip_existing=not req.override_existing,

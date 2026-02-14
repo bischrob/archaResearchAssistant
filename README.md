@@ -57,8 +57,8 @@ The GUI includes in-app instructions and buttons for:
 - health/stats
 - sync PDFs
 - ingest modes:
-  - `test3` (partial ingest; first N via `partial_count`, default 3)
-  - `all` (all PDFs in `pdfs/`)
+  - `batch` (batch upload; first N via `partial_count`, default 3)
+  - `all` (all PDFs in `pdfs/`, automatically processed in batches of `partial_count`)
   - `custom` (specific files)
 - contextual query
 - pre-LLM query parsing (tokens, years, phrases, author terms) with multi-channel retrieval
@@ -73,7 +73,8 @@ Notes:
 - unreadable/non-PDF-content files are skipped and returned in `failed_pdfs`.
 - ingest is non-destructive and does not erase existing Neo4j data.
 - default ingest behavior skips already-ingested PDFs; use override existing to reprocess.
-- in `test3` mode, selection order is: readable PDFs -> skip existing (unless override) -> metadata filter -> first N.
+- in `batch` mode, selection order is: readable PDFs -> skip existing (unless override) -> metadata filter -> first N.
+- in `all` mode, selected PDFs are processed as sequential batches and progress is updated after each batch.
 - ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
 - LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
@@ -110,9 +111,9 @@ If a check fails, review the check details shown in the table and correct the co
 Build graph:
 
 ```bash
-python scripts/build_graph.py --mode test3 --pdf-dir pdfs
+python scripts/build_graph.py --mode batch --pdf-dir pdfs
 python scripts/build_graph.py --mode all --pdf-dir pdfs
-python scripts/build_graph.py --mode test3 --pdf-dir pdfs --override-existing
+python scripts/build_graph.py --mode batch --pdf-dir pdfs --override-existing
 ```
 
 Custom files:

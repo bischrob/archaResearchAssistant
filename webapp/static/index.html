@@ -24,7 +24,7 @@
       <ol>
         <li>Click <strong>Sync PDFs</strong> to mirror Google Drive Paperpile files into local <code>pdfs/</code>.</li>
         <li>Choose ingest mode:
-          <code>test3</code> for partial ingest (first N using <code>Partial Count</code>), <code>all</code> for full corpus, or <code>custom</code> with explicit file paths.
+          <code>batch</code> for batch upload (first N using <code>Batch Size</code>), <code>all</code> for full corpus in automatic batches of <code>Batch Size</code>, or <code>custom</code> with explicit file paths.
         </li>
         <li>By default, already ingested PDFs are skipped. Enable <strong>Override Existing</strong> to reprocess them.</li>
         <li>Run <strong>Ingest</strong> to add/update graph data. Existing Neo4j data is never erased. Unreadable files are skipped and shown in <code>failed_pdfs</code>.</li>
@@ -54,7 +54,7 @@
       <div class="row">
         <label>Mode
           <select id="ingestMode">
-            <option value="test3">test3</option>
+            <option value="batch">batch upload</option>
             <option value="all">all</option>
             <option value="custom">custom</option>
           </select>
@@ -62,7 +62,7 @@
         <label>Source Dir
           <input id="sourceDir" value="pdfs" />
         </label>
-        <label>Partial Count (test3)
+        <label>Batch Size
           <input id="partialCount" type="number" value="3" min="1" />
         </label>
         <label><input type="checkbox" id="overrideExisting" /> Override Existing (reprocess already ingested PDFs)</label>

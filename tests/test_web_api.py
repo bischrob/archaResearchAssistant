@@ -155,6 +155,44 @@ def test_ingest_endpoint_override_existing(monkeypatch, tmp_path: Path, client):
     assert captured["skip_existing"] is False
 
 
+def test_ingest_all_runs_in_batches(monkeypatch, tmp_path: Path, client):
+    files = []
+    for i in range(5):
+        p = tmp_path / f"f{i}.pdf"
+        p.write_text("x")
+        files.append(p)
+
+    monkeypatch.setattr(webmain, "choose_pdfs", lambda **kwargs: files)
+    calls = {"n": 0}
+
+    def fake_ingest_pdfs(**kwargs):
+        calls["n"] += 1
+        selected = kwargs["selected_pdfs"]
+        return IngestSummary(
+            ingested_articles=len(selected),
+            total_chunks=len(selected) * 2,
+            total_references=len(selected),
+            selected_pdfs=[str(p) for p in selected],
+            skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
+            failed_pdfs=[],
+        )
+
+    monkeypatch.setattr(webmain, "ingest_pdfs", fake_ingest_pdfs)
+    resp = client.post(
+        "/api/ingest",
+        json={"mode": "all", "source_dir": "pdfs", "pdfs": [], "override_existing": False, "partial_count": 2},
+    )
+    assert resp.status_code == 200
+    final = wait_for_status(client, "/api/ingest/status")
+    assert final["status"] == "completed"
+    summary = final["result"]["summary"]
+    assert summary["batch_total"] == 3
+    assert len(summary["batch_results"]) == 3
+    assert calls["n"] == 3
+    assert summary["ingested_articles"] == 5
+
+
 def test_ingest_status_failed(monkeypatch, client):
     monkeypatch.setattr(webmain, "choose_pdfs", lambda **kwargs: (_ for _ in ()).throw(RuntimeError("bad ingest")))
     resp = client.post("/api/ingest", json={"mode": "all", "source_dir": "pdfs", "pdfs": [], "override_existing": False})
