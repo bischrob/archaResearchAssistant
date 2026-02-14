@@ -1,0 +1,918 @@
+Timpson, A., Colledge, S., Crema, E., Edinborough, K., Kerig, T., Manning, K., Thomas, M. G., & Shennan, S. (2014). Reconstructing regional population fluctuations in the European Neolithic using radiocarbon dates: a new case-study using an improved method. Journal of Archaeological Science, 52, 549–557. https://doi.org/10.1016/j.jas. 2014.08.011
+
+Verhagen, P., Vossen, I., Groenhuijzen, M. R., & Joyce, J. (2016). Now you see them, now you don’t: Defining and using a flexible chronology of sites for spatial analysis of Roman settlement in the Dutch river area. Journal of Archaeological Science: Reports, 10, 309–321.
+
+PIKETTY,T.2014. Capital in the twenty-
+first century. Cambridge (MA): Harvard University Press.
+
+STYRING, A.K. et al. 2017. Isotope evidence for agricultural extensification reveals how the
+world’s first cities were fed. Nature Plants
+3: 17076.
+
+BETTENCOURT, L.M.A. 2021. Introduction to urban science: evidence and theory for cities as complex
+systems. Cambridge (MA): MIT Press.
+https://doi.org/10.7551/mitpress/13909.001.
+0001
+
+Ratté, J. C., and Hedlund, D.C.   
+  1981 Geologic map of the Hells Hole Further Planning Area (RARE II), Greenlee County, 
+Arizona and Grant County, New Mexico.  U.S. Geological Survey Miscellaneous Field  Studies Map MF-1344-A.
+
+23. Rackauckas C and Nie Q. DifferentialEquations.jl —a per- formant and feature-rich ecosystem for solving differential equations in Julia. J Open Res Softw 2017; 5: 15.
+
+11. Railsback SF. Agent-based and individual-based modeling: a practical introduction. 2nd ed. Princeton, NJ: Princeton University Press, 2019.
+
+2. Politopoulos I. Review and analysis of agent-based models in biology. Liverpool: University of Liverpool, 2007, pp. 1–14.
+
+SPICER, EDWARD H. 
+1940  Pascua,  A  Yaqui Village  in Arizona. University of Chicago Press, Chicago.  1962  Cycles of Conquest.  University of Arizona Press, Tucson.
+
+UNDERHILL, RUTH 
+1953  Here Come the Navaho! U.  S.  Indian Service, Haskell Institute, Lawrence.
+
+Webster, Gary S.
+1978 Dry Creek Rockshelter: Cultural Chro- nology in the Western Snake River Region of Idaho. Tebiwa 15:4-31.
+1980   Recent Data Bearing on the Question of the Origins of the Bow and Arrow in the Great Basin. American Antiquity  55:63-66.
+
+Truesdale, James A. and William P. Eckerle
+1986  Continued Archaeological Investiga- tions at 48SW6191. Test Excavations,  Recommendations and Data Recovery  Program for Area B. Highway Project  SSP-TO-017-1(12). Report by Office of  the  Wyoming  State  Archaeologist,   prepared for Wyoming Highway De- partment. On file at SHPO Cultural Records, Laramie, Wyoming.
+
+Truesdale, James A. and George W. Gill
+1994   The Mountain Meadow Ranch Burial from Southeastern Wyoming. The Wyo- ming Archaeologist 38 (1-2):23-40.
+Waitkus, Brian R.
+2012  Archaeological Investigations of the  WYDOT Rock Springs-Pinedale Safety  Slopes, Project N131054 Sweetwater  County, Wyoming. Report by Office of the Wyoming State Archaeologist. On  file at SHPO Cultural Records, Lara- mie, Wyoming.
+Speer,  James  H.,  Karla  Hansen-Speer,  and  Lynn   Harrell
+1986  Dendrochronological Investigation of  the Bridger Antelope Trap, Wyoming. Report by Indiana State University and Bureau of Land Management. On file at  SHPO  Cultural  Records,  Laramie,   Wyoming.
+
+
+Hafner, A. (2020). Central European Early Bronze Age chronology revisited:
+a Bayesian examination of large-scale radiocarbon dating. PLoS ONE, 15(12), e0243719. https://doi.org/10.1371/
+journal.pone.0243719
+Buck, C. E., Cavanagh, W. G., & Litton, C. D. (1996). Bayesian approach to interpreting archaeological data. Wiley.
+Carleton, W. C., & Groucutt, H. S. (2020). Sum things are not what they seem: Problems with point-wise interpretations
+and quantitative analyses of proxies based on aggregated radiocarbon dates. Holocene, 31(4), 630–643. https://doi.
+org/10.1177/0959683620981700
+Carlson, D. L. (1983). Computer analysis of dated ceramics: estimating dates and occupational ranges. Southeastern
+Archaeology, 2(1), 8–20.
+Collins-Elliott, S. A. (2019). Quantifying artefacts over time: interval estimation of a Poisson distribution using the Jef-
+freys prior. Archaeometry, 61(5), 1207–1222. https://doi.org/10.1111/arcm.12481
+Crema, E. R. (2012). Modelling temporal uncertainty in archaeological analysis. Journal of Archaeological Method and
+Theory, 19(3), 440–461. https://doi.org/10.1007/s10816-011-9122-3
+Crema, E. R. (2015). Time and probabilistic reasoning in settlement analysis. In J. A. Barcelo & I. Bogdanovic (Eds.),
+Mathematics and archaeology (pp. 314–334). CRC Press.
+Crema, E. R. (2022). Statistical inference of prehistoric demography from frequency distributions of radiocarbon dates:
+a review and a guide for the perplexed. Journal of Archaeological Method and Theory, 29(4), 1387–1418. https://
+doi.org/10.1007/s10816-022-09559-5
+Crema, E. R., &
+
+Arnoldussen, S. (2023). Parsing prehistoric patterns: Prospects and limitations of a
+big radiocarbon dataset for understanding the impact of climate on Late Palaeolithic and Mesolithic populations
+in Northwest Europe (16–7.5 ka calBP). Journal of Archaeological Science, Reports, 49, 103944. https://doi.org/10.
+1016/j.jasrep.2023.103944
+22
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Johnson, I. (2004). Aoristic Analysis: seeds of a new approach to mapping archaeological distributions through time. In
+K. F. Ausserer, W. B. Rner, M. Goriany, & L. K.-V. Ckl (Eds.), [Enter the past] the E-way into the four dimen-
+sions of cultural heritage: CAA2003. BAR International Series 1227. (pp. 448–452). Archaeopress.
+Kim, H., Lee, G.-A., & Crema, E. R. (2021). Bayesian analyses question the role of climate in Chulmun demography.
+Scientific Reports, 11(1), 23797. https://doi.org/10.1038/s41598-021-03180-4
+Kleijne, J., Weinelt, M., & Müller, J. (2020). Late Neolithic and chalcolithic maritime resilience? The 4.2 ka BP event
+and its implications for environments and societies in Northwest Europe. Environmental Research Letters: ERL,
+15(12), 125003. https://doi.org/10.1088/1748-9326/aba3d6
+Knitter, D., Brozio, J. P., Hamer, W., Duttmann, R., Müller, J., &
+
+Shennan, S. (2017). Comparing archaeological proxies for long-term population patterns:
+an example from Central Italy. Journal of Archaeological Science, 87, 59–72. https://doi.org/10.1016/j.jas.2017.
+10.001
+Palmisano, A., Woodbridge, J., Roberts, N., Bevan, A., Fyfe, R., Shennan, S., Cheddadi, R., Greenberg, R.,
+Kaniewski, D., Langgut, D., & Leroy, S. A. (2019). Holocene landscape dynamics and long-term population
+trends in the Levant. Holocene, 29(5), 708–727. https://doi.org/10.1177/0959683619826642
+
+Held, L. (2004). Gaussian Markov random fields: theory and applications. Chapman and Hall. https://doi.
+org/10.1201/9780203492024
+Shennan, S., Downey, S. S., Timpson, A., Edinborough, K., Colledge, S., Kerig, T., Manning, K., & Thomas, M. G.
+(2013). Regional population collapse followed initial agriculture booms in mid-Holocene Europe. Nature Commu-
+nications, 4(1), 2486. https://doi.org/10.1038/ncomms3486
+Steinmann, L., &
+
+Manning, K. (2021). Directly modelling population
+dynamics in the South American arid diagonal using 14C dates. Philosophical Transactions of the Royal Society of
+London. Series B, Biological Sciences, 376(1816), 20190723. https://doi.org/10.1098/rstb.2019.0723
+Timpson, A., Colledge, S., Crema, E., Edinborough, K., Kerig, T., Manning, K., Thomas, M. G., & Shennan, S.
+(2014). Reconstructing regional population fluctuations in the European Neolithic using radiocarbon dates: a new
+case-study using an improved method. Journal of Archaeological Science, 52, 549–557. https://doi.org/10.1016/j.jas.
+2014.08.011
+van Lieshout, M. N. M., & Markwitz, R. L. (2022). State estimation for aoristic models. Scandinavian Journal of Statis-
+tics, Theory and Applications, 50, 1068–1089. https://doi.org/10.1111/sjos.12619
+Verhagen, P., Vossen, I., Groenhuijzen, M. R., &
+
+Joyce, J. (2016). Now you see them, now you don’t: Defining and
+using a flexible chronology of sites for spatial analysis of Roman settlement in the Dutch river area. Journal of
+Archaeological Science: Reports, 10, 309–321.
+Yubero-Gomez, M., Rubio-Campillo, X., & Lopez-
+
+O R I G I N A L A R T I C L E
+A Bayesian alternative for aoristic analyses in
+archaeology
+Enrico R. Crema1,2
+1McDonald Institute for Archaeological
+Research, University of Cambridge,
+Cambridge, UK
+2Department of Archaeology, University of
+Cambridge, Cambridge, UK
+Correspondence
+Enrico R. Crema, McDonald Institute for
+Archaeological Research, University of
+Cambridge, Downing Street, CB2 3ER,
+Cambridge, UK.
+Email: erc62@cam.ac.uk
+Funding information
+Leverhulme Trust, Grant/Award Number:
+PLP-2019-304
+Abstract
+Aoristic analysis is often used to handle chronological
+uncertainties of datasets where scientific dates (e.g., 14C
+and
+OSL)
+are
+unavailable,
+and
+observations
+are
+described by association to archaeological periods or
+phases. Although several advances have been made
+over the last 2 decades, the basic principle of this
+approach remains fundamentally the same. Temporal
+windows of analyses are first divided into regularly
+sized time blocks, and probability weight is assigned to
+each of these for every observation. Weights are then
+aggregated by time block, and the resulting vector of
+summed probabilities is interpreted as a curve rep-
+resenting changes in the intensity over time of a partic-
+ular
+phenomenon.
+This
+paper
+reviews
+the
+basic
+principles and assumptions of aoristic analyses in
+archaeology, highlighting several issues with its appli-
+cation and interpretation, advocating for a Bayesian
+alternative implemented via baorista, a new package
+written in R statistical computing language. The
+robustness
+of
+the
+proposed
+solution
+is
+evaluated
+through a series of experiments based on simulated
+datasets, which showcase key advantages over aoristic
+analysis. Two specific solutions are considered: a para-
+metric approach where data are fitted to specific
+growth models and a nonparametric approach that
+allows for the visualisation of the changing frequencies
+of events, accounting for sampling error and the pecu-
+liarities of archaeological periodisation.
+K E Y W O R D S
+aoristic analyses, archaeological periodisation, Bayesian inference,
+chronological uncertainty
+Received: 7 March 2024
+Accepted: 26 April 2024
+DOI: 10.1111/arcm.12984
+This is an open access article under the terms of the Creative Commons Attribution License, which permits use, distribution and
+reproduction in any medium, provided the original work is properly cited.
+© 2024 The Author. Archaeometry published by John Wiley & Sons Ltd on behalf of University of Oxford.
+Archaeometry. 2024;1–24.
+wileyonlinelibrary.com/journal/arcm
+1
+
+INTRODUCTION
+Time is undoubtedly one of the most important and ubiquitous yet elusive and problematic con-
+cepts in archaeology. Ontological and epistemological discussions proliferate the archaeological
+literature (Bailey, 2007; Lyman & O’Brein, 2006; Murray, 1999), and the opportunity of provid-
+ing long-term perspectives is a trope that is often used to justify its broader disciplinary rele-
+vance. It is undeniable, however, that we recurrently need to face the inferential limits imposed
+by issues such as chronological resolution, time averaging, and, more broadly, the problem of
+temporal uncertainty. The widespread use of radiocarbon and other scientific dating techniques
+offers new opportunities to address many of these concerns. More recently, the use of Bayesian
+models has dramatically refined our ability to date key events (Bayliss, 2009; Buck et al., 1996),
+whereas the availability of large collections of radiocarbon dates has even kindled a growing
+interest in new research areas such as comparative paleodemography (Crema, 2022; French
+et al., 2021).
+Although absolute chronology is regarded as the golden standard for prehistoric research,
+much of the legacy data at our hands are based on traditional forms of relative chronologies,
+typically inferred from diagnostic properties of the artefacts we recover. Efforts have been made
+to translate archaeological periodisations into absolute chronology through, for example, the
+use of radiocarbon dating
+and Bayesian methods (Brunner et al., 2020; Crema &
+Kobayashi, 2020; e.g. Ziedler et al., 1998). These advances can even offer temporal resolutions
+comparable to those provided by scientific dating for later periods, but much of the prehistoric
+record is still constrained by coarser and often vague typochronologies. As a result, most
+archaeological data are still typically attributed to a period or a phase chronologically bounded
+by a (often loosely defined) start and end date. Most diachronic analyses are thus built around
+these temporal units, which can be severely limiting in the presence of uneven and large dura-
+tions or when, depending on the quality of the diagnostic artefacts, a precise attribution to a
+particular phase or another is not always possible (Bevan et al., 2012).
+The current ‘go-to’ solution in analysing archaeological datasets dated by means of relative
+chronologies is to employ a suite of techniques with a shared origin in aoristic analysis. The
+technique was initially developed in crime science (Ratcliffe & McCullagh, 1998), and after a
+few early applications in the early 2000s (Johnson, 2004; Mischka, 2004), it experienced mild
+success within archaeology (Baxter & Cool, 2016; Brozio et al., 2019; Crema, 2012; Franconi
+et al., 2023; Furlan, 2017; Hinz et al., 2019; Hoebe et al., 2023; Kleijne et al., 2020; Knitter
+et al., 2019; Levy et al., 2022; Orton et al., 2017; Palmisano et al., 2017, 2019; Pollard, 2021;
+Roalkvam, 2022; Romandini et al., 2020; Romanowska et al., 2021; Stoddart et al., 2019;
+Taelman, 2022; Verhagen et al., 2016; Yubero-Gomez et al., 2016), partly aided by the develop-
+ment of several dedicated R packages such as aoristic, datplot, archSeries, and kairos
+(Frerebeau, 2022; Orton et al., 2017; Ratcliffe, 2022; Steinmann & Weissova, 2021). The con-
+ceptual idea behind aoristic analysis is not new, and it is worth noting that similar ideas were
+independently introduced within archaeology before and after Ratcliffe’s seminal paper
+(e.g. Carlson, 1983; Roberts et al., 2012).
+The main appeal of aoristic analysis (and similar methods) is rooted in their intuitive
+handling of chronological uncertainty and the minimum requirements for their implementation
+(see Section 2 below for details). Although, in principle, aoristic approaches can be part of any
+analyses involving time, its primary application in archaeology has been the visualisation of
+time-frequency data. In practical terms, aoristic analyses offer a solution for replacing the x-axis
+of bar plots from relative chronologies (e.g. ‘Early Bronze Age’ and ‘Middle Bronze Age’) to a
+sequence of time blocks representing equally sized time intervals (e.g. 3700–3601 BC and 3600–
+3501 BC), while accounting for the (1) the uneven duration of the periodisations and phases, and
+(2) the uncertainties in the assignment of each observation to these periodsiations and phases.
+2
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+In this paper, I argue that (1) the archaeological application of aoristic methods is often
+unwarranted and can occasionally lead to a misleading interpretation of the data, and (2) an
+alternative approach based on Bayesian inference can solve many of its limitations. Section 2
+will briefly review aoristic analysis and related techniques developed within archaeology;
+Section 3 will highlight the main issues of its application in archaeological analyses, with a par-
+ticular emphasis on its use for building time series of frequency data. Section 4 will introduce
+the basic principle of a Bayesian alternative, and Section 5 will examine the robustness of the
+proposed approach through the analyses of simulated datasets. Finally, Section 6 will summa-
+rise and discuss the main findings presented in the paper, focusing on limitations and potential
+future methodological advances.
+AORISTIC ANALYSIS
+Core concept
+Aoristic analysis was initially developed by Ratcliffe and McCullagh (1998) to provide a quantita-
+tive framework for analysing crime patterns where each event does not have a precise time stamp
+(e.g., ‘The car was stolen at 2:23 pm’) but is described instead by a timespan bounded between two
+points in time representing the interval within which the event occurred (e.g., ‘The car was stolen
+sometime between 1 pm and 3 pm’). The key concern here is that timespans of events cannot be
+straightforwardly handled in temporal analyses, and basic queries (e.g. ‘Is the crime rate higher at
+2 pm or 3 pm?’) become difficult. The most common solution involves using midpoints
+(e.g. treating ‘The car was stolen sometime between 1:20 pm and 1:50 pm’ as if it were ‘The car
+was stolen at 1:35 pm’), or removing samples with coarse chronological resolutions. Neither are
+satisfactory and can lead to biased patterns in the data. Ratcliffe and McCullagh’s core intuition
+was to (1) discretise time into a series of regularly sized blocks (e.g. 1:01–2:00 pm and 2:01–
+3:00 pm), and (2) assign aoristic weights to each of these time blocks based on the duration of the
+timespan. Thus, if an event had a timespan of 12:00 pm to 2:00 pm, it would have an aoristic
+weight of 0.5 for 12:01–1:00 pm and 0.5 for 1:01–2:00 pm. This solution is effectively equivalent to
+describing the uncertainty of the timestamp θi of the event i as a uniform probability distribution:
+θi  Uniform αi,βi
+ð
+Þ
+ð1Þ
+where αi and βi are the start and end points of the timespan of the event i. Once these weights
+are assigned, it is possible to add them by each time block and display a ‘temporal weight histo-
+gram’, which provides an ‘indication of the probable temporal distribution of events’
+(Ratcliffe, 2000). In mathematical terms, Equation (1) is just a particular way to express mea-
+surement error employing a uniform distribution rather than a more conventional Gaussian
+distribution.
+The shared concern with temporal uncertainty in crime science and archaeology led to pio-
+neer adaptations of aoristic analysis in the latter field during the early 2000s (Johnson, 2004;
+Mischka, 2004). A key step for this adaptation was to infer the timespan of archaeological
+events from an evaluation of the diagnostic properties of an object and its attribution to one or
+more archaeological periods. Thus, depending on its diagnostic features, a potsherd might be
+assigned to a narrower (e.g. ‘late Medieval’, 1200–1537 CE) or a broader timespan
+(e.g. ‘unidentified period’, 6300 BCE-2000 CE).
+Despite these early attempts, archaeological applications of aoristic analysis took off only in
+the subsequent decade, partly promoted by the increased availability of computer scripts for
+executing calculations and by methodological advances that addressed some, but not all, of its
+shortcomings.
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+3
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+archaeological periodisation. They distinguish among within-phase uncertainty (the uncertainty
+on when an event occurred within an archaeologically defined phase), phase assignment uncer-
+tainty (the uncertainty in assigning an event to a particular archaeological period or phase), and
+phase boundary uncertainty (the uncertainty on the definition of the absolute calendar dates of
+the start and end of phase), and advocate for an analytical workflow where these uncertainties
+are estimated from empirical data (e.g. employing Bayesian analyses on radiocarbon dates asso-
+ciated with particular phases) and taken into account together within the Monte-Carlo simula-
+tion approach.
+Several authors note that a uniform probability distribution (i.e. Equation (1) above) is only
+one possible way to model the uncertainty within the timespan of an event. Baxter and Cool
+(2016), for example, model this interval using a Beta distribution (technically a beta-PERT
+distribution), which provides a flexible range of symmetric and asymmetric unimodal shapes
+and includes the uniform distribution as a special case. Others have similarly used different
+probability distributions,
+including chi-square (Carlson, 1983), Gaussian (Bellanger &
+Husi, 2012), gamma (Steponaitis & Kintigh, 1993), and trapezoid (Crema & Kobayashi, 2020).
+Although the exact shapes of these distributions differ, they all share an unimodal shape
+typically observed in the rise and fall popularity of stylistic traits. The extent to which such a
+shape is preferable over a uniform probability distribution is debatable and ultimately condi-
+tioned by the nature of the chronologically diagnostic elements employed. In some cases,
+employing the latter under the premise of the principle of insufficient reason could be an
+acceptable solution.
+Although dimensionless ‘events’ are mathematically straightforward to handle, most
+archaeological phenomena have some duration in time. If the event is relatively short compared
+to the chronological resolution of analyses (e.g. the construction of a dwelling), the implications
+are minimal; events can effectively be treated as points in time. However, when the duration of
+an event is considerably long relative to the time window of analyses (e.g., the occupation of a
+site), several analytical consequences and challenges arise. Palmisano et al. (Palmisano
+et al., 2017) approach events with duration using a modified two-step Monte-Carlo simulation
+approach. They examined long-term changes in the settlement density of central Italy by first
+randomly sampling the start date of occupation within the temporal time-span, and subse-
+quently simulating the duration of each settlement using a Gaussian distribution informed by
+the available archaeological record. Collins-Elliott (2019) also employs a Monte-Carlo
+approach to examine the abundance of Roman coinage usage but instead models the duration
+of coin use via a geometric distribution, with a probability λ representing the chances of coins
+being discarded each year.
+Finally, an under-discussed aspect of the Monte-Carlo simulation approach is the problem
+of sample interdependence. Consider, for example, a situation where the objective is to assess
+changes in residential density over time. Suppose we have a prehistoric settlement that con-
+sists of 20 dwellings, all with an identical timespan between 7000 and 3000 BP. How should
+the dates of the residential units be simulated? If we sample each residential unit indepen-
+dently, our simulations will unlikely contain instances where the 20 dwellings co-exist in time.
+Indeed, with larger timespans, this will become increasingly unlikely. On the other hand,
+simulating a single date for 20 residential units comes with a strong assumption of settlement
+contemporaneity that is not necessarily warranted. Orton et al. (2017) briefly discuss this
+problem in the context of aoristic analyses applied to historic fish consumption in London.
+They chose to use the context of recovery (rather than individual observations) as an analyti-
+cal unit, weighting its contribution to the Monte-Carlo approach based on the number of eco-
+facts recovered.
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+7
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+BAYESIAN SOLUTIONS
+Similarities between aoristic analyses and summed probability distribution of
+radiocarbon dates
+Many of the problems associated with aoristic analyses and related methods in archaeology
+resemble those encountered in the application of summed probability distribution of radiocar-
+bon dates (hereafter SPD). First, the problematic interpretation of summing probabilities of cal-
+ibrated dates is mathematically equivalent to the issues associated with summing aoristic
+weights. Second, the uncertainty associated with each radiocarbon date is also nonrandom and
+linked (at least in part) to their absolute dates. As a consequence, just as we observe specific sig-
+natures from the underlying archaeological periodisations in aoristic analyses, SPDs are
+characterised by distinctive peaks and troughs that result from the slopes and the plateau of the
+calibration curve. Third, both SPDs and aoristic sums are descriptive rather than inferential
+statistics.
+A fairly extensive number of papers have raised these problems with SPDs (for a recent
+review see Carleton & Groucutt, 2020; Crema, 2022), highlighting how biased their visual
+assessment can be and advocating for more robust analytical solutions. The similarity of these
+problems to those observed in aoristic analyses has indeed been mentioned and discussed before
+(Baxter & Cool, 2016; Bevan & Crema, 2021; Collins-Elliott, 2019; Orton et al., 2017).
+Although both aoristic (and related) analyses and SPDs have experienced methodological
+advances, the latter has benefited from a considerably higher number of new approaches in the
+last decade. In a recent review article, Crema (2022) has distinguished between three broad
+approaches: (1) null hypothesis significance testing (NHST); (2) nonparametric ‘“reconstruc-
+tive” methods, and (3) model-based inference. All three approaches overcome the core statisti-
+cal issues of SPDs, either by determining whether and when we observe significant deviations
+from a particular growth model, reconstructing the overall “shape”’ of the time-frequency dis-
+tribution while displaying confidence envelopes to account for any fluctuations arising from
+sampling error, or by fitting parameters of growth models to identify rates and timing of signifi-
+cant shifts in density.
+Given the similarity of the underlying statistical problem, it is worth evaluating whether
+some of the solutions developed for SPDs can be adapted to situations where we typically
+employ aoristic analyses. For example, the NHST approach developed by Shennan and col-
+leagues (Shennan et al., 2013; Timpson et al., 2014) requires a null growth model and an algo-
+rithm for ‘back-calibrating’ calendar dates into 14C ages. Details of the implementation are
+discussed elsewhere (Timpson et al., 2014); here, it is sufficient to know that the core algorithm
+generates, via Monte-Carlo simulation, n sets of calendar dates given a user-defined growth
+model. These dates are then ‘converted back’ into
+14C ages, calibrated again, and then
+aggregated to generate SPDs. The process is repeated for each set, and the ensemble of SPDs
+generates an envelope to which the observed curves are compared. This procedure emulates
+both the impact of sampling error (each set contains the same number of dates as the observed
+data) and the information loss entailed by the calibration process. Deviations of the observed
+SPD from the simulation envelope are interpreted as evidence of departures from a particular
+null model.
+A fundamental step for this Monte Carlo test is the ability to transform dates sampled in
+calendar time (given a particular growth model) into 14C ages through a back-calibration pro-
+cess. To adopt a similar approach for events described with archaeological periodisation, one
+would thus require an algorithm that similarly assigns each calendar date to one or more
+periods (and eventually to a timespan). Although theoretically possible, a number of issues need
+to be addressed. For example, archaeological events are often assigned to multiple periods
+depending on the number and quality of diagnostic elements (i.e. phase assignment uncertainty).
+8
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+measurement error of each event can be described by a parameterised probability distribution
+(uniform in this case); as such, its application will not be explored in this paper.
+Parametric and nonparametric Bayesian alternatives to aoristic analysis
+This paper presents and explores the robustness of parametric and nonparametric Bayesian
+approaches to aoristic data. In both cases, the objective is to describe the time frequency of
+some archaeological events where a vector of probabilities describes each observation over the
+time blocks constituting the temporal window of analyses. In the case of the parametric
+approach, the general shape of the time frequency is assumed a priori (e.g. exponential growth
+and logistic growth), and the objective is to recover the parameters of a particular
+growth model. In the nonparametric approach, there are no assumptions on the underlying
+shape of the time-frequency data other than some degree of temporal autocorrelation (see
+below). At its core, both approaches define a multinomial model with a sequence of z levels,
+each corresponding to the time blocks within the temporal window of analyses. Once we infer
+the z probability values of a discrete probability distribution, we can compute the likelihood
+using the approach described in Section 3.1.
+In the case of a parametric model, the actual number of parameters can be drastically
+reduced to fewer values representing some growth curve limited by a start and end date. Thus,
+for example, exponential growth can be defined by two parameters: the growth rate r and the
+number of blocks z. More specifically, the probability pi assigned to the i-th time-block is simply
+given by:
+pi ¼
+1þr
+ð
+Þi
+P
+z
+j¼1
+1þr
+ð
+Þj
+ð2Þ
+Here, the number of blocks z is user defined and is determined by the chronological resolu-
+tion of the analyses (i.e. shorter time blocks will lead to a larger z). It follows that from an infer-
+ential standpoint, we just need to estimate the growth rate r. For a given value of this
+parameter, we can compute the vector of probabilities p1, p2, … pz, and as long as we can char-
+acterise each of our observations as a vector of probabilities with the same length (z), we can
+calculate the likelihood and estimate r. The denominator in Equation (2) normalises the growth
+model into probabilities, and as such, any equation that can characterise a population size
+changing over z discrete intervals can employ a similar solution (see example in Crema &
+Shoda, 2021; Kim et al., 2021; Timpson et al., 2021).
+When a strong assumption on the shape of the time frequency is not available or when the
+objective is not the calculation of a general exponential growth rate, a nonparametric approach
+might be more suitable. The term ‘nonparametric’ is a misnomer here, as the objective in this
+case is to estimate the vector of probabilities p1, p2, … pz directly. The simplest way to achieve
+this is to estimate directly these parameters using a multinomial distribution with a symmetric
+Dirichlet distribution as a prior. Such an approach would, however, consider a wide range of
+possible shapes in the time-frequency distribution of the events with no a priori assumptions to
+aid the inferential process. An alternative is to restrict the range of possible shapes while keep-
+ing sufficient flexibility by adding some weak assumptions on temporal autocorrelation. One
+such approach is to use an intrinsic Gaussian conditional autoregressive model (ICAR;
+Besag, 1974; Rue & Held, 2004) to generate a vector of temporally autocorrelated values g1, g2,
+… gz and use the softmax function to convert the vector into the probabilities p1, p2, … pz. This
+approach would effectively estimate the probability for given time-slice pi, conditioning it on
+10
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+highest probability density interval (HPDI) of r. MCMC settings were based on default values
+implemented in baorista (four chains with 100,000 iterations, half discarded for burn-in and
+with thinning parameter set to 10). The fitting process did not generate any convergence warn-
+ings. The prior of the growth rate was modelled using an exponential with a rate of 1.
+Experiment #2 loosely followed a similar structure to Experiment #1, but with a larger
+number of replicates (1000), each with a randomly assigned ‘true’ growth rate (randomly sam-
+pled from between 0.002 and 0.002), sample size (between 100 and 500), and periodisation
+(using the same approach as in Experiment 1). For each replicate, I considered two different
+time-block sizes, one with a coarse setting of 100 years and one with a finer resolution of
+10 years. I recorded for each replicate whether the 95% confidence interval (for the regression
+over aoristic sums) or the 95% HPDI of r included the ‘true’ growth rate or not. MCMC and
+prior settings were the default of baorista and the same used in Experiment #1.
+Experiment #3 explored the impact of periodisation in the inferential process, more specifi-
+cally identifying whether the Bayesian approach introduced here is capable of correctly
+assessing instances of indeterminacy. The experiment had two stages. First, I considered a range
+of parameter combinations (growth rate r and inflexion point m) of a logistic growth model
+ranging between 800 and 301 BC, and computed the cumulative probability mass over the inter-
+vals 800–501 and 500–301 BC, representing the time-span of two hypothetical archaeological
+periodisations. Because all dates falling within each period are assigned to the same timespan,
+parameter combinations yielding identical cumulative probability mass over the two intervals
+are indeterminable. I thus selected one of the so-obtained combinations of parameters
+(r = 0.01154545 and m = 302 BC) and sampled 500 calendar dates from the model. Each date
+was then associated with a timespan based on the abovementioned two periods. The resulting
+aoristic dataset was then fitted with a logistic growth model using a flat prior for the growth
+rate (r  Uniform[0.0001,0.03]) and the inflexion point parameters (m  Uniform[301,800]). As
+for Experiments #1 and #2, default settings were used for the MCMC.
+Finally, Experiment #4 assessed the inferential power of the nonparametric approach by
+determining whether the ICAR model was able to correctly recover the shape of a time-
+frequency distribution under a combination of different sample sizes (n = 50 and n = 500) and
+periodisation (3, 5, and 8 periods, with the duration of each modelled using the Dirichlet distri-
+bution with α = 2). The model was fitted over four chains with 4 million iterations, 3 million
+discarded for burn-in and parameters sampled every 100 steps.
+All scripts required for replicating the analyses presented here can be found in a dedicated
+GitHub repository (https://github.com/ercrema/beyond_aoristic), archived in zenodo (https://
+doi.org/10.5281/zenodo.11163687), whereas the source code and a quick guide for the baorista
+R package can be found in a separate repository (https://github.com/ercrema/baorista).
+RESULTS
+Experiment 1
+Figure 2 compares the precision and the accuracy of the regression of aoristic analyses and the
+direct Bayesian approach proposed here. The general expectation of a robust inferential tool is
+to have stable and high accuracy levels and increased precision (i.e. narrower confidence inter-
+vals) with larger samples. There are compelling differences between the two methods in this
+case. When growth rates are estimated from aoristic sums, the accuracy is generally low, with
+most the confidence intervals not including the ‘true’ growth rate (here equivalent to 0.002).
+The precision of the estimate does seem to be weakly associated with sample sizes, but there are
+significant differences across replicates, indicating how the approach is not robust to sampling
+error and underlying archaeological periodisations.
+12
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+In contrast, the Bayesian approach shows remarkably higher and consistent levels of
+accuracy, with only 4 replicates out of 60 sets failing to include the true growth rate. Although
+there are still some differences between replicates, there is a far more consistent asso-
+ciation between precision and sample sizes, with larger number of events leading to narrower
+HPDIs.
+F I G U R E 2
+Comparison of growth rate estimates based on regression over aoristic sums (left column; 95%
+confidence intervals) versus direct Bayesian approach (right column; 95% highest posterior density intervals) on
+simulated datasets with different sample sizes but same ‘true’ growth rate (equal to 0.002). Intervals shown in red do not
+include the true rate within its range.
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+13
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Experiment 3
+The idiosyncratic and context-dependent nature of archaeological periodisation limits the range
+of experimental analyses one could pursue. Still, it is possible to examine a particular example
+that illustrates the limitations imposed by the nature of relative chronology. A simple way to
+conceptualise this is to consider periodisation as information loss, where different parameter
+settings of a particular growth model leading to different time-frequency distributions become
+effectively undistinguishable. Figure 4a, shows a hypothetical example of three logistic growth
+models with different intrinsic growth rates (r) and inflection points (m), but having the same
+cumulative probability mass for the intervals 800–501 and 500–301 BC. The three curves are
+F I G U R E 4
+Coarse archaeological periodisation and indeterminacy: (a) three parameter combinations of r and m
+yielding identical cumulative probabilities for the specific periodisation (Phases I and II, shown as different grey bars on
+the top); (b) parameter combinations of r and m yielding a cumulative probability of 0.13 for Phase I and 0.87 for Phase
+II; (c) posterior fitted model obtained analysing on a simulated dataset generated with r = 0.01155 and m = 302 (solid
+line on panel a); (d) joint posterior of r and m of the same analysis.
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+15
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+obviously different, but because all dates falling within 800–501 BC are treated in the same
+way, any shape variations of the curve within this interval are effectively lost when the chronol-
+ogy is based on these periodisations. Figure 4b is the result of a systematic evaluation of differ-
+ent parameter combinations of r and m, with instances showing a cumulative probability mass
+of 0.13 between 800 and 501 BC highlighted in red. Although this captures a wide range of
+shapes, the archaeological record associated with these are expected to yield the same propor-
+tion of events for the first and the second of our hypothetical phases.
+The objective of Experiment #3 is to determine whether the Bayesian approach proposed
+here can recover the structure of indeterminacy imposed by the archaeological periodisation.
+Thus, samples generated from any parameter combinations along the red dots in Figure 4b
+should yield similar results, and the posterior should capture the range of indeterminate param-
+eter combinations. Figure 4c,d does indeed show that the proposed Bayesian solution can
+achieve this. The posterior of time-frequency distribution (Figure 4c) shows an envelope captur-
+ing a wide range of shapes that includes the extreme cases shown in Figure 4a. Similarly, the
+joint posterior of r and m (Figure 4d) does recuperate the spectrum of indeterminate parameter
+combinations shown in Figure 4b.
+Experiment 4
+Figure 5 shows the six scenarios explored in Experiment #4, with the underlying probability dis-
+tribution of the time frequency superimposed over the aoristic sum for different sample sizes
+and periodisations. Unsurprisingly, instances with a larger number of samples and periods
+(Figure 5f) show closer similarity between the aoristic sum and the shape of the underlying
+time-frequency distribution. However, in all cases, spurious fluctuations are also visible.
+Results of the nonparametric Bayesian model (Figure 6) show that in all scenarios, the 95%
+HPDI includes the actual shape of the time-frequency distribution from which the artificial
+samples were generated. The precision of the posterior is conditioned by both the number of
+samples available and the number of archaeological periodisations, although the latter appears
+to have a more substantial impact, with the two-period scenario (Figure 5a,b) showing the wid-
+est HPDI ranges.
+DISCUSSION
+The experiment design devised in this paper is limited to a narrow set of circumstances where
+the observed data are characterised exclusively by within-phase uncertainty (Crema &
+Kobayashi, 2020). Yet, employing these ‘tactical simulations’ (Orton, 1973) enables us to deter-
+mine the inferential power of the proposed method and to compare its performance to aoristic
+analyses. Despite the additional cost in computing performance (see below), the experiments
+demonstrate that both parametric and nonparametric approaches offer a more robust alterna-
+tive to aoristic analysis.
+Results of Experiments 1–3 show that the parametric approach can provide a superior accu-
+racy in recovering the ‘true’ parameters of a model under a variety of different scenarios. As for
+SPDs, direct analyses of aoristic sums for statistical inference are unwarranted, and both Exper-
+iments #1 and #2 demonstrate the implications of pursuing this. Regression estimates over
+aoristic sums behave inconsistently, with generally a low accuracy and the size of the confidence
+interval severely impacted by factors external to sample size. In contrast, the parametric Bayes-
+ian approach consistently offers higher accuracy, with larger sample sizes yielding higher accu-
+racy as expected.
+16
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+F I G U R E 5
+Aoristic sum on simulated data sampled from the same underlying distribution (dashed red line) with
+different periodisations (top grey bars) and sample sizes (n = 50 for (a), (c), and e; n = 500 for (b), (d), and (f)).
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+17
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Although the fundamental methodological framework of the parametric approach pres-
+ented in Experiments 1–3 is the same as the one introduced for radiocarbon dates by Timpson
+et al. (2021), the nonparametric ICAR approach has not been explored previously. Experiment
+#4 shows that the model does capture the uncertainty of the estimates, showing larger posterior
+envelopes when sample sizes are small and archaeological periodisation are coarse. The ‘true’
+shape of the frequency distribution was contained within the 95% HPDI, but the extent to
+which the model can provide an accurate and precise recovery is somewhat limited. This is not
+surprising and reflects the amount of information provided as assumption in the inferential pro-
+cess. In other words, a satisfactory performance can be achieved by better quality data (large
+sample sizes and fine-grained periodisation) or stronger assumptions in the shape of the time
+frequency distribution (i.e., using a parametric approach).
+Aside from the choice between parametric and nonparametric approaches, the methods
+introduced here require additional decisions to be made by the analyst. As for aoristic analysis,
+both the parametric and the nonparametric are based on estimates over user-defined time
+blocks. Experiment #2 demonstrates that a finer resolution (i.e. smaller time blocks) provides
+substantially higher accuracy. This is most likely due to information loss associated with coarser
+resolution, where the boundary between periods and phases can be out of sync with the
+breakpoints of the time blocks. The general recommendation is thus to use the finest resolution,
+that is, a yearly time block. This choice, however, comes with an added computational cost that
+can quickly become prohibitive in the case of the nonparametric approach,i particularly when
+dealing with larger sample sizes and/or larger window of analyses. In this case, a compromise
+can be achieved by using a slightly coarser resolution, bearing in mind the potential loss in the
+accuracy of the estimated parameters.
+The choice of the prior is another key aspect of the inferential process, particularly in the
+case of the parametric approach. As for any standard Bayesian approaches, priors should be
+weakly informative, excluding unrealistic scenarios but allowing the model to flexibly learn
+from the data. The impact of these choices should also be properly explored. In some circum-
+stances, such as the scenario presented in Experiment #3, the choice of the prior can lead to
+major differences. Using nonflat prior for r and m would not recover the full range of indetermi-
+nate outcomes shown in Figure 4b, as effectively we are stating that some values of r and m are
+more likely before even looking at the data. However, if using a nonflat prior is justified on
+independent grounds, the Bayesian approach can reduce indeterminacy and greatly aid the
+inferential process.
+It is worth highlighting here some of the limitations of the approach proposed in this paper.
+First, unevenly sized and/or coarse periodisations as well as small sample sizes can severely limit
+the inferential power. Admittedly, this is not a negative aspect of the approach advocated here.
+A good statistical method should not misguide the analyst and should fully capture the uncer-
+tainty in the data. Results of Experiments #3 and #4 are promising in this regard. Still, it is dif-
+ficult to fully assess the extent to which the model can handle appropriately high levels of
+uncertainty in the input data. One aspect that was not explored here is the extent to which com-
+plex overlapping phases, which may generate artificial peaks in aoristic sums, are handled by
+the solutions introduced here. The issue is particularly pertinent for the ICAR model, which
+might be similarly affected by such artefacts. It is possible that the choice of a suitable prior, for
+example, one assuming larger expected values for the scalar precision (i.e. stronger temporal
+autocorrelation), might counter such effects. However, using a strong prior will also lead to flat-
+ter time series, effectively trading false positives (i.e. artificial peaks) for false negatives
+(e.g. potentially missing real peaks). Undoubtedly extreme caution is required in these
+circumstances.
+Second, parametric approaches are strictly dependent on the selection of the growth model.
+Fitting a logistic growth model when the true time-frequency distribution is characterised by a
+rise-and-fall pattern can lead to problematic inference. The only exception to this might be the
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+19
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+exponential growth model, whose parameter could still be interpreted the average growth rate
+within the time window of analyses. In the case of SPDs, posterior predictive checks are possi-
+ble (Crema & Shoda, 2021; Timpson et al., 2021) and can even reveal when interesting devia-
+tions from the model are observed. Implementing similar approaches with aoristic data is not
+trivial, except for instances where there is a one-to-one association between a calendar date and
+an archaeological period. A potential way to tackle this approach is to fully account for the
+error structure of the data, that is, estimate the probability of each event assigned to a particular
+timespan.
+Third, the models introduced here do not account for uncertainties in the start and end date
+of
+timespans
+(i.e.
+phase-boundary
+uncertainty).
+When
+this
+information
+is
+available
+(e.g. Crema & Kobayashi, 2020), one could potentially iteratively sample possible timespans
+and generate a custom probability distribution to represent the timespan of each event.
+Although this approach would account for additional levels of uncertainty, it would effectively
+‘collapse’ different forms of uncertainty into a single vector of probabilities across all time
+blocks, ignoring consequently any interdependencies. Alternative approaches would require
+additional layers in the hierarchical model where the uncertainty of archaeological periodisation
+and the inference on the time-frequency distribution is carried out simultaneously. Further stud-
+ies are required to explore the analytical and computational challenges this and possibly other
+solutions require.
+Finally, it is worth mentioning that other attempts to provide a Bayesian framework to
+aoristic analysis are currently being developed in other fields as well. Van Lieshout and
+Markwits (van Lieshout & Markwitz, 2022) approach the problem as a marked point process,
+whereas Briz-Redon (Briz-Redon, 2023) associates a uniform prior to each observation, effec-
+tively carrying out a measurement error model similar to the one implemented by Crema and
+Shoda (2021) for radiocarbon dates. Both solutions offer similar advantages to the solutions
+implemented here, although they are not designed to deal with instances where a user-defined
+vector of probabilities is employed to describe the most likely timing of the event within its
+timespan.
+CONCLUSIONS
+Developing a robust and general inferential tool for events described by archaeological
+periodisation is a challenging task. In contrast to radiocarbon dating, there are no formal prin-
+ciples that translate the uncertainty associated with the timing of an event into a probability dis-
+tribution, with much of the legwork left to the subjective guesswork of experts. Start and end
+dates of archaeological periods are just general chronological reference points and not designed
+to be approached as formal analytical units. Yet, the bulk of the archaeological record is
+described within this chronological framework. Aoristic analysis and related techniques offer a
+straightforward and easy-to-implement solution that allows archaeologists to explore the rich
+untapped resource.
+I argue that even in an ideal condition, where the only form of uncertainty is determining
+when an event occurred within a period or phase, aoristic analysis a highly problematic
+approach for three reasons: (1) the summing of aoristic weights is mathematically unwarranted;
+(2) the nonrandom nature of archaeological periodisation can lead to misleading artefacts in
+aoristic sums; and (3) aoristic analysis is at its best a descriptive rather than an inferential
+statistic.
+The paper introduced two Bayesian approaches and an associated R package that can pro-
+vide an alternative to aoristic analysis in archaeology. The two approaches are tailored for dif-
+ferent sets of objectives, but in both cases, the minimum requirements are the same for the
+aoristic analysis, with each archaeological event described by a chronological timespan or a
+20
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+vector of probability values for each time block. Although a comprehensive assessment of the
+robustness of the proposed approach was not possible, a series of experiments have been carried
+out to determine its accuracy and precision. Under all circumstances, the results showed a supe-
+rior performance to aoristic analysis. The parametric approach can recuperate key values of
+interest accurately and consistently while simultaneously capable of formally capturing
+instances of high indeterminacy dictated by the nature of the underlying periodisation. Simi-
+larly, the ICAR-based nonparametric can visualise the extent of the uncertainty dictated by
+sampling error and periodisation, providing a more sound and cautious basis for the visual
+inspection of archaeological time-frequency data.
+ACKNOWLEDGMENTS
+I am grateful to Thomas Huet and Eythan Levy for their invitation to the special issues and the
+excellent editorial process, the three reviewers (two anonymous and Martin Hinz) for their con-
+structive comments and feedbacks, and Jonas Alcaina-Mateos for beta-testing the baorista
+package and providing key insights about model priors. This work was supported by a
+Leverhulme Trust Philip Leverhulme Prize (#PLP-2019–304). For the purpose of open access,
+the author has applied a Creative Commons Attribution (CC BY) licence to any Author
+Accepted Manuscript version arising from this submission.
+DATA AVAILABILITY STATEMENT
+The data supporting this study’s findings are openly available at
+https://doi.org/10.5281/
+zenodo.11163687.
+PEER REVIEW
+The peer review history for this article is available at https://www.webofscience.com/api/
+gateway/wos/peer-review/10.1111/arcm.12984.
+ORCID
+Enrico R. Crema
+https://orcid.org/0000-0001-6727-5138
+ENDNOTE
+i As a ball-park estimate, using a desktop machine a dataset with 450 observations and 50 time blocks can be fitted with
+a parametric exponential model in less than minute (running four chains in parallel with 50,000 iterations), whereas
+the same dataset would require approximately 1 h to go through 2,000,000 iterations (over four chains in parallel) for
+a nonparametric model to achieve reliable convergence.
+REFERENCES
+
+Bailey, G. (2007). Time perspectives, palimpsests and the archaeology of time. Journal of Anthropological Archaeology,
+26, 198–223. https://doi.org/10.1016/j.jaa.2006.08.002
+Baxter, M. J., & Cool, H. E. M. (2016). Reinventing the wheel? Modelling temporal uncertainty with applications to
+brooch distributions in Roman Britain. Journal of Archaeological Science, 66, 120–127. https://doi.org/10.1016/j.
+jas.2015.12.007
+
+Husi, P. (2012). Statistical tool for dating and interpreting archaeological contexts using pottery. Jour-
+nal of Archaeological Science, 39(4), 777–790. https://doi.org/10.1016/j.jas.2011.06.031
+
+Vroom, J. (2012). Measuring chronologi-
+cal uncertainty in intensive survey finds. Archaeometry, 55(2), 318–328. https://doi.org/10.1111/j.1475-4754.2012.
+00674.x
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+21
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Bevan, A., & Crema, E. R. (2021). Modifiable reporting unit problems and time series of long-term human activity.
+Philosophical Transactions of the Royal Society of London. Series B: Biological Sciences, 376(1816), 20190726.
+https://doi.org/10.1098/rstb.2019.0726
+Blackwell, P. G., & Buck, C. E. (2003). The late glacial human reoccupation of North-Western Europe: New
+approaches to space-time modelling. Antiquity, 77(296), 232–240. https://doi.org/10.1017/S0003598X00092231
+Briz-Redon, ´A. (2023). A Bayesian aoristic logistic regression to model spatio-temporal crime risk under the presence of
+interval-censored event times. arXiv [stat.AP]. http://arxiv.org/abs/2304.05933
+Brozio, J. P., Müller, J., Furholt, M., Kirleis, W., Dreibrodt, S., Feeser, I., Dörfler, W., Weinelt, M., Raese, H., &
+
+Hafner, A. (2020). Central European Early Bronze Age chronology revisited:
+a Bayesian examination of large-scale radiocarbon dating. PLoS ONE, 15(12), e0243719. https://doi.org/10.1371/
+journal.pone.0243719
+Buck, C. E., Cavanagh, W. G., & Litton, C. D. (1996). Bayesian approach to interpreting archaeological data. Wiley.
+Carleton, W. C., & Groucutt, H. S. (2020). Sum things are not what they seem: Problems with point-wise interpretations
+and quantitative analyses of proxies based on aggregated radiocarbon dates. Holocene, 31(4), 630–643. https://doi.
+org/10.1177/0959683620981700
+Carlson, D. L. (1983). Computer analysis of dated ceramics: estimating dates and occupational ranges. Southeastern
+Archaeology, 2(1), 8–20.
+Collins-Elliott, S. A. (2019). Quantifying artefacts over time: interval estimation of a Poisson distribution using the Jef-
+freys prior. Archaeometry, 61(5), 1207–1222. https://doi.org/10.1111/arcm.12481
+Crema, E. R. (2012). Modelling temporal uncertainty in archaeological analysis. Journal of Archaeological Method and
+Theory, 19(3), 440–461. https://doi.org/10.1007/s10816-011-9122-3
+Crema, E. R. (2015). Time and probabilistic reasoning in settlement analysis. In J. A. Barcelo & I. Bogdanovic (Eds.),
+Mathematics and archaeology (pp. 314–334). CRC Press.
+Crema, E. R. (2022). Statistical inference of prehistoric demography from frequency distributions of radiocarbon dates:
+a review and a guide for the perplexed. Journal of Archaeological Method and Theory, 29(4), 1387–1418. https://
+doi.org/10.1007/s10816-022-09559-5
+Crema, E. R., &
+
+Kobayashi, K. (2020). A multi-proxy inference of Jomon population dynamics using Bayesian phase
+models, residential data, and summed probability distribution of 14C dates. Journal of Archaeological Science,
+117, 105136. https://doi.org/10.1016/j.jas.2020.105136
+Crema, E. R., &
+
+Shoda, S. (2021). A Bayesian approach for fitting and comparing demographic growth models of
+radiocarbon dates: a case study on the Jomon-Yayoi transition in Kyushu (Japan). PLoS ONE, 16(5), e0251695.
+https://doi.org/10.1371/journal.pone.0251695
+de Valpine, P., Adler, C., Turek, D., Michaud, N., Anderson-Bergman, C., Obermeyer, F., Cortes, C.W.,
+Rodrìguez, A., Lang, D.T., &
+
+Weinelt, M. (2019). The Chalcolithic–Bronze Age transition in
+southern Iberia under the influence of the 4.2 kyr event? a correlation of climatological and demographic proxies.
+Journal of Neolithic Archaeology, 21, 1–26. https://doi.org/10.12766/jna.2019.1
+Hoebe, P. W., Peeters, J. H. M., &
+
+Arnoldussen, S. (2023). Parsing prehistoric patterns: Prospects and limitations of a
+big radiocarbon dataset for understanding the impact of climate on Late Palaeolithic and Mesolithic populations
+in Northwest Europe (16–7.5 ka calBP). Journal of Archaeological Science, Reports, 49, 103944. https://doi.org/10.
+1016/j.jasrep.2023.103944
+22
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Johnson, I. (2004). Aoristic Analysis: seeds of a new approach to mapping archaeological distributions through time. In
+K. F. Ausserer, W. B. Rner, M. Goriany, & L. K.-V. Ckl (Eds.), [Enter the past] the E-way into the four dimen-
+sions of cultural heritage: CAA2003. BAR International Series 1227. (pp. 448–452). Archaeopress.
+Kim, H., Lee, G.-A., & Crema, E. R. (2021). Bayesian analyses question the role of climate in Chulmun demography.
+Scientific Reports, 11(1), 23797. https://doi.org/10.1038/s41598-021-03180-4
+Kleijne, J., Weinelt, M., & Müller, J. (2020). Late Neolithic and chalcolithic maritime resilience? The 4.2 ka BP event
+and its implications for environments and societies in Northwest Europe. Environmental Research Letters: ERL,
+15(12), 125003. https://doi.org/10.1088/1748-9326/aba3d6
+Knitter, D., Brozio, J. P., Hamer, W., Duttmann, R., Müller, J., &
+
+Shennan, S. (2017). Comparing archaeological proxies for long-term population patterns:
+an example from Central Italy. Journal of Archaeological Science, 87, 59–72. https://doi.org/10.1016/j.jas.2017.
+10.001
+Palmisano, A., Woodbridge, J., Roberts, N., Bevan, A., Fyfe, R., Shennan, S., Cheddadi, R., Greenberg, R.,
+Kaniewski, D., Langgut, D., & Leroy, S. A. (2019). Holocene landscape dynamics and long-term population
+trends in the Levant. Holocene, 29(5), 708–727. https://doi.org/10.1177/0959683619826642
+
+Pollard, D. (2021). All equal in the presence of death? A quantitative analysis of the Early Iron Age cemeteries of Knos-
+sos, Crete. Journal of Anthropological Archaeology, 63, 101320. https://doi.org/10.1016/j.jaa.2021.101320
+Ratcliffe, J. H. (2000). Aoristic analysis: The spatial interpretation of unspecifed temporal events. International Journal
+of Geographical Information Science, 14(7), 669–679. https://doi.org/10.1080/136588100424963
+Ratcliffe, J. H. (2022). aoristic: generates aoristic probability Distributions. https://CRAN.R-project.org/package=
+aoristic
+Ratcliffe, J. H., & McCullagh, M. J. (1998). Aoristic crime anaysis. International Journal of Geographical Information
+Science, 12(7), 751–764. https://doi.org/10.1080/136588198241644
+
+Roalkvam, I. (2022). Exploring the composition of lithic assemblages in Mesolithic south-eastern Norway. Journal of
+Archaeological Science: Reports, 42, 103371.
+Roberts, J. M. Jr., Mills, B. J., Clark, J. J., Haas, W. R. Jr., Huntley, D. L., & Trowbridge, M. A. (2012). A method for
+chronological apportioning of ceramic assemblages. Journal of Archaeological Science, 39(5), 1513–1520. https://
+doi.org/10.1016/j.jas.2011.12.022
+Romandini, M., Crezzini, J., Bortolini, E., Boscato, P., Boschin, F., Carrera, L., Nannini, N., Tagliacozzo, A.,
+Terlato, G., Arrighi, S., &
+
+Held, L. (2004). Gaussian Markov random fields: theory and applications. Chapman and Hall. https://doi.
+org/10.1201/9780203492024
+Shennan, S., Downey, S. S., Timpson, A., Edinborough, K., Colledge, S., Kerig, T., Manning, K., & Thomas, M. G.
+(2013). Regional population collapse followed initial agriculture booms in mid-Holocene Europe. Nature Commu-
+nications, 4(1), 2486. https://doi.org/10.1038/ncomms3486
+Steinmann, L., &
+
+Weissova, B. (2021). datplot: a new R package for the visualization of date ranges in archaeology.
+Advances in Archaeological Practice, 9(4), 288–298. https://doi.org/10.1017/aap.2021.8
+Steponaitis, V. P., & Kintigh, K. W. (1993). Estimating site occupation spans from dated artifact types: Some new
+approaches. In J. Stoltman (Ed.), Archaeology of Eastern North America: Papers in Honor of Stephen Williams
+(Vol. 25) (pp. 349–361). Mississippi Department of Archives and History.
+Stoddart, S., Woodbridge, J., Palmisano, A., Mercuri, A. M., Mensing, S. A., Colombaroli, D., Sadori, L., Magri, D.,
+di Rita, F., Giardini, M., Mariotti Lippi, M., Montanari, C., Bellini, C., Florenzano, A., Torri, P., Bevan, A.,
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+23
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Shennan, S., Fyfe, R., & Roberts, C. N. (2019). Tyrrhenian Central Italy: Holocene population and landscape
+ecology. Holocene, 29(5), 761–775. https://doi.org/10.1177/0959683619826696
+
+Manning, K. (2021). Directly modelling population
+dynamics in the South American arid diagonal using 14C dates. Philosophical Transactions of the Royal Society of
+London. Series B, Biological Sciences, 376(1816), 20190723. https://doi.org/10.1098/rstb.2019.0723
+Timpson, A., Colledge, S., Crema, E., Edinborough, K., Kerig, T., Manning, K., Thomas, M. G., & Shennan, S.
+(2014). Reconstructing regional population fluctuations in the European Neolithic using radiocarbon dates: a new
+case-study using an improved method. Journal of Archaeological Science, 52, 549–557. https://doi.org/10.1016/j.jas.
+2014.08.011
+van Lieshout, M. N. M., & Markwitz, R. L. (2022). State estimation for aoristic models. Scandinavian Journal of Statis-
+tics, Theory and Applications, 50, 1068–1089. https://doi.org/10.1111/sjos.12619
+Verhagen, P., Vossen, I., Groenhuijzen, M. R., &
+
+Joyce, J. (2016). Now you see them, now you don’t: Defining and
+using a flexible chronology of sites for spatial analysis of Roman settlement in the Dutch river area. Journal of
+Archaeological Science: Reports, 10, 309–321.
+Yubero-Gomez, M., Rubio-Campillo, X., & Lopez-
+
+Cachero, J. (2016). The study of spatiotemporal patterns integrating
+temporal uncertainty in late prehistoric settlements in northeastern Spain. Archaeological and Anthropological Sci-
+ences, 8(3), 477–490. https://doi.org/10.1007/s12520-015-0231-x
+Ziedler, J. A., Buck, C. E., & Litton, C. D. (1998). Integration of archaeological phase information and radiocarbon
+results from the Jama River valley, Ecuador: A Bayesian approach. Latin American Antiquity, 9(2), 160–179.
+https://doi.org/10.2307/971992
+How to cite this article: Crema, E. R. (2024). A Bayesian alternative for aoristic analyses
+in archaeology. Archaeometry, 1–24. https://doi.org/10.1111/arcm.12984
+24
+CREMA
+ 14754754, 0, Downloaded from https://onlinelibrary.wiley.com/doi/10.1111/arcm.12984, Wiley Online Library on [19/03/2025]. See the Terms and Conditions (https://onlinelibrary.wiley.com/terms-and-conditions) on Wiley Online Library for rules of use; OA articles are governed by the applicable Creative Commons License
+
+Vroom, J. (2012). Measuring chronologi-
+cal uncertainty in intensive survey finds. Archaeometry, 55(2), 318–328. https://doi.org/10.1111/j.1475-4754.2012.
+00674.x
+A BAYESIAN ALTERNATIVE FOR AORISTIC ANALYSES IN ARCHAEOLOGY
+
+
+Badino, F. (2020). Macromammal and bird assemblages across the late Middle to
+Upper Palaeolithic transition in Italy: an extended zooarchaeological review. Quaternary International: The Jour-
+nal of the International Union for Quaternary Research, 551, 188–223.
+
+Paganin, S. (2020). NIMBLE: MCMC, Particle Filtering, and Programmable Hier-
+archical Modeling. R package. https://doi.org/10.5281/zenodo.1211190
+
+Jessica Munson16, Paul Roscoe17, Eva Rosenstock18, Amy Thompson19, Cameron A. Petrie6 & Timothy A. Kohler2,14,20,21 1 School of Archaeology, University of Oxford, UK

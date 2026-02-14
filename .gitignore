@@ -1,0 +1,61 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Environments
+.env
+.env.*
+venv/
+.venv/
+env/
+my_env/
+researchenv/
+
+# Logs / temp
+*.log
+tmp/
+temp/
+*.tmp
+
+# Local project data and generated outputs
+db/*
+pdfs/
+jsons/
+pdf2epub/output/
+embeddings/
+upload.pkl
+chunks_df.pkl
+pdfs.pkl
+
+# Binary artifacts not typically committed
+*.pkl
+*.json
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.tif
+*.tiff
+*.Identifier
