@@ -1,4 +1,5 @@
 import requests
+import os
 
 def find_articles(author, year, title, api_key, count=25, start=0):
     url = "https://api.elsevier.com/content/search/sciencedirect"
@@ -24,7 +25,9 @@ def find_articles(author, year, title, api_key, count=25, start=0):
         response.raise_for_status()
 
 # Example usage:
-api_key = "fea84b364ab661e3cf955f0f48f43fb9"
+api_key = os.getenv("ELSEVIER_API_KEY", "")
+if not api_key:
+    raise RuntimeError("Set ELSEVIER_API_KEY before running this script.")
 author = "Perrault"
 year = "2012"
 title = "THE PACE OF CULTURAL EVOLUTION"
