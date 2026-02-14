@@ -459,6 +459,7 @@ document.getElementById("syncStopBtn").addEventListener("click", async () => {
 
 document.getElementById("ingestBtn").addEventListener("click", async () => {
   const mode = document.getElementById("ingestMode").value;
+  const partialCount = parseInt(document.getElementById("partialCount").value || "3", 10);
   const lines = document.getElementById("customPdfs").value
     .split("\n")
     .map((x) => x.trim())
@@ -469,6 +470,7 @@ document.getElementById("ingestBtn").addEventListener("click", async () => {
       source_dir: document.getElementById("sourceDir").value.trim() || "pdfs",
       pdfs: lines,
       override_existing: document.getElementById("overrideExisting").checked,
+      partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),
     });
     renderSimpleMessage(document.getElementById("ingestOut"), "Ingest Job", "running", "Starting ingest...");
     startPolling("ingest", async (payload) => {
@@ -484,6 +486,7 @@ document.getElementById("ingestBtn").addEventListener("click", async () => {
 
 document.getElementById("ingestPreviewBtn").addEventListener("click", async () => {
   const mode = document.getElementById("ingestMode").value;
+  const partialCount = parseInt(document.getElementById("partialCount").value || "3", 10);
   const lines = document.getElementById("customPdfs").value
     .split("\n")
     .map((x) => x.trim())
@@ -496,6 +499,7 @@ document.getElementById("ingestPreviewBtn").addEventListener("click", async () =
       source_dir: document.getElementById("sourceDir").value.trim() || "pdfs",
       pdfs: lines,
       override_existing: document.getElementById("overrideExisting").checked,
+      partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),
     });
     renderIngestPreview(payload);
   } catch (err) {

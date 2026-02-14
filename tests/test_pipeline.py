@@ -216,6 +216,26 @@ def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, t
     assert selected == [files[2], files[3], files[4]]
 
 
+def test_choose_pdfs_test3_respects_partial_count_after_existing_skip(monkeypatch, tmp_path: Path) -> None:
+    files = []
+    for i in range(1, 8):
+        p = tmp_path / f"f{i}.pdf"
+        p.write_bytes(b"%PDF-1.7\nfake")
+        files.append(p)
+
+    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"f1", "f2", "f3"})
+    selected = pipeline.choose_pdfs(
+        mode="test3",
+        source_dir=str(tmp_path),
+        skip_existing=True,
+        require_metadata=False,
+        settings=Settings(),
+        partial_count=2,
+    )
+
+    assert selected == [files[3], files[4]]
+
+
 def test_choose_pdfs_override_includes_existing(monkeypatch, tmp_path: Path) -> None:
     p1 = tmp_path / "a.pdf"
     p2 = tmp_path / "b.pdf"

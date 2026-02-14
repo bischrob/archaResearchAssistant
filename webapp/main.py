@@ -18,7 +18,7 @@ from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
 from src.rag.llm_answer import ask_openai_grounded
 from src.rag.neo4j_store import GraphStore
-from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
+from src.rag.paperpile_metadata import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
 from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
@@ -75,6 +75,7 @@ class IngestRequest(BaseModel):
     source_dir: str = "pdfs"
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
+    partial_count: int = Field(default=3, ge=1, le=5000)
 
 
 class QueryRequest(BaseModel):
@@ -99,6 +100,7 @@ class IngestPreviewRequest(BaseModel):
     source_dir: str = "pdfs"
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
+    partial_count: int = Field(default=3, ge=1, le=5000)
 
 
 @dataclass
@@ -296,16 +298,14 @@ def diagnostics() -> dict:
     # Metadata coverage checks
     metadata_index = load_paperpile_index(settings.paperpile_json)
     pdf_root = Path("pdfs")
-    total_local_pdfs = _count_local_pdfs(str(pdf_root)) if pdf_root.exists() else 0
-    with_meta = 0
-    if pdf_root.exists():
-        for p in pdf_root.rglob("*"):
-            if not p.is_file() or p.suffix.lower() != ".pdf":
-                continue
-            if find_metadata_for_pdf(metadata_index, p.name):
-                with_meta += 1
+    pdf_files = iter_pdf_files(pdf_root) if pdf_root.exists() else []
+    unmatched = find_unmatched_pdfs(pdf_root, metadata_index) if pdf_root.exists() else []
+    total_local_pdfs = len(pdf_files)
+    with_meta = total_local_pdfs - len(unmatched)
     diag["pdfs_total"] = total_local_pdfs
     diag["pdfs_with_metadata"] = with_meta
+    diag["pdfs_unmatched"] = len(unmatched)
+    diag["unmatched_sample"] = [str(p) for p in unmatched[:20]]
     checks.append(
         {
             "name": "metadata_coverage_nonzero",
@@ -417,6 +417,7 @@ def ingest(req: IngestRequest) -> dict:
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,
             require_metadata=True,
+            partial_count=req.partial_count,
         )
         summary = ingest_pdfs(
             selected_pdfs=selected,
@@ -451,9 +452,10 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
             mode=req.mode,
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
-            skip_existing=False,
+            skip_existing=not req.override_existing,
             require_metadata=False,
             settings=settings,
+            partial_count=req.partial_count,
         )
         try:
             selected_for_ingest = choose_pdfs(
@@ -463,6 +465,7 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
                 skip_existing=not req.override_existing,
                 require_metadata=True,
                 settings=settings,
+                partial_count=req.partial_count,
             )
         except Exception:
             selected_for_ingest = []

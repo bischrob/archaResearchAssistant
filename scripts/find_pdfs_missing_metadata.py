@@ -10,18 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
-
-def find_unmatched_pdfs(pdf_root: Path, metadata_index: dict[str, dict]) -> list[Path]:
-    unmatched: list[Path] = []
-    for p in pdf_root.rglob("*"):
-        if not p.is_file():
-            continue
-        if p.suffix.lower() != ".pdf":
-            continue
-        if not find_metadata_for_pdf(metadata_index, p.name):
-            unmatched.append(p)
-    return sorted(unmatched, key=lambda x: str(x).lower())
+from src.rag.paperpile_metadata import find_unmatched_pdfs, load_paperpile_index
 
 
 def write_csv(out_csv: Path, pdf_root: Path, unmatched: list[Path]) -> None:
@@ -71,7 +60,7 @@ def main() -> None:
         raise SystemExit(f"Paperpile JSON not found: {paperpile_json}")
 
     metadata_index = load_paperpile_index(str(paperpile_json))
-    unmatched = find_unmatched_pdfs(pdf_root, metadata_index)
+    unmatched = find_unmatched_pdfs(str(pdf_root), metadata_index)
     write_csv(out_csv, pdf_root, unmatched)
 
     print(f"PDF root: {pdf_root}")
