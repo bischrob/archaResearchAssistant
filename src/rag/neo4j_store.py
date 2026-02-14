@@ -62,16 +62,7 @@ class GraphStore:
             for stmt in statements:
                 session.run(stmt, dims=vector_dimensions)
 
-    def clear_graph(self) -> None:
-        query = """
-        MATCH (n)
-        WHERE any(label IN labels(n) WHERE label IN ['Article', 'Author', 'Chunk', 'Token', 'Reference'])
-        DETACH DELETE n
-        """
-        with self.driver.session() as session:
-            session.run(query)
-
-    def ingest_articles(self, articles: list[ArticleDoc]) -> None:
+    def ingest_articles(self, articles: list[ArticleDoc], should_cancel=None) -> None:
         chunk_texts = [chunk.text for article in articles for chunk in article.chunks]
         if not chunk_texts:
             return
@@ -80,6 +71,8 @@ class GraphStore:
         emb_iter = iter(embeddings)
         with self.driver.session() as session:
             for article in articles:
+                if should_cancel and should_cancel():
+                    raise RuntimeError("Ingest cancelled by user.")
                 session.run(
                     """
                     MERGE (a:Article {id: $id})
@@ -101,6 +94,8 @@ class GraphStore:
                 )
 
                 for chunk in article.chunks:
+                    if should_cancel and should_cancel():
+                        raise RuntimeError("Ingest cancelled by user.")
                     emb = next(emb_iter)
                     session.run(
                         """
@@ -144,6 +139,8 @@ class GraphStore:
                         )
 
                 for citation in article.citations:
+                    if should_cancel and should_cancel():
+                        raise RuntimeError("Ingest cancelled by user.")
                     session.run(
                         """
                         MERGE (r:Reference {id: $id})
@@ -163,6 +160,8 @@ class GraphStore:
                         article_id=article.article_id,
                     )
 
+        if should_cancel and should_cancel():
+            raise RuntimeError("Ingest cancelled by user.")
         self._link_article_citations(articles)
 
     def _link_article_citations(self, articles: Iterable[ArticleDoc]) -> None:
@@ -335,3 +334,23 @@ class GraphStore:
                 embedding=vector,
             )
             return [dict(r) for r in result]
+
+    def graph_stats(self) -> dict:
+        query = """
+        MATCH (a:Article) WITH count(a) AS articles
+        MATCH (c:Chunk) WITH articles, count(c) AS chunks
+        MATCH (t:Token) WITH articles, chunks, count(t) AS tokens
+        MATCH (r:Reference) WITH articles, chunks, tokens, count(r) AS references
+        OPTIONAL MATCH (:Article)-[x:CITES]->(:Article)
+        RETURN articles, chunks, tokens, references, count(x) AS cites
+        """
+        with self.driver.session() as session:
+            row = session.run(query).single()
+            if not row:
+                return {"articles": 0, "chunks": 0, "tokens": 0, "references": 0, "cites": 0}
+            return dict(row)
+
+    def existing_article_ids(self) -> set[str]:
+        with self.driver.session() as session:
+            rows = session.run("MATCH (a:Article) RETURN a.id AS id")
+            return {r["id"] for r in rows if r.get("id")}

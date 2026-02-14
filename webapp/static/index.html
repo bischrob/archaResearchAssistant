@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Research Assistant RAG</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>Research Assistant RAG</h1>
+      <p>Neo4j-backed PDF ingestion and contextual retrieval.</p>
+    </header>
+
+    <section class="panel">
+      <h2>How To Use</h2>
+      <ol>
+        <li>Click <strong>Sync PDFs</strong> to mirror Google Drive Paperpile files into local <code>pdfs/</code>.</li>
+        <li>Choose ingest mode:
+          <code>test3</code> for first 3 PDFs, <code>all</code> for full corpus, or <code>custom</code> with explicit file paths.
+        </li>
+        <li>By default, already ingested PDFs are skipped. Enable <strong>Override Existing</strong> to reprocess them.</li>
+        <li>Run <strong>Ingest</strong> to add/update graph data. Existing Neo4j data is never erased. Unreadable files are skipped and shown in <code>failed_pdfs</code>.</li>
+        <li>Use <strong>Stop</strong> on Sync/Ingest/Query to cancel a running action.</li>
+        <li>Ask a retrieval query in <strong>Search</strong> to get chunks with author and citation context.</li>
+      </ol>
+    </section>
+
+    <section class="panel grid">
+      <div>
+        <h2>System</h2>
+        <button id="healthBtn">Refresh Health</button>
+        <pre id="healthOut" class="output"></pre>
+      </div>
+
+      <div>
+        <h2>Sync PDFs</h2>
+        <label><input type="checkbox" id="syncDryRun" /> Dry run</label>
+        <button id="syncBtn">Run Sync</button>
+        <button id="syncStopBtn">Stop Sync</button>
+        <pre id="syncOut" class="output"></pre>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Ingest</h2>
+      <div class="row">
+        <label>Mode
+          <select id="ingestMode">
+            <option value="test3">test3</option>
+            <option value="all">all</option>
+            <option value="custom">custom</option>
+          </select>
+        </label>
+        <label>Source Dir
+          <input id="sourceDir" value="pdfs" />
+        </label>
+        <label><input type="checkbox" id="overrideExisting" /> Override Existing (reprocess already ingested PDFs)</label>
+      </div>
+      <label>Custom PDFs (one path per line)</label>
+      <textarea id="customPdfs" rows="4" placeholder="pdfs/file1.pdf&#10;pdfs/file2.pdf"></textarea>
+      <button id="ingestBtn">Run Ingest</button>
+      <button id="ingestStopBtn">Stop Ingest</button>
+      <pre id="ingestOut" class="output"></pre>
+    </section>
+
+    <section class="panel">
+      <h2>Search</h2>
+      <div class="row">
+        <input id="queryText" placeholder="e.g. Uinta basin chronology" />
+        <input id="queryLimit" type="number" value="5" min="1" max="20" />
+      </div>
+      <button id="queryBtn">Run Query</button>
+      <button id="queryStopBtn">Stop Query</button>
+      <div id="queryResults"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
