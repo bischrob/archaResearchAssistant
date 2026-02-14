@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import pickle
+from dataclasses import asdict
 from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Settings
 from .neo4j_store import GraphStore
 from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
-from .pdf_processing import load_article
+from .pdf_processing import ArticleDoc, Chunk, Citation, load_article
 
 
 @dataclass
@@ -18,6 +22,67 @@ class IngestSummary:
     skipped_existing_pdfs: list[str]
     skipped_no_metadata_pdfs: list[str]
     failed_pdfs: list[dict]
+
+
+def _cache_dir() -> Path:
+    p = Path(".cache") / "rag_articles"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _cache_key(pdf_path: Path, settings: Settings, metadata: dict | None) -> str:
+    stat = pdf_path.stat()
+    md = json.dumps(metadata or {}, sort_keys=True, ensure_ascii=False)
+    raw = "|".join(
+        [
+            str(pdf_path.resolve()),
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            str(settings.chunk_size_words),
+            str(settings.chunk_overlap_words),
+            md,
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _deserialize_article(obj: dict) -> ArticleDoc:
+    chunks = [Chunk(**c) for c in obj.get("chunks", [])]
+    citations = [Citation(**c) for c in obj.get("citations", [])]
+    return ArticleDoc(
+        article_id=obj["article_id"],
+        title=obj["title"],
+        normalized_title=obj["normalized_title"],
+        year=obj.get("year"),
+        author=obj.get("author"),
+        authors=obj.get("authors", []),
+        citekey=obj.get("citekey"),
+        paperpile_id=obj.get("paperpile_id"),
+        doi=obj.get("doi"),
+        journal=obj.get("journal"),
+        publisher=obj.get("publisher"),
+        source_path=obj["source_path"],
+        chunks=chunks,
+        citations=citations,
+    )
+
+
+def _load_article_cached(pdf_path: Path, settings: Settings, metadata: dict | None) -> ArticleDoc:
+    key = _cache_key(pdf_path, settings, metadata)
+    cache_file = _cache_dir() / f"{key}.pkl"
+    if cache_file.exists():
+        with cache_file.open("rb") as f:
+            return _deserialize_article(pickle.load(f))
+
+    article = load_article(
+        pdf_path=pdf_path,
+        chunk_size_words=settings.chunk_size_words,
+        chunk_overlap_words=settings.chunk_overlap_words,
+        metadata=metadata,
+    )
+    with cache_file.open("wb") as f:
+        pickle.dump(asdict(article), f)
+    return article
 
 
 def _has_pdf_header(path: Path) -> bool:
@@ -168,10 +233,9 @@ def ingest_pdfs(
             progress_callback((parse_done / total_steps) * 100.0, f"Parsing {p.name}")
         try:
             articles.append(
-                load_article(
+                _load_article_cached(
                     pdf_path=p,
-                    chunk_size_words=settings.chunk_size_words,
-                    chunk_overlap_words=settings.chunk_overlap_words,
+                    settings=settings,
                     metadata=find_metadata_for_pdf(paperpile_index, p.name),
                 )
             )

@@ -7,6 +7,7 @@ This project provides:
 - Contextual retrieval (token + vector signal + citation neighborhood)
 - A web GUI for sync, ingest, and search
 - Metadata enrichment from `Paperpile.json` (title, authors, year, citekey, DOI, journal, publisher)
+- Grounded LLM Q&A via OpenAI API using only retrieved RAG context and returning citations
 
 ## 1) Start Neo4j
 
@@ -20,6 +21,8 @@ Default DB env values:
 - `NEO4J_USER=neo4j`
 - `NEO4J_PASSWORD=archaResearchAssistant`
 - `PAPERPILE_JSON=Paperpile.json`
+- `OPENAI_API_KEY=...`
+- `OPENAI_MODEL=gpt-5` (optional; defaults to `gpt-5`)
 
 ## 2) Sync PDFs from Google Drive
 
@@ -59,6 +62,9 @@ The GUI includes in-app instructions and buttons for:
   - `custom` (specific files)
 - contextual query
 - stop/cancel for sync, ingest, and query jobs
+- grounded ChatGPT Q&A with configurable RAG context size
+- export of answer reports (Markdown, CSV) and print view (PDF via browser print)
+- a dedicated `Model Details & Diagnostics` tab with architecture notes and environment/data checks
 
 Notes:
 
@@ -68,6 +74,27 @@ Notes:
 - default ingest behavior skips already-ingested PDFs; use override existing to reprocess.
 - ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
+- LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
+
+## 5) Diagnostics and model structure
+
+Use the **Model Details & Diagnostics** tab in the web UI to inspect:
+
+- pipeline architecture (source metadata -> graph model -> retrieval -> grounded LLM answer)
+- graph schema (`Article`, `Author`, `Chunk`, `Token`, `Reference`, `CITES`)
+- retrieval strategy (token + vector + rerank)
+- grounding and citation enforcement design
+
+Click **Run Diagnostics** to execute runtime checks:
+
+- `paperpile_json_exists`
+- `sync_script_exists`
+- `openai_api_key_set`
+- `metadata_coverage_nonzero`
+- `pdf_headers_sample_quality`
+- `neo4j_connectivity`
+
+If a check fails, review the check details shown in the table and correct the corresponding file/config/runtime dependency.
 
 ## 4) CLI usage (optional)
 

@@ -13,6 +13,12 @@
       <p>Neo4j-backed PDF ingestion and contextual retrieval.</p>
     </header>
 
+    <section class="panel tab-bar">
+      <button class="tab-btn active" data-tab="operationsTab">Operations</button>
+      <button class="tab-btn" data-tab="detailsTab">Model Details & Diagnostics</button>
+    </section>
+
+    <div id="operationsTab" class="tab-content active">
     <section class="panel">
       <h2>How To Use</h2>
       <ol>
@@ -77,6 +83,42 @@
       <button id="queryStopBtn">Stop Query</button>
       <div id="queryResults" class="output"></div>
     </section>
+
+    <section class="panel">
+      <h2>LLM Answer (RAG Grounded)</h2>
+      <div class="row">
+        <input id="askQuestion" placeholder="Ask a question grounded in your ingested corpus..." />
+        <input id="askRagResults" type="number" value="8" min="1" max="30" />
+        <input id="askModel" placeholder="model (default from env OPENAI_MODEL)" />
+        <label><input type="checkbox" id="askEnforceCitations" checked /> Enforce citations</label>
+      </div>
+      <button id="askBtn">Ask ChatGPT (Grounded)</button>
+      <button id="askExportMdBtn">Export Markdown</button>
+      <button id="askExportCsvBtn">Export Citations CSV</button>
+      <button id="askPrintBtn">Open Print View (PDF)</button>
+      <div id="askOut" class="output"></div>
+    </section>
+    </div>
+
+    <div id="detailsTab" class="tab-content">
+      <section class="panel">
+        <h2>Architecture</h2>
+        <ul>
+          <li><strong>Data source:</strong> PDFs in <code>pdfs/</code> plus bibliographic metadata from <code>Paperpile.json</code>.</li>
+          <li><strong>Graph model:</strong> <code>Article</code>, <code>Author</code>, <code>Chunk</code>, <code>Token</code>, <code>Reference</code>, <code>CITES</code>.</li>
+          <li><strong>Retrieval:</strong> Hybrid token + vector search, then lexical reranking.</li>
+          <li><strong>LLM grounding:</strong> RAG chunks are passed as citation blocks <code>[C1]</code>, <code>[C2]</code>, etc.; answers are expected to cite these IDs inline.</li>
+          <li><strong>Safety:</strong> citation enforcement + unsupported-sentence risk audit.</li>
+          <li><strong>Incremental ingest:</strong> already-ingested files can be skipped; parsing cache is used for speed.</li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2>Diagnostics</h2>
+        <button id="diagBtn">Run Diagnostics</button>
+        <div id="diagOut" class="output"></div>
+      </section>
+    </div>
   </main>
 
   <script src="/static/app.js"></script>

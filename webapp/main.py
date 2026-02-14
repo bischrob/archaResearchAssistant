@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 import time
@@ -9,20 +10,41 @@ from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
+from src.rag.llm_answer import ask_openai_grounded
 from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
+from src.rag.report_export import citations_to_csv, to_markdown
 
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "webapp" / "static"
 SYNC_SCRIPT = ROOT / "scripts" / "sync_pdfs_from_gdrive.sh"
+DOTENV_PATH = ROOT / ".env"
+
+
+def _load_dotenv(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        key = k.strip()
+        val = v.strip().strip("'").strip('"')
+        if key and key not in os.environ:
+            os.environ[key] = val
+
+
+_load_dotenv(DOTENV_PATH)
 
 app = FastAPI(title="Research Assistant RAG UI", version="0.1.0")
 app.add_middleware(
@@ -48,6 +70,18 @@ class IngestRequest(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     limit: int = Field(default=5, ge=1, le=20)
+
+
+class AskRequest(BaseModel):
+    question: str
+    rag_results: int = Field(default=8, ge=1, le=30)
+    model: str | None = None
+    enforce_citations: bool = True
+
+
+class AskExportRequest(BaseModel):
+    report: dict[str, Any]
+    format: str = Field(default="markdown", pattern="^(markdown|csv)$")
 
 
 class IngestPreviewRequest(BaseModel):
@@ -160,6 +194,25 @@ def _count_local_pdfs(root_dir: str) -> int:
     return sum(1 for p in root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf")
 
 
+def _sample_valid_pdf_headers(root_dir: str, sample_limit: int = 300) -> dict[str, int]:
+    root = Path(root_dir)
+    checked = 0
+    valid = 0
+    for p in root.rglob("*"):
+        if checked >= sample_limit:
+            break
+        if not p.is_file() or p.suffix.lower() != ".pdf":
+            continue
+        checked += 1
+        try:
+            with open(p, "rb") as f:
+                if f.read(4) == b"%PDF":
+                    valid += 1
+        except Exception:
+            pass
+    return {"checked": checked, "valid": valid}
+
+
 def _count_remote_pdfs(remote_path: str) -> int | None:
     try:
         proc = subprocess.run(
@@ -198,6 +251,95 @@ def health() -> dict:
     finally:
         store.close()
     return {"status": "ok", "neo4j_uri": settings.neo4j_uri, "stats": stats}
+
+
+@app.get("/api/diagnostics")
+def diagnostics() -> dict:
+    settings = Settings()
+    diag: dict[str, Any] = {}
+    checks: list[dict[str, Any]] = []
+
+    # Config and file checks
+    paperpile_path = Path(settings.paperpile_json)
+    checks.append(
+        {
+            "name": "paperpile_json_exists",
+            "ok": paperpile_path.exists(),
+            "details": str(paperpile_path),
+        }
+    )
+    checks.append(
+        {
+            "name": "sync_script_exists",
+            "ok": SYNC_SCRIPT.exists(),
+            "details": str(SYNC_SCRIPT),
+        }
+    )
+    checks.append(
+        {
+            "name": "openai_api_key_set",
+            "ok": bool(os.getenv("OPENAI_API_KEY", "").strip()),
+            "details": "OPENAI_API_KEY present in environment",
+        }
+    )
+
+    # Metadata coverage checks
+    metadata_index = load_paperpile_index(settings.paperpile_json)
+    pdf_root = Path("pdfs")
+    total_local_pdfs = _count_local_pdfs(str(pdf_root)) if pdf_root.exists() else 0
+    with_meta = 0
+    if pdf_root.exists():
+        for p in pdf_root.rglob("*"):
+            if not p.is_file() or p.suffix.lower() != ".pdf":
+                continue
+            if find_metadata_for_pdf(metadata_index, p.name):
+                with_meta += 1
+    diag["pdfs_total"] = total_local_pdfs
+    diag["pdfs_with_metadata"] = with_meta
+    checks.append(
+        {
+            "name": "metadata_coverage_nonzero",
+            "ok": with_meta > 0,
+            "details": f"{with_meta}/{total_local_pdfs} local PDFs matched to metadata",
+        }
+    )
+    hdr = _sample_valid_pdf_headers(str(pdf_root), sample_limit=300) if pdf_root.exists() else {"checked": 0, "valid": 0}
+    diag["pdf_header_sample"] = hdr
+    checks.append(
+        {
+            "name": "pdf_headers_sample_quality",
+            "ok": (hdr["checked"] == 0) or (hdr["valid"] / max(1, hdr["checked"]) >= 0.5),
+            "details": f"{hdr['valid']}/{hdr['checked']} sampled PDFs have valid %PDF header",
+        }
+    )
+
+    # Neo4j connectivity and stats check
+    neo4j_ok = False
+    neo4j_stats = {}
+    try:
+        store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+        try:
+            neo4j_stats = store.graph_stats()
+            neo4j_ok = True
+        finally:
+            store.close()
+    except Exception as exc:
+        neo4j_stats = {"error": str(exc)}
+    checks.append(
+        {
+            "name": "neo4j_connectivity",
+            "ok": neo4j_ok,
+            "details": neo4j_stats,
+        }
+    )
+    diag["neo4j_stats"] = neo4j_stats
+
+    overall_ok = all(bool(c.get("ok")) for c in checks)
+    return {
+        "ok": overall_ok,
+        "checks": checks,
+        "details": diag,
+    }
 
 
 @app.post("/api/sync")
@@ -388,6 +530,55 @@ def query(req: QueryRequest) -> dict:
         return {"ok": True, "query": req.query, "results": rows}
 
     return jobs.start("query", run)
+
+
+@app.post("/api/ask")
+def ask(req: AskRequest) -> dict:
+    question = (req.question or "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    settings = Settings()
+    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    try:
+        rag_rows = contextual_retrieve(store, question, limit=req.rag_results)
+    finally:
+        store.close()
+
+    try:
+        llm = ask_openai_grounded(
+            question=question,
+            rows=rag_rows,
+            model=req.model,
+            enforce_citations=req.enforce_citations,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    audit = audit_answer_support(llm.get("answer", ""), llm.get("used_citations", []))
+
+    report = {
+        "ok": True,
+        "question": question,
+        "rag_results_count": len(rag_rows),
+        "rag_results": rag_rows,
+        "model": llm.get("model"),
+        "answer": llm.get("answer"),
+        "citation_enforced": llm.get("citation_enforced"),
+        "audit": audit,
+        "used_citations": llm.get("used_citations", []),
+        "all_citations": llm.get("all_citations", []),
+    }
+    return report
+
+
+@app.post("/api/ask/export")
+def ask_export(req: AskExportRequest):
+    if req.format == "markdown":
+        text = to_markdown(req.report or {})
+        return PlainTextResponse(text, media_type="text/markdown")
+    csv_text = citations_to_csv(req.report or {})
+    return PlainTextResponse(csv_text, media_type="text/csv")
 
 
 @app.get("/api/query/status")

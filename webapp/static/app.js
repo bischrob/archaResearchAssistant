@@ -12,6 +12,7 @@ async function api(path, body) {
 }
 
 const pollers = {};
+let lastAskReport = null;
 
 function escapeHtml(v) {
   return String(v ?? "")
@@ -260,6 +261,127 @@ function renderQueryJob(job) {
   `;
 }
 
+function renderAskResult(payload) {
+  const out = document.getElementById("askOut");
+  const used = payload?.used_citations || [];
+  const allCites = payload?.all_citations || [];
+  const answer = payload?.answer || "";
+  const audit = payload?.audit || {};
+  out.innerHTML = `
+    ${statusHeader({ status: "completed" }, "LLM Answer")}
+    <div class="kv">
+      <strong>Model</strong><span>${escapeHtml(payload?.model || "")}</span>
+      <strong>RAG Results Used</strong><span>${escapeHtml(payload?.rag_results_count ?? 0)}</span>
+      <strong>Citations Referenced</strong><span>${escapeHtml(used.length)}</span>
+      <strong>Citation Enforcement</strong><span>${escapeHtml(payload?.citation_enforced ?? true)}</span>
+      <strong>Risk</strong><span>${escapeHtml(audit.risk_label || "n/a")} (${escapeHtml(audit.risk_score ?? "n/a")})</span>
+    </div>
+    ${audit.unsupported_sentence_count ? `<details><summary>Potentially Unsupported Sentences (${escapeHtml(audit.unsupported_sentence_count)})</summary><ul class="list-box">${(audit.unsupported_sentences || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></details>` : ""}
+    <details open>
+      <summary>Answer</summary>
+      <div>${escapeHtml(answer)}</div>
+    </details>
+    ${used.length ? `
+      <details open>
+        <summary>Used Citations (${used.length})</summary>
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>ID</th><th>Title</th><th>Year</th><th>Authors</th><th>Citekey</th><th>Pages</th><th>Chunk</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${used.map((c) => `
+              <tr>
+                <td>${escapeHtml(c.citation_id)}</td>
+                <td>${escapeHtml(c.article_title || "")}</td>
+                <td>${escapeHtml(c.article_year || "")}</td>
+                <td>${escapeHtml((c.authors || []).join(", "))}</td>
+                <td>${escapeHtml(c.citekey || "")}</td>
+                <td>${escapeHtml(c.page_start || "")}-${escapeHtml(c.page_end || "")}</td>
+                <td>${escapeHtml(c.chunk_id || "")}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </details>
+    ` : '<div class="empty">No inline [C#] citations were detected in the model output.</div>'}
+    <details>
+      <summary>All Provided Context Citations (${allCites.length})</summary>
+      <ul class="list-box">
+        ${allCites.slice(0, 200).map((c) => `<li>${escapeHtml(c.citation_id)} - ${escapeHtml(c.article_title || "")}</li>`).join("")}
+      </ul>
+    </details>
+  `;
+}
+
+function renderDiagnostics(payload) {
+  const out = document.getElementById("diagOut");
+  const checks = payload?.checks || [];
+  const details = payload?.details || {};
+  out.innerHTML = `
+    ${statusHeader({ status: payload?.ok ? "completed" : "failed" }, "Diagnostics")}
+    <div class="kv">
+      <strong>Overall</strong><span class="${payload?.ok ? "ok" : "bad"}">${escapeHtml(payload?.ok ? "PASS" : "FAIL")}</span>
+      <strong>Local PDFs</strong><span>${escapeHtml(details.pdfs_total ?? 0)}</span>
+      <strong>With Metadata</strong><span>${escapeHtml(details.pdfs_with_metadata ?? 0)}</span>
+      <strong>Neo4j Articles</strong><span>${escapeHtml(details?.neo4j_stats?.articles ?? "n/a")}</span>
+    </div>
+    <table class="preview-table">
+      <thead><tr><th>Check</th><th>Status</th><th>Details</th></tr></thead>
+      <tbody>
+        ${checks.map((c) => `
+          <tr>
+            <td>${escapeHtml(c.name)}</td>
+            <td class="${c.ok ? "ok" : "bad"}">${escapeHtml(c.ok ? "OK" : "FAIL")}</td>
+            <td><pre>${escapeHtml(typeof c.details === "string" ? c.details : JSON.stringify(c.details, null, 2))}</pre></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function initTabs() {
+  const buttons = Array.from(document.querySelectorAll(".tab-btn"));
+  const tabs = Array.from(document.querySelectorAll(".tab-content"));
+  for (const btn of buttons) {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-tab");
+      buttons.forEach((b) => b.classList.remove("active"));
+      tabs.forEach((t) => t.classList.remove("active"));
+      btn.classList.add("active");
+      const tab = document.getElementById(target);
+      if (tab) tab.classList.add("active");
+    });
+  }
+}
+
+async function downloadReport(format, filename) {
+  if (!lastAskReport) {
+    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", "No report to export yet.");
+    return;
+  }
+  const res = await fetch("/api/ask/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report: lastAskReport, format }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(txt || "Export failed");
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 document.getElementById("healthBtn").addEventListener("click", async () => {
   try {
     await refreshHealth();
@@ -372,10 +494,82 @@ document.getElementById("queryStopBtn").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("askBtn").addEventListener("click", async () => {
+  const out = document.getElementById("askOut");
+  const question = document.getElementById("askQuestion").value.trim();
+  const ragResults = parseInt(document.getElementById("askRagResults").value || "8", 10);
+  const model = document.getElementById("askModel").value.trim();
+  if (!question) {
+    renderSimpleMessage(out, "LLM Answer", "failed", "Question cannot be empty.");
+    return;
+  }
+  renderSimpleMessage(out, "LLM Answer", "running", "Querying RAG and calling model...");
+  try {
+    const payload = await api("/api/ask", {
+      question,
+      rag_results: ragResults,
+      model: model || null,
+      enforce_citations: document.getElementById("askEnforceCitations").checked,
+    });
+    lastAskReport = payload;
+    renderAskResult(payload);
+  } catch (err) {
+    renderSimpleMessage(out, "LLM Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askExportMdBtn").addEventListener("click", async () => {
+  try {
+    await downloadReport("markdown", "rag_answer_report.md");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askExportCsvBtn").addEventListener("click", async () => {
+  try {
+    await downloadReport("csv", "rag_used_citations.csv");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askPrintBtn").addEventListener("click", async () => {
+  if (!lastAskReport) {
+    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", "No report to print yet.");
+    return;
+  }
+  const mdRes = await fetch("/api/ask/export", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ report: lastAskReport, format: "markdown" }),
+  });
+  const md = await mdRes.text();
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.write(`<html><head><title>RAG Report</title></head><body><pre>${escapeHtml(md)}</pre></body></html>`);
+  w.document.close();
+});
+
+document.getElementById("diagBtn").addEventListener("click", async () => {
+  const out = document.getElementById("diagOut");
+  renderSimpleMessage(out, "Diagnostics", "running", "Running checks...");
+  try {
+    const res = await fetch("/api/diagnostics");
+    const payload = await res.json();
+    renderDiagnostics(payload);
+  } catch (err) {
+    renderSimpleMessage(out, "Diagnostics", "failed", err.message);
+  }
+});
+
 renderSyncJob({ status: "idle" });
 renderSimpleMessage(document.getElementById("ingestPreviewOut"), "Ingest Preview", "idle", "Click Preview Selection.");
 renderIngestJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
+renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "idle", "Ask a grounded question.");
+renderSimpleMessage(document.getElementById("diagOut"), "Diagnostics", "idle", "Click Run Diagnostics.");
+initTabs();
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
 });

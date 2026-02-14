@@ -36,6 +36,30 @@ header { margin-bottom: 14px; }
   margin-bottom: 14px;
 }
 
+.tab-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  background: #e0d7c7;
+  color: #233136;
+  border: 1px solid #ccbfa8;
+}
+
+.tab-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -169,6 +193,16 @@ details {
 
 .preview-table th {
   background: #f1e7d3;
+}
+
+.ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.bad {
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .progress {
