@@ -234,10 +234,22 @@ def test_query_validation_and_success(monkeypatch, client):
 
 
 def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
+    captured = {}
+
+    def fake_retrieve(store, query, limit):
+        captured["query"] = query
+        captured["limit"] = limit
+        return [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020}]
+
     monkeypatch.setattr(
         webmain,
         "contextual_retrieve",
-        lambda store, query, limit: [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020}],
+        fake_retrieve,
+    )
+    monkeypatch.setattr(
+        webmain,
+        "preprocess_search_query",
+        lambda question, model=None: f"{question} bischoff archaeology",
     )
     monkeypatch.setattr(
         webmain,
@@ -266,6 +278,9 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     assert data["ok"] is True
     assert data["answer"] == "Answer [C1]"
     assert len(data["used_citations"]) == 1
+    assert data["search_query_used"] == "What is this? bischoff archaeology"
+    assert data["query_preprocess"]["method"] == "llm_rewrite"
+    assert captured["query"] == "What is this? bischoff archaeology"
 
 
 def test_ask_export_markdown_and_csv(client):
