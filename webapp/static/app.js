@@ -21,6 +21,47 @@ function escapeHtml(v) {
     .replaceAll(">", "&gt;");
 }
 
+function markdownToHtml(markdown) {
+  let text = escapeHtml(String(markdown || "").replaceAll("\r\n", "\n"));
+  const codeBlocks = [];
+  text = text.replace(/```([\s\S]*?)```/g, (_, code) => {
+    const token = `@@CODEBLOCK_${codeBlocks.length}@@`;
+    codeBlocks.push(`<pre><code>${code}</code></pre>`);
+    return token;
+  });
+  text = text.replace(/^### (.+)$/gm, "<h3>$1</h3>");
+  text = text.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+  text = text.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
+  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+  text = text.replace(/(?:^|\n)((?:- .*(?:\n|$))+)/g, (m, list) => {
+    const items = list
+      .trim()
+      .split("\n")
+      .map((line) => line.replace(/^- /, "").trim())
+      .map((item) => `<li>${item}</li>`)
+      .join("");
+    return `\n<ul>${items}</ul>\n`;
+  });
+  const blocks = text
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean)
+    .map((b) => {
+      if (/^<(h1|h2|h3|ul|pre)/.test(b) || /^@@CODEBLOCK_\d+@@$/.test(b)) {
+        return b;
+      }
+      return `<p>${b.replaceAll("\n", "<br />")}</p>`;
+    });
+  let html = blocks.join("\n");
+  for (let i = 0; i < codeBlocks.length; i += 1) {
+    html = html.replace(`@@CODEBLOCK_${i}@@`, codeBlocks[i]);
+  }
+  return html;
+}
+
 function statusClass(status) {
   return `status-${status || "idle"}`;
 }
@@ -279,7 +320,7 @@ function renderAskResult(payload) {
     ${audit.unsupported_sentence_count ? `<details><summary>Potentially Unsupported Sentences (${escapeHtml(audit.unsupported_sentence_count)})</summary><ul class="list-box">${(audit.unsupported_sentences || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></details>` : ""}
     <details open>
       <summary>Answer</summary>
-      <div>${escapeHtml(answer)}</div>
+      <article class="markdown-body">${markdownToHtml(answer)}</article>
     </details>
     ${used.length ? `
       <details open>
@@ -534,21 +575,12 @@ document.getElementById("askExportCsvBtn").addEventListener("click", async () =>
   }
 });
 
-document.getElementById("askPrintBtn").addEventListener("click", async () => {
-  if (!lastAskReport) {
-    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", "No report to print yet.");
-    return;
+document.getElementById("askExportPdfBtn").addEventListener("click", async () => {
+  try {
+    await downloadReport("pdf", "rag_answer_report.pdf");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
   }
-  const mdRes = await fetch("/api/ask/export", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ report: lastAskReport, format: "markdown" }),
-  });
-  const md = await mdRes.text();
-  const w = window.open("", "_blank");
-  if (!w) return;
-  w.document.write(`<html><head><title>RAG Report</title></head><body><pre>${escapeHtml(md)}</pre></body></html>`);
-  w.document.close();
 });
 
 document.getElementById("diagBtn").addEventListener("click", async () => {

@@ -230,6 +230,34 @@ details {
   margin-top: 4px;
 }
 
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3 {
+  margin: 0.4rem 0 0.5rem 0;
+}
+
+.markdown-body p {
+  margin: 0.5rem 0;
+}
+
+.markdown-body ul {
+  margin: 0.5rem 0 0.7rem 1.2rem;
+}
+
+.markdown-body pre {
+  overflow-x: auto;
+  padding: 0.7rem;
+  background: #f4f7fb;
+  border: 1px solid #d7deea;
+  border-radius: 6px;
+}
+
+.markdown-body code {
+  background: #f4f7fb;
+  padding: 0.1rem 0.25rem;
+  border-radius: 4px;
+}
+
 pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;

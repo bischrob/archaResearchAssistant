@@ -22,7 +22,7 @@ Default DB env values:
 - `NEO4J_PASSWORD=archaResearchAssistant`
 - `PAPERPILE_JSON=Paperpile.json`
 - `OPENAI_API_KEY=...`
-- `OPENAI_MODEL=gpt-5` (optional; defaults to `gpt-5`)
+- `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 
 ## 2) Sync PDFs from Google Drive
 
@@ -63,7 +63,7 @@ The GUI includes in-app instructions and buttons for:
 - contextual query
 - stop/cancel for sync, ingest, and query jobs
 - grounded ChatGPT Q&A with configurable RAG context size
-- export of answer reports (Markdown, CSV) and print view (PDF via browser print)
+- export of answer reports (Markdown, CSV, PDF via pandoc)
 - a dedicated `Model Details & Diagnostics` tab with architecture notes and environment/data checks
 
 Notes:
@@ -75,6 +75,11 @@ Notes:
 - ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
 - LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
+- LLM answers are rendered as Markdown in the UI.
+
+PDF export dependency:
+
+- Install `pandoc` and at least one PDF engine (`xelatex`, `pdflatex`, `wkhtmltopdf`, or `weasyprint`) available in `PATH`.
 
 ## 5) Diagnostics and model structure
 

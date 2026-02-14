@@ -95,7 +95,7 @@
       <button id="askBtn">Ask ChatGPT (Grounded)</button>
       <button id="askExportMdBtn">Export Markdown</button>
       <button id="askExportCsvBtn">Export Citations CSV</button>
-      <button id="askPrintBtn">Open Print View (PDF)</button>
+      <button id="askExportPdfBtn">Export PDF (Pandoc)</button>
       <div id="askOut" class="output"></div>
     </section>
     </div>
@@ -111,6 +111,23 @@
           <li><strong>Safety:</strong> citation enforcement + unsupported-sentence risk audit.</li>
           <li><strong>Incremental ingest:</strong> already-ingested files can be skipped; parsing cache is used for speed.</li>
         </ul>
+      </section>
+
+      <section class="panel">
+        <h2>How Query Works</h2>
+        <ol>
+          <li><strong>Candidate retrieval:</strong> the query is encoded and matched against chunk vectors plus lexical token overlap to collect candidate <code>Chunk</code> nodes.</li>
+          <li><strong>Relationship expansion:</strong> each chunk is connected to its parent <code>Article</code> and related <code>Author</code> nodes, and article citation links are inspected through <code>(Article)-[:CITES]-&gt;(Article)</code>.</li>
+          <li><strong>Context enrichment:</strong> results include citation neighborhood signals (what the source cites and what cites it) so highly connected, contextually relevant work is easier to surface.</li>
+          <li><strong>Reranking:</strong> candidates are reranked using lexical overlap and graph-aware features to produce a final combined score.</li>
+          <li><strong>Grounded answering:</strong> selected chunks are passed to the LLM as numbered citation blocks (<code>[C1]</code>, <code>[C2]</code>, ...), and final answers are expected to cite those blocks inline.</li>
+        </ol>
+        <p>
+          <strong>Relationship usage summary:</strong>
+          <code>Author -[WROTE]-&gt; Article -[HAS_CHUNK]-&gt; Chunk</code>,
+          <code>Article -[CITES]-&gt; Article</code>,
+          and reference metadata links are used to provide richer retrieval context than isolated chunk matching.
+        </p>
       </section>
 
       <section class="panel">

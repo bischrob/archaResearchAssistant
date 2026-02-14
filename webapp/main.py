@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
-from src.rag.report_export import citations_to_csv, to_markdown
+from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,18 +33,28 @@ DOTENV_PATH = ROOT / ".env"
 def _load_dotenv(path: Path) -> None:
     if not path.exists():
         return
+    alias_map = {
+        "OpenAPIKey": "OPENAI_API_KEY",
+        "OPENAPIKEY": "OPENAI_API_KEY",
+    }
     for raw_line in path.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
         k, v = line.split("=", 1)
-        key = k.strip()
+        key = alias_map.get(k.strip(), k.strip())
         val = v.strip().strip("'").strip('"')
         if key and key not in os.environ:
             os.environ[key] = val
 
 
 _load_dotenv(DOTENV_PATH)
+
+
+def _openai_api_key_set() -> bool:
+    primary = os.getenv("OPENAI_API_KEY", "").strip()
+    alias = os.getenv("OpenAPIKey", "").strip()
+    return bool(primary or alias)
 
 app = FastAPI(title="Research Assistant RAG UI", version="0.1.0")
 app.add_middleware(
@@ -81,7 +91,7 @@ class AskRequest(BaseModel):
 
 class AskExportRequest(BaseModel):
     report: dict[str, Any]
-    format: str = Field(default="markdown", pattern="^(markdown|csv)$")
+    format: str = Field(default="markdown", pattern="^(markdown|csv|pdf)$")
 
 
 class IngestPreviewRequest(BaseModel):
@@ -278,7 +288,7 @@ def diagnostics() -> dict:
     checks.append(
         {
             "name": "openai_api_key_set",
-            "ok": bool(os.getenv("OPENAI_API_KEY", "").strip()),
+            "ok": _openai_api_key_set(),
             "details": "OPENAI_API_KEY present in environment",
         }
     )
@@ -574,11 +584,22 @@ def ask(req: AskRequest) -> dict:
 
 @app.post("/api/ask/export")
 def ask_export(req: AskExportRequest):
+    report = req.report or {}
     if req.format == "markdown":
-        text = to_markdown(req.report or {})
+        text = to_markdown(report)
         return PlainTextResponse(text, media_type="text/markdown")
-    csv_text = citations_to_csv(req.report or {})
-    return PlainTextResponse(csv_text, media_type="text/csv")
+    if req.format == "csv":
+        csv_text = citations_to_csv(report)
+        return PlainTextResponse(csv_text, media_type="text/csv")
+    try:
+        pdf_bytes = markdown_to_pdf_bytes(to_markdown(report))
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=rag_answer_report.pdf"},
+    )
 
 
 @app.get("/api/query/status")
