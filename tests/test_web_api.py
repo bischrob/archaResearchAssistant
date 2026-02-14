@@ -48,6 +48,7 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
     script = tmp_path / "sync.sh"
     script.write_text("#!/usr/bin/env bash\nsleep 1\n")
     monkeypatch.setattr(webmain, "SYNC_SCRIPT", script)
+    monkeypatch.setattr(webmain, "_count_remote_pdfs", lambda _remote: None)
 
     class FakePopen:
         def __init__(self, *args, **kwargs):
@@ -217,3 +218,158 @@ def test_query_validation_and_success(monkeypatch, client):
     final = wait_for_status(client, "/api/query/status")
     assert final["status"] == "completed"
     assert len(final["result"]["results"]) == 1
+
+
+def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
+    monkeypatch.setattr(
+        webmain,
+        "contextual_retrieve",
+        lambda store, query, limit: [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020}],
+    )
+    monkeypatch.setattr(
+        webmain,
+        "ask_openai_grounded",
+        lambda question, rows, model=None, enforce_citations=True: {
+            "model": model or "gpt-test",
+            "answer": "Answer [C1]",
+            "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "citation_enforced": True,
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/ask", json={"question": "What is this?", "rag_results": 3, "model": "gpt-test"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["answer"] == "Answer [C1]"
+    assert len(data["used_citations"]) == 1
+
+
+def test_ask_export_markdown_and_csv(client):
+    report = {
+        "question": "Q?",
+        "model": "gpt-test",
+        "rag_results_count": 2,
+        "answer": "A [C1]",
+        "audit": {"risk_label": "low", "risk_score": 0.1},
+        "used_citations": [
+            {
+                "citation_id": "C1",
+                "article_title": "Paper A",
+                "article_year": 2020,
+                "authors": ["A A"],
+                "citekey": "A2020-x",
+                "doi": "10.1/x",
+                "page_start": 1,
+                "page_end": 2,
+                "chunk_id": "ch1",
+            }
+        ],
+    }
+    md = client.post("/api/ask/export", json={"report": report, "format": "markdown"})
+    assert md.status_code == 200
+    assert "RAG Answer Report" in md.text
+    assert "A [C1]" in md.text
+
+    csv_resp = client.post("/api/ask/export", json={"report": report, "format": "csv"})
+    assert csv_resp.status_code == 200
+    assert "citation_id,article_title" in csv_resp.text
+    assert "C1,Paper A" in csv_resp.text
+
+
+def test_diagnostics_endpoint_reports_pass(monkeypatch, tmp_path: Path, client):
+    monkeypatch.chdir(tmp_path)
+    pdf_root = tmp_path / "pdfs"
+    pdf_root.mkdir()
+    (pdf_root / "a.pdf").write_bytes(b"%PDF-1.7\n")
+    (pdf_root / "b.pdf").write_bytes(b"%PDF-1.7\n")
+    paperpile_path = tmp_path / "Paperpile.json"
+    paperpile_path.write_text("[]", encoding="utf-8")
+    sync_script = tmp_path / "sync.sh"
+    sync_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(webmain, "SYNC_SCRIPT", sync_script)
+
+    class FakeSettings:
+        neo4j_uri = "bolt://example:7687"
+        neo4j_user = "neo4j"
+        neo4j_password = "pass"
+        embedding_model = "model"
+        paperpile_json = str(paperpile_path)
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def graph_stats(self):
+            return {"articles": 3, "chunks": 4, "tokens": 5, "references": 6, "cites": 7}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+    monkeypatch.setattr(webmain, "load_paperpile_index", lambda _path: {"a.pdf": {"title": "A"}})
+    monkeypatch.setattr(
+        webmain,
+        "find_metadata_for_pdf",
+        lambda index, filename: index.get(filename.lower()),
+    )
+
+    resp = client.get("/api/diagnostics")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["details"]["pdfs_total"] == 2
+    assert data["details"]["pdfs_with_metadata"] == 1
+    assert data["details"]["neo4j_stats"]["articles"] == 3
+    assert any(c["name"] == "neo4j_connectivity" and c["ok"] is True for c in data["checks"])
+
+
+def test_diagnostics_endpoint_reports_neo4j_failure(monkeypatch, tmp_path: Path, client):
+    monkeypatch.chdir(tmp_path)
+    pdf_root = tmp_path / "pdfs"
+    pdf_root.mkdir()
+    (pdf_root / "a.pdf").write_bytes(b"%PDF-1.7\n")
+    paperpile_path = tmp_path / "Paperpile.json"
+    paperpile_path.write_text("[]", encoding="utf-8")
+    sync_script = tmp_path / "sync.sh"
+    sync_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setattr(webmain, "SYNC_SCRIPT", sync_script)
+
+    class FakeSettings:
+        neo4j_uri = "bolt://example:7687"
+        neo4j_user = "neo4j"
+        neo4j_password = "pass"
+        embedding_model = "model"
+        paperpile_json = str(paperpile_path)
+
+    class FailingStore:
+        def __init__(self, *args, **kwargs):
+            raise RuntimeError("neo4j down")
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "GraphStore", FailingStore)
+    monkeypatch.setattr(webmain, "load_paperpile_index", lambda _path: {"a.pdf": {"title": "A"}})
+    monkeypatch.setattr(
+        webmain,
+        "find_metadata_for_pdf",
+        lambda index, filename: index.get(filename.lower()),
+    )
+
+    resp = client.get("/api/diagnostics")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is False
+    assert any(c["name"] == "neo4j_connectivity" and c["ok"] is False for c in data["checks"])
