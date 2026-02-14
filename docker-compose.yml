@@ -1,0 +1,46 @@
+services:
+
+  neo4j:
+    image: neo4j:2025.02.0-community
+    container_name: neo4j
+    volumes:
+      - ./db/data:/var/lib/neo4j/data
+      - ./db/backups:/var/lib/neo4j/backups
+      - ./db/import:/var/lib/neo4j/import
+      - ./db/conf:/var/lib/neo4j/conf
+      - ./db/plugins:/var/lib/neo4j/plugins
+    environment:
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_server_directories_import=/var/lib/neo4j/
+      - NEO4J_dbms_security_allow__csv__import__from__file__urls=true
+      - NEO4J_AUTH=neo4j/archaResearchAssistant
+      - NEO4J_PLUGINS=["apoc"]
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    restart: unless-stopped
+
+  neo4j-admin:
+    image: neo4j:2025.02.0-community
+    container_name: neo4j-admin
+    entrypoint: ""
+    command: bash
+    user: "0:0"
+    volumes:
+      - ./db/data:/var/lib/neo4j/data
+      - ./db/backups:/var/lib/neo4j/import
+      - ./db/conf:/var/lib/neo4j/conf
+
+  anystyle:
+    image: ruby:3.3
+    container_name: anystyle
+    command: [ "/bin/bash" ]
+    stdin_open: true
+    tty: true
+    volumes:
+      - /home/rjbischo/researchAssistant/tmp:/tmp
+    environment:
+      - LANG=C.UTF-8
+    build:
+      context: anystyle
+    restart: unless-stopped
