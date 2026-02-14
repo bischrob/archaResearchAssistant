@@ -126,3 +126,45 @@ def ask_openai_grounded(
         "used_citations": used_citations,
         "all_citations": citations,
     }
+
+
+def preprocess_search_query(question: str, model: str | None = None) -> str:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("OpenAPIKey", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENAI_API_KEY is not set.")
+
+    selected_model = (model or os.getenv("OPENAI_MODEL", "gpt-5.1")).strip()
+    system = (
+        "You rewrite user questions into compact retrieval queries for academic search. "
+        "Preserve key entities (authors, place names, years, methods, concepts). "
+        "Return one plain-text line only, no explanation."
+    )
+    user = (
+        f"Question:\n{question}\n\n"
+        "Return a single retrieval query string suitable for database search."
+    )
+
+    resp = requests.post(
+        "https://api.openai.com/v1/chat/completions",
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        json={
+            "model": selected_model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        },
+        timeout=60,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"OpenAI API error {resp.status_code}: {resp.text[:500]}")
+    payload = resp.json()
+    text = (
+        payload.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content", "")
+        .strip()
+    )
+    line = (text.splitlines()[0] if text else "").strip().strip('"').strip("'")
+    line = re.sub(r"\s+", " ", line)
+    return line or question

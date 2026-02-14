@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
-from src.rag.llm_answer import ask_openai_grounded
+from src.rag.llm_answer import ask_openai_grounded, preprocess_search_query
 from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
@@ -88,6 +88,7 @@ class AskRequest(BaseModel):
     rag_results: int = Field(default=8, ge=1, le=30)
     model: str | None = None
     enforce_citations: bool = True
+    preprocess_search: bool = True
 
 
 class AskExportRequest(BaseModel):
@@ -551,10 +552,28 @@ def ask(req: AskRequest) -> dict:
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
+    search_query_used = question
+    preprocess_meta: dict[str, Any] = {
+        "enabled": req.preprocess_search,
+        "method": "identity",
+        "error": None,
+    }
+    if req.preprocess_search:
+        try:
+            rewritten = preprocess_search_query(question, model=req.model).strip()
+            if rewritten:
+                search_query_used = rewritten
+                preprocess_meta["method"] = "llm_rewrite"
+            else:
+                preprocess_meta["method"] = "fallback_original"
+        except Exception as exc:
+            preprocess_meta["method"] = "fallback_original"
+            preprocess_meta["error"] = str(exc)
+
     settings = Settings()
     store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
     try:
-        rag_rows = contextual_retrieve(store, question, limit=req.rag_results)
+        rag_rows = contextual_retrieve(store, search_query_used, limit=req.rag_results)
     finally:
         store.close()
 
@@ -573,6 +592,8 @@ def ask(req: AskRequest) -> dict:
     report = {
         "ok": True,
         "question": question,
+        "search_query_used": search_query_used,
+        "query_preprocess": preprocess_meta,
         "rag_results_count": len(rag_rows),
         "rag_results": rag_rows,
         "model": llm.get("model"),

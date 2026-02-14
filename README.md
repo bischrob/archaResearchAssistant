@@ -79,6 +79,7 @@ Notes:
 - LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
 - LLM answers are rendered as Markdown in the UI.
 - Retrieval is two-pass: broader candidate recall (vector + token + author channels) followed by stricter reranking on chunk/title/author/year/phrase and citation-neighborhood signals.
+- Ask flow defaults to pre-LLM query rewrite; responses include the exact `search_query_used` for transparency.
 
 PDF export dependency:
 

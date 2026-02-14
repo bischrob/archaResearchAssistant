@@ -13,6 +13,7 @@ async function api(path, body) {
 
 const pollers = {};
 let lastAskReport = null;
+let askLoadingTimer = null;
 
 function escapeHtml(v) {
   return String(v ?? "")
@@ -308,15 +309,19 @@ function renderAskResult(payload) {
   const allCites = payload?.all_citations || [];
   const answer = payload?.answer || "";
   const audit = payload?.audit || {};
+  const preprocess = payload?.query_preprocess || {};
   out.innerHTML = `
     ${statusHeader({ status: "completed" }, "LLM Answer")}
     <div class="kv">
       <strong>Model</strong><span>${escapeHtml(payload?.model || "")}</span>
+      <strong>Search Query Used</strong><span>${escapeHtml(payload?.search_query_used || payload?.question || "")}</span>
+      <strong>Preprocess Method</strong><span>${escapeHtml(preprocess.method || "identity")}</span>
       <strong>RAG Results Used</strong><span>${escapeHtml(payload?.rag_results_count ?? 0)}</span>
       <strong>Citations Referenced</strong><span>${escapeHtml(used.length)}</span>
       <strong>Citation Enforcement</strong><span>${escapeHtml(payload?.citation_enforced ?? true)}</span>
       <strong>Risk</strong><span>${escapeHtml(audit.risk_label || "n/a")} (${escapeHtml(audit.risk_score ?? "n/a")})</span>
     </div>
+    ${preprocess.error ? `<div class="empty">Preprocess fallback: ${escapeHtml(preprocess.error)}</div>` : ""}
     ${audit.unsupported_sentence_count ? `<details><summary>Potentially Unsupported Sentences (${escapeHtml(audit.unsupported_sentence_count)})</summary><ul class="list-box">${(audit.unsupported_sentences || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></details>` : ""}
     <details open>
       <summary>Answer</summary>
@@ -548,17 +553,39 @@ document.getElementById("askBtn").addEventListener("click", async () => {
     renderSimpleMessage(out, "LLM Answer", "failed", "Question cannot be empty.");
     return;
   }
-  renderSimpleMessage(out, "LLM Answer", "running", "Querying RAG and calling model...");
+  const loadingSteps = [
+    "Parsing question and extracting likely search terms...",
+    "Running pre-LLM query rewrite...",
+    "Searching Neo4j with the rewritten query...",
+    "Compiling grounded citation context...",
+    "Calling model for final grounded answer...",
+  ];
+  let loadingIndex = 0;
+  renderSimpleMessage(out, "LLM Answer", "running", loadingSteps[loadingIndex]);
+  if (askLoadingTimer) clearInterval(askLoadingTimer);
+  askLoadingTimer = setInterval(() => {
+    loadingIndex = Math.min(loadingIndex + 1, loadingSteps.length - 1);
+    renderSimpleMessage(out, "LLM Answer", "running", loadingSteps[loadingIndex]);
+  }, 1400);
   try {
     const payload = await api("/api/ask", {
       question,
       rag_results: ragResults,
       model: model || null,
       enforce_citations: document.getElementById("askEnforceCitations").checked,
+      preprocess_search: document.getElementById("askPreprocessSearch").checked,
     });
+    if (askLoadingTimer) {
+      clearInterval(askLoadingTimer);
+      askLoadingTimer = null;
+    }
     lastAskReport = payload;
     renderAskResult(payload);
   } catch (err) {
+    if (askLoadingTimer) {
+      clearInterval(askLoadingTimer);
+      askLoadingTimer = null;
+    }
     renderSimpleMessage(out, "LLM Answer", "failed", err.message);
   }
 });

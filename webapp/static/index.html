@@ -93,6 +93,7 @@
         <input id="askQuestion" placeholder="Ask a question grounded in your ingested corpus..." />
         <input id="askRagResults" type="number" value="8" min="1" max="30" />
         <input id="askModel" placeholder="model (default from env OPENAI_MODEL)" />
+        <label><input type="checkbox" id="askPreprocessSearch" checked /> Preprocess search query (LLM rewrite)</label>
         <label><input type="checkbox" id="askEnforceCitations" checked /> Enforce citations</label>
       </div>
       <button id="askBtn">Ask ChatGPT (Grounded)</button>
