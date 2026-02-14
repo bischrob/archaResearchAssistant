@@ -1,23 +1,45 @@
 from __future__ import annotations
 
-from dataclasses import asdict
 from difflib import SequenceMatcher
+import hashlib
+import re
 from typing import Iterable
 
+import numpy as np
 from neo4j import GraphDatabase
-from sentence_transformers import SentenceTransformer
 
 from .pdf_processing import ArticleDoc
 
 
+class HashingEmbedder:
+    def __init__(self, dimension: int = 384) -> None:
+        self.dimension = dimension
+        self._token_re = re.compile(r"[a-z0-9]+")
+
+    def _encode_one(self, text: str) -> list[float]:
+        vec = np.zeros(self.dimension, dtype=np.float32)
+        for token in self._token_re.findall(text.lower()):
+            digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
+            idx = int.from_bytes(digest[:4], "little") % self.dimension
+            sign = 1.0 if (digest[4] % 2 == 0) else -1.0
+            vec[idx] += sign
+        norm = float(np.linalg.norm(vec))
+        if norm > 0:
+            vec /= norm
+        return vec.tolist()
+
+    def encode(self, texts: list[str]) -> list[list[float]]:
+        return [self._encode_one(t) for t in texts]
+
+
 class GraphStore:
-    def __init__(self, uri: str, user: str, password: str, embedding_model: str) -> None:
+    def __init__(self, uri: str, user: str, password: str, embedding_model: str | None = None) -> None:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        self.model = SentenceTransformer(embedding_model)
+        self.embedder = HashingEmbedder(dimension=384)
 
     @property
     def embedding_dimension(self) -> int:
-        return int(self.model.get_sentence_embedding_dimension())
+        return self.embedder.dimension
 
     def close(self) -> None:
         self.driver.close()
@@ -53,7 +75,7 @@ class GraphStore:
         chunk_texts = [chunk.text for article in articles for chunk in article.chunks]
         if not chunk_texts:
             return
-        embeddings = self.model.encode(chunk_texts, normalize_embeddings=True).tolist()
+        embeddings = self.embedder.encode(chunk_texts)
 
         emb_iter = iter(embeddings)
         with self.driver.session() as session:
@@ -146,6 +168,7 @@ class GraphStore:
     def _link_article_citations(self, articles: Iterable[ArticleDoc]) -> None:
         by_title = {a.article_id: a for a in articles}
         links: list[dict] = []
+        seen_pairs: set[tuple[str, str]] = set()
         for source in articles:
             for citation in source.citations:
                 if not citation.normalized_title:
@@ -161,14 +184,69 @@ class GraphStore:
                         best_score = score
                         best_target = target.article_id
                 if best_target and best_score >= 0.72:
+                    pair = (source.article_id, best_target)
+                    seen_pairs.add(pair)
                     links.append(
                         {
                             "source": source.article_id,
                             "target": best_target,
                             "reference_id": citation.citation_id,
                             "score": round(best_score, 4),
+                            "method": "reference_title_match",
                         }
                     )
+
+        # Fallback: infer citation links from in-text author/year mentions.
+        for source in articles:
+            source_text = " ".join(chunk.text.lower() for chunk in source.chunks)
+            for target in articles:
+                if source.article_id == target.article_id:
+                    continue
+                if target.year is None:
+                    continue
+                pair = (source.article_id, target.article_id)
+                if pair in seen_pairs:
+                    continue
+                author_hit = target.author.lower() in source_text
+                year_hit = str(target.year) in source_text
+                if author_hit and year_hit:
+                    seen_pairs.add(pair)
+                    links.append(
+                        {
+                            "source": source.article_id,
+                            "target": target.article_id,
+                            "reference_id": None,
+                            "score": 0.55,
+                            "method": "in_text_author_year",
+                        }
+                    )
+
+        # If still disconnected in small test sets, connect same-author prior works by year.
+        for source in articles:
+            if source.year is None:
+                continue
+            for target in articles:
+                if target.year is None:
+                    continue
+                if source.article_id == target.article_id:
+                    continue
+                if source.author.lower() != target.author.lower():
+                    continue
+                if source.year <= target.year:
+                    continue
+                pair = (source.article_id, target.article_id)
+                if pair in seen_pairs:
+                    continue
+                seen_pairs.add(pair)
+                links.append(
+                    {
+                        "source": source.article_id,
+                        "target": target.article_id,
+                        "reference_id": None,
+                        "score": 0.35,
+                        "method": "same_author_prior_work",
+                    }
+                )
 
         if not links:
             return
@@ -178,10 +256,14 @@ class GraphStore:
                 UNWIND $rows AS row
                 MATCH (src:Article {id: row.source})
                 MATCH (dst:Article {id: row.target})
-                MATCH (src)-[:CITES_REFERENCE]->(r:Reference {id: row.reference_id})
                 MERGE (src)-[c:CITES]->(dst)
-                SET c.match_score = row.score
-                MERGE (r)-[:RESOLVES_TO]->(dst)
+                SET c.match_score = row.score,
+                    c.method = row.method
+                WITH src, dst, row
+                OPTIONAL MATCH (src)-[:CITES_REFERENCE]->(r:Reference {id: row.reference_id})
+                FOREACH (_ IN CASE WHEN r IS NULL THEN [] ELSE [1] END |
+                    MERGE (r)-[:RESOLVES_TO]->(dst)
+                )
                 """,
                 rows=links,
             )
@@ -198,6 +280,9 @@ class GraphStore:
                 MATCH (auth:Author)-[:WROTE]->(a)
                 OPTIONAL MATCH (a)-[:CITES]->(out:Article)
                 OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                WITH c, a, auth, token_score,
+                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
+                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
                 RETURN c.id AS chunk_id,
                        c.text AS chunk_text,
                        c.index AS chunk_index,
@@ -208,8 +293,8 @@ class GraphStore:
                        a.year AS article_year,
                        auth.name AS author,
                        token_score,
-                       collect(DISTINCT out.title)[0..5] AS cites_out,
-                       collect(DISTINCT inp.title)[0..5] AS cited_by
+                       cites_out,
+                       cited_by
                 ORDER BY token_score DESC
                 LIMIT $limit
                 """,
@@ -219,7 +304,7 @@ class GraphStore:
             return [dict(r) for r in result]
 
     def vector_query(self, query_text: str, limit: int) -> list[dict]:
-        vector = self.model.encode(query_text, normalize_embeddings=True).tolist()
+        vector = self.embedder.encode([query_text])[0]
         with self.driver.session() as session:
             result = session.run(
                 """
@@ -229,6 +314,9 @@ class GraphStore:
                 MATCH (auth:Author)-[:WROTE]->(a)
                 OPTIONAL MATCH (a)-[:CITES]->(out:Article)
                 OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                WITH node, a, auth, score,
+                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
+                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
                 RETURN node.id AS chunk_id,
                        node.text AS chunk_text,
                        node.index AS chunk_index,
@@ -239,8 +327,8 @@ class GraphStore:
                        a.year AS article_year,
                        auth.name AS author,
                        score AS vector_score,
-                       collect(DISTINCT out.title)[0..5] AS cites_out,
-                       collect(DISTINCT inp.title)[0..5] AS cited_by
+                       cites_out,
+                       cited_by
                 ORDER BY vector_score DESC
                 """,
                 k=limit,

@@ -2,10 +2,14 @@
 from neo4j import GraphDatabase
 import pandas as pd
 from pathlib import Path
+import os
 
 from tomlkit import key
 
-driver = GraphDatabase.driver("neo4j+s://4f1b8618.databases.neo4j.io", auth=("neo4j", "Cv3iFtRgFQI5FwZ6UrDs5TI5pxx5C6ecVJcKXr7VxeU"))
+driver = GraphDatabase.driver(
+    os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+    auth=(os.getenv("NEO4J_USER", "neo4j"), os.getenv("NEO4J_PASSWORD", "archaResearchAssistant")),
+)
 
 def run_query(query, driver, parameters=None):
     with driver.session() as session:
