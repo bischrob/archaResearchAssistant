@@ -1,0 +1,245 @@
+---
+title: "9. Uncertainty, Validation, and Sensitivity Analysis"
+---
+
+# 9. Uncertainty, Validation, and Sensitivity Analysis
+
+
+### Learning Objectives
+
+After this chapter you should be able to:
+
+- Explain why uncertainty and error are fundamental issues in archaeological computational modeling, not just technical details. [@Brouwer-Burg2016-na]  
+- Describe what sensitivity analysis is and how it relates to uncertainty analysis, calibration, and solution‐space exploration. [@Kanters2021-wq][@Brouwer-Burg2016-na]  
+- Recognize that assumptions about past behavior and data are uncertain in both computational and “traditional” archaeological reasoning. [@Brouwer-Burg2016-na]  
+- Outline a basic workflow that incorporates uncertainty assessment and sensitivity analysis into simulation or other computational models. [@Kanters2021-wq][@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]  
+- Identify common mistakes in using quantitative and modeling tools drawn from other disciplines. [@Brouwer-Burg2016-na][@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]  
+- Formulate transparent reporting practices that make uncertainty and robustness checks explicit. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+
+---
+
+### Core Ideas
+
+#### 9.1 Uncertainty is Everywhere
+
+With the expansion of formal computational models in archaeology since the late 1960s, such as simulations and predictive modeling, model use has increased but is still less common than it could be. [@Brouwer-Burg2016-na] At the same time, there is no discipline‑wide protocol for identifying and isolating sources of error or uncertainty in these models. [@Brouwer-Burg2016-na]
+
+Uncertainty arises at multiple levels:
+
+- **Data and proxies:** Archaeological network analysis, for example, often cannot observe social links directly; instead it infers ties from proxies such as shared artifact types, styles, or raw material sources. [@Kerig2019-pf] These proxies introduce uncertainty about what the inferred relationships actually represent. [@Kerig2019-pf]
+- **Conceptual assumptions:** Underlying ideas about past human behavior are often built on ambiguous archaeological data and anthropological analogy, so uncertainty is not limited to computational methods but also affects “traditional” models. [@Brouwer-Burg2016-na]
+- **Computational implementation:** Different combinations of software, coding languages, input parameters, landscape reconstructions, and behavioral processes produce models with complex and sometimes opaque uncertainty structures. [@Brouwer-Burg2016-na]
+
+Because of this, the editors of a major volume on archaeological computational modeling explicitly argue that uncertainty assessment should be applied not only to formal models but also to implicit assumptions about the past. [@Brouwer-Burg2016-na]
+
+#### 9.2 Monte Carlo Thinking and Solution‑Space Exploration
+
+In simulation work, sensitivity analysis is framed as part of a broader “solution space exploration” that also includes optimization, calibration, and uncertainty analysis, all aimed at understanding a model’s results, their robustness, and their implications. [@Kanters2021-wq]
+
+Monte Carlo–style thinking—systematically exploring many possible combinations of parameters or inputs—is conceptually aligned with this solution‑space exploration:
+
+- You treat parameters and inputs as variable rather than fixed.
+- You run many model realizations with varied inputs.
+- You examine how outcomes change across these realizations to understand robustness and uncertainty. [@Kanters2021-wq]
+
+Although the term “Monte Carlo” is not used explicitly in the cited texts, the practice of varying inputs systematically to explore outcome behavior is the same conceptual foundation as Monte Carlo approaches. [@Kanters2021-wq]
+
+#### 9.3 Sensitivity Analysis: What It Is and Why It Matters
+
+Sensitivity analysis is defined as a phase in simulation development, often regarded as part of analyzing results. [@Kanters2021-wq] It “consists of varying the input of a simulation, either parameter values or input data, and recording the changes” in outcomes. [@Kanters2021-wq]
+
+It is intimately tied to:
+
+- **Robustness:** By checking how much outcomes change when inputs are perturbed, you evaluate the robustness of substantive conclusions. [@Kanters2021-wq]
+- **Uncertainty analysis and calibration:** Sensitivity analysis is considered alongside uncertainty analysis and calibration as complementary ways of understanding models. [@Kanters2021-wq]
+- **Discipline practice:** A case study on the MERCURY model in Roman economic integration explicitly uses sensitivity analysis, and its authors argue that sensitivity analyses should become much more common in archaeology, providing open scripts to help others implement them. [@Kanters2021-wq]
+
+Given the lack of discipline‑based protocols for testing models, a forum at the Society for American Archaeology was convened specifically on “Error, Sensitivity Analysis, and Uncertainty in Archaeological Computational Modeling,” leading to a collected volume meant to foreground these practices across archaeology. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+
+#### 9.4 Error Propagation in Archaeological Models
+
+Because models combine multiple uncertain components—software, code, input parameters, reconstructed landscapes, and behavioral rules—errors can propagate in complex ways. [@Brouwer-Burg2016-na]
+
+Key implications:
+
+- Small uncertainties in inputs (e.g., environmental reconstructions, artifact classifications) can have disproportionate effects on outputs once processed through a model’s internal logic. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+- Since modelers often rely on ambiguous data and analogy, error propagation is not only numerical but conceptual: uncertain assumptions flow through to uncertain interpretations of past behavior. [@Brouwer-Burg2016-na]
+- Formal modeling is valuable precisely because it allows such uncertainty to be investigated explicitly, rather than remaining implicit. [@Brouwer-Burg2016-na]
+
+#### 9.5 Critical Use of Imported Methods
+
+Several authors warn that quantitative and modeling tools taken from other disciplines must be used critically:
+
+- In network analysis, methods and interpretative assumptions from sociology are often imported, despite archaeological data being fundamentally different from sociological data. [@Brughmans2010-mg][@Brughmans2010-mg]
+- Archaeological networks are often built from assemblage data rather than direct observation of relationships, meaning that some measures, theories, and techniques are applicable only if “appropriately utilized.” [@Kerig2019-pf]
+- Consequently, archaeological network analysis should be rooted in relational thinking and archaeological reasoning, not just borrowed tools. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+This is directly relevant to uncertainty and validation: an uncritical adoption of external tools can hide mismatches between method assumptions and archaeological data, creating unrecognized sources of error. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+---
+
+### Worked Workflow: Building Uncertainty and Sensitivity into a Model
+
+This section sketches a generic workflow for an archaeological computational model that explicitly incorporates uncertainty, robustness checks, and sensitivity analysis. It synthesizes themes from work on archaeological simulations, uncertainty, and network analysis. [@Kanters2021-wq][@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+#### Step 1: Problem Definition and Assumption Audit
+
+- Define the archaeological question (e.g., dynamics of Roman economic integration or prehistoric economies). [@Kanters2021-wq][@Brouwer-Burg2016-na][@Kerig2019-pf]
+- List all major theoretical assumptions about behavior, environment, and material culture.
+- Explicitly note where assumptions rest on ambiguous data or analogy, recognizing that these are themselves uncertain. [@Brouwer-Burg2016-na]
+
+#### Step 2: Data and Proxy Assessment
+
+- Identify what you can observe directly versus what must be inferred from proxies (e.g., social links from shared artifact types or raw material sources; networks from assemblage distributions). [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+- Document the uncertainties involved in each proxy: what alternative interpretations could the same pattern support? [@Kerig2019-pf]
+
+#### Step 3: Model Design with Uncertainty in Mind
+
+- Design the computational model (simulation, GIS‑based model, or network‑based model) as one component in a broader research design, rather than as an infallible oracle. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Brughmans2010-mg]
+- Explicitly mark uncertain parameters (e.g., rates, thresholds, decision rules) for later sensitivity analysis. [@Kanters2021-wq][@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+- Recognize that choices of software, code architecture, and landscape reconstruction all introduce potential errors. [@Brouwer-Burg2016-na]
+
+#### Step 4: Implementation and Verification
+
+- Implement the model using explicit, reproducible code and, where possible, prepare scripts that others can reuse or adapt for their own sensitivity analyses, as done in the MERCURY model study. [@Kanters2021-wq]
+- Verify that the implementation matches the intended design (i.e., check for coding errors or unintended behavior), acknowledging that this is distinct from validating the model against data. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+
+#### Step 5: Uncertainty Exploration and Monte Carlo‑Style Runs
+
+- Treat uncertain parameters and inputs as ranges rather than fixed values.
+- Run many model realizations across these ranges, akin to solution‑space exploration, to see what set of outcomes the model can produce. [@Kanters2021-wq]
+- Record distributions of key outputs instead of relying on a single “best run,” reflecting the emphasis on exploring solution spaces rather than point predictions. [@Kanters2021-wq][@Brouwer-Burg2016-na]
+
+#### Step 6: Sensitivity Analysis
+
+- Systematically vary one or more parameters or input datasets and record how the outputs change, following the definition of sensitivity analysis as varying inputs and tracking resulting changes. [@Kanters2021-wq]
+- Use this to:
+  - Identify which inputs most strongly affect outcomes (high sensitivity).
+  - Detect parameters that do not materially change results (low sensitivity), which may indicate redundancy or over‑parameterization.
+- Interpret these patterns in light of archaeological questions (e.g., which aspects of behavior or environment are truly crucial to a hypothesized process). [@Kanters2021-wq]
+
+#### Step 7: Calibration and Comparative Evaluation
+
+- Consider sensitivity analysis alongside calibration and uncertainty analysis within a coherent solution‑space exploration framework. [@Kanters2021-wq]
+- Where appropriate (e.g., for network or economic models), compare model outputs to empirical archaeological patterns such as observed distributions of table wares or obsidian. [@Kanters2021-wq][@Brughmans2010-mg][@Kerig2019-pf]
+- Use discrepancies not simply to reject models but to refine assumptions and highlight where uncertainty or missing processes might lie. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Brughmans2010-mg]
+
+#### Step 8: Interpretation and Error Propagation Reflection
+
+- Trace how uncertainties in proxies, assumptions, and parameters propagate through the model to affect conclusions about past behavior. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Kerig2019-pf]
+- Distinguish between robust findings (stable across a wide range of plausible inputs) and fragile ones (dependent on narrow parameter choices). [@Kanters2021-wq][@Brouwer-Burg2016-na]
+
+#### Step 9: Transparent Reporting
+
+- Report how and where uncertainty enters the model, both theoretically and methodologically. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+- Describe how many runs were executed, what ranges were explored, and how sensitivity analysis was performed (e.g., which parameters varied, what metrics recorded). [@Kanters2021-wq][@Brouwer-Burg2016-na]
+- Clarify how modeling tools from other disciplines (e.g., network metrics from sociology) were adapted or critiqued in light of archaeological data properties. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+---
+
+### Case Study (Conceptual): Sensitivity Analysis and Economic / Network Models
+
+Several concrete strands in the literature illustrate how uncertainty, sensitivity, and robustness play out in computational archaeology. This section conceptually synthesizes them without reconstructing full technical details.
+
+#### MERCURY Model and Roman Economic Integration
+
+A sensitivity analysis of the MERCURY simulation model, applied to debates on Roman economic integration, offers a practical example. [@Kanters2021-wq]
+
+Key points:
+
+- The authors replicated and modified an existing model specifically to enable sensitivity analysis, showing that models not originally built for this purpose may need re‑engineering to support systematic input variation. [@Kanters2021-wq]
+- By varying parameter values and input data, and recording changes in key outcomes, they evaluated how robust the model’s implications for Roman economic integration were to plausible uncertainties. [@Kanters2021-wq]
+- Based on this experience, they argued that sensitivity analysis should become routine in archaeological simulation and provided an open analysis script to support adoption. [@Kanters2021-wq]
+
+This case directly demonstrates that serious archaeological inferences (here about large‑scale economic integration) depend on understanding how sensitive model conclusions are to uncertainties in assumptions and data. [@Kanters2021-wq]
+
+#### Archaeological Network Analysis and Data Uncertainty
+
+Work on archaeological network analysis, such as studies of Roman table ware distributions and Mesoamerican economies, emphasizes different but related uncertainty issues. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+- Archaeological network analysis often derives networks from assemblage data rather than direct social observations, for example using shared artifact types or raw material sources to infer ties between archaeological sites. [@Kerig2019-pf]
+- Because these are indirect measures, there is inherent uncertainty in what sort of relationships they encode; this affects any subsequent quantitative analysis, such as computing network centrality or other metrics borrowed from sociology. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+- Authors therefore stress that not all measures and techniques from social network analysis can be applied uncritically; only those appropriately matched to archaeological data and reasoning should be used. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+Inside a full modeling workflow, these insights inform:
+
+- How to construct network‑based models or compare simulated networks to empirical ones.
+- How to interpret sensitivity of network metrics to definitions of ties or to different artifact proxies (e.g., different ceramic types or materials). [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+Together, the MERCURY study and archaeological network work underscore that uncertainty and sensitivity analysis are as much about the nature of archaeological evidence and proxies as about numerical techniques. [@Kanters2021-wq][@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+---
+
+### Common Mistakes
+
+The literature identifies recurring pitfalls in archaeological computational modeling and quantitative analysis.
+
+1. **Treating Models or Tools as Infallible**
+
+   - A forum and subsequent volume explicitly question the “infallibility” of tools like GIS and highlight the lack of discipline‑wide protocols for error and uncertainty assessment. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+   - Over‑trust in software outputs without explicit uncertainty analysis leads to misleading confidence in results. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+
+2. **Ignoring Theoretical and Data Uncertainty**
+
+   - Focusing only on numerical error while ignoring that underlying ideas about past behavior are built on ambiguous data and analogy. [@Brouwer-Burg2016-na]
+   - Failing to acknowledge that uncertainty extends beyond computational aspects into “traditional” archaeological reasoning. [@Brouwer-Burg2016-na]
+
+3. **Uncritical Adoption of External Methods**
+
+   - Importing network measures and interpretative assumptions from sociology without considering that archaeological networks are built on different types of evidence. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+   - Applying all techniques of social network analysis to archaeological data, instead of carefully selecting those that are appropriate to proxy‑derived networks. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+4. **Lack of Sensitivity Analysis**
+
+   - Running a model once (or only a few times) and treating outcomes as definitive without systematic exploration of parameter and input uncertainty. [@Kanters2021-wq][@Brouwer-Burg2016-na]
+   - Omitting sensitivity analysis entirely, despite its role in assessing robustness and understanding how inputs shape outputs. [@Kanters2021-wq][@Brouwer-Burg2016-na]
+
+5. **Opaque Reporting**
+
+   - Not documenting where uncertainty enters (in data, parameters, reconstructions, code) or how it was handled. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+   - Providing results without open scripts or sufficient detail to allow replication or independent sensitivity analysis. [@Kanters2021-wq][@Brouwer-Burg2016-na]
+
+Avoiding these mistakes requires both methodological rigor and a reflective stance about the nature of archaeological evidence and inference. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+---
+
+### Exercises
+
+1. **Assumption Audit Exercise**
+
+   - Take a simple computational model you have encountered (or design a sketch of one, e.g., a site location predictive model).
+   - List:
+     - Data inputs and their sources.
+     - Theoretical assumptions about behavior or environment.
+     - Any proxies used to represent unobserved processes (e.g., artifact types as proxies for interaction).
+   - For each, describe briefly what makes it uncertain (e.g., ambiguity in data, reliance on analogy). [@Brouwer-Burg2016-na][@Kerig2019-pf]
+
+2. **Conceptual Sensitivity Analysis Design**
+
+   - Suppose you are modeling an economic network in a Roman or Mesoamerican context.
+   - Identify three parameters or inputs that you would systematically vary (e.g., link thresholds, cost assumptions, or artifact‑based tie definitions).
+   - For each, describe what outputs or metrics you would monitor to assess sensitivity (e.g., changes in overall connectivity, centrality of specific sites).
+   - Explain how differences in the archaeological proxies (like different artifact types) could alter inferred networks. [@Kanters2021-wq][@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+3. **Critical Method Adoption**
+
+   - Choose a quantitative method from another discipline (e.g., a network centrality measure from sociology).
+   - Write a short critique of how applying it to archaeological assemblage‑based networks might introduce error or misinterpretation, and what adaptations or cautions are needed. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+
+4. **Reporting Plan**
+
+   - Draft a one‑page outline of how you would report uncertainty and sensitivity analysis in a hypothetical modeling study:
+     - What uncertainties would you highlight?
+     - How would you summarize sensitivity results?
+     - What scripts or data would you share to facilitate replication? [@Kanters2021-wq][@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+
+---
+
+### Key Takeaways
+
+- Computational models in archaeology have grown with increasing computer power, but the discipline lacks clear protocols for identifying and managing uncertainty and error. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]
+- Uncertainty arises from ambiguous data, proxy‑based inference, analogical reasoning, and implementation choices, affecting both computational and “traditional” models of the past. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na][@Kerig2019-pf]
+- Sensitivity analysis, defined as varying simulation inputs and recording outcome changes, is central to evaluating robustness and belongs alongside optimization, calibration, and uncertainty analysis in exploring a model’s solution space. [@Kanters2021-wq]
+- Case work such as the MERCURY model study demonstrates that meaningful archaeological interpretations, like those concerning Roman economic integration, depend on explicit sensitivity analysis; such work also shows the value of open scripts for community adoption. [@Kanters2021-wq]
+- Archaeological network analysis highlights that data are often indirect proxies for relationships, so methods and interpretations from sociology and other fields must be adapted carefully, grounded in archaeological reasoning and relational thinking. [@Brughmans2010-mg][@Brughmans2010-mg][@Kerig2019-pf]
+- Uncertainty assessment should be applied not only to computational details but also to implicit ideas and assumptions about the past, and it must be transparently reported to make archaeological modeling credible and cumulative. [@Brouwer-Burg2016-na][@Brouwer-Burg2016-na]

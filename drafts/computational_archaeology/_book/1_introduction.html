@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-99.9.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>2&nbsp; 1. Introduction – Open Book of Computational Archaeology</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./2_data_foundations.html" rel="next">
+<link href="./index.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-494121dfa8658343c03537e94414993d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-08ba49fb381fd3f8c97a5af9c3db1c30.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./1_introduction.html"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Open Book of Computational Archaeology</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./1_introduction.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./2_data_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./3_programming_workflows.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./4_statistics_inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./5_machine_learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./6_spatial_gis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./7_network_science.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./8_agent_based_modeling.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./9_uncertainty_sensitivity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10_ethics_governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11_projects_case_studies.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12_future_directions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">12. Future Directions in Computational Archaeology</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">3</span> 1. Introduction</a>
+  <ul class="collapse">
+  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link" data-scroll-target="#learning-objectives"><span class="header-section-number">3.1</span> Learning Objectives</a></li>
+  <li><a href="#how-the-book-is-structured" id="toc-how-the-book-is-structured" class="nav-link" data-scroll-target="#how-the-book-is-structured"><span class="header-section-number">3.2</span> How the Book Is Structured</a></li>
+  <li><a href="#core-ideas" id="toc-core-ideas" class="nav-link" data-scroll-target="#core-ideas"><span class="header-section-number">3.3</span> Core Ideas</a>
+  <ul class="collapse">
+  <li><a href="#what-is-computational-archaeology" id="toc-what-is-computational-archaeology" class="nav-link" data-scroll-target="#what-is-computational-archaeology"><span class="header-section-number">3.3.1</span> 1.1 What Is Computational Archaeology?</a></li>
+  <li><a href="#scope-from-data-to-models" id="toc-scope-from-data-to-models" class="nav-link" data-scroll-target="#scope-from-data-to-models"><span class="header-section-number">3.3.2</span> 1.2 Scope: From Data to Models</a></li>
+  <li><a href="#why-computer-science-matters" id="toc-why-computer-science-matters" class="nav-link" data-scroll-target="#why-computer-science-matters"><span class="header-section-number">3.3.3</span> 1.3 Why Computer Science Matters</a></li>
+  </ul></li>
+  <li><a href="#archaeological-data-lifecycle" id="toc-archaeological-data-lifecycle" class="nav-link" data-scroll-target="#archaeological-data-lifecycle"><span class="header-section-number">3.4</span> Archaeological Data Lifecycle</a>
+  <ul class="collapse">
+  <li><a href="#creation" id="toc-creation" class="nav-link" data-scroll-target="#creation"><span class="header-section-number">3.4.1</span> 2.1 Creation</a></li>
+  <li><a href="#editing-cleaning-and-annotation" id="toc-editing-cleaning-and-annotation" class="nav-link" data-scroll-target="#editing-cleaning-and-annotation"><span class="header-section-number">3.4.2</span> 2.2 Editing, Cleaning, and Annotation</a></li>
+  <li><a href="#curation-and-preservation" id="toc-curation-and-preservation" class="nav-link" data-scroll-target="#curation-and-preservation"><span class="header-section-number">3.4.3</span> 2.3 Curation and Preservation</a></li>
+  <li><a href="#reuse-integration-and-analysis" id="toc-reuse-integration-and-analysis" class="nav-link" data-scroll-target="#reuse-integration-and-analysis"><span class="header-section-number">3.4.4</span> 2.4 Reuse, Integration, and Analysis</a></li>
+  </ul></li>
+  <li><a href="#framing-key-computational-approaches" id="toc-framing-key-computational-approaches" class="nav-link" data-scroll-target="#framing-key-computational-approaches"><span class="header-section-number">3.5</span> Framing Key Computational Approaches</a>
+  <ul class="collapse">
+  <li><a href="#network-science-in-archaeology" id="toc-network-science-in-archaeology" class="nav-link" data-scroll-target="#network-science-in-archaeology"><span class="header-section-number">3.5.1</span> 3.1 Network Science in Archaeology</a></li>
+  <li><a href="#agent-based-modeling-abm" id="toc-agent-based-modeling-abm" class="nav-link" data-scroll-target="#agent-based-modeling-abm"><span class="header-section-number">3.5.2</span> 3.2 Agent-Based Modeling (ABM)</a></li>
+  <li><a href="#machine-learning-style-tasks-and-data-work" id="toc-machine-learning-style-tasks-and-data-work" class="nav-link" data-scroll-target="#machine-learning-style-tasks-and-data-work"><span class="header-section-number">3.5.3</span> 3.3 Machine-Learning-Style Tasks and Data Work</a></li>
+  </ul></li>
+  <li><a href="#worked-workflow-from-excavation-data-to-network-model" id="toc-worked-workflow-from-excavation-data-to-network-model" class="nav-link" data-scroll-target="#worked-workflow-from-excavation-data-to-network-model"><span class="header-section-number">3.6</span> Worked Workflow: From Excavation Data to Network Model</a>
+  <ul class="collapse">
+  <li><a href="#step-1-initial-data-creation" id="toc-step-1-initial-data-creation" class="nav-link" data-scroll-target="#step-1-initial-data-creation"><span class="header-section-number">3.6.1</span> Step 1: Initial Data Creation</a></li>
+  <li><a href="#step-2-validation-and-local-storage" id="toc-step-2-validation-and-local-storage" class="nav-link" data-scroll-target="#step-2-validation-and-local-storage"><span class="header-section-number">3.6.2</span> Step 2: Validation and Local Storage</a></li>
+  <li><a href="#step-3-editorial-review-and-cleanup" id="toc-step-3-editorial-review-and-cleanup" class="nav-link" data-scroll-target="#step-3-editorial-review-and-cleanup"><span class="header-section-number">3.6.3</span> Step 3: Editorial Review and Cleanup</a></li>
+  <li><a href="#step-4-curation-in-a-repository" id="toc-step-4-curation-in-a-repository" class="nav-link" data-scroll-target="#step-4-curation-in-a-repository"><span class="header-section-number">3.6.4</span> Step 4: Curation in a Repository</a></li>
+  <li><a href="#step-5-reuse-and-integration" id="toc-step-5-reuse-and-integration" class="nav-link" data-scroll-target="#step-5-reuse-and-integration"><span class="header-section-number">3.6.5</span> Step 5: Reuse and Integration</a></li>
+  <li><a href="#step-6-constructing-a-network-model" id="toc-step-6-constructing-a-network-model" class="nav-link" data-scroll-target="#step-6-constructing-a-network-model"><span class="header-section-number">3.6.6</span> Step 6: Constructing a Network Model</a></li>
+  <li><a href="#step-7-simulation-and-theory-testing" id="toc-step-7-simulation-and-theory-testing" class="nav-link" data-scroll-target="#step-7-simulation-and-theory-testing"><span class="header-section-number">3.6.7</span> Step 7: Simulation and Theory Testing</a></li>
+  </ul></li>
+  <li><a href="#case-study-conceptual-archaeological-networks-and-complexity" id="toc-case-study-conceptual-archaeological-networks-and-complexity" class="nav-link" data-scroll-target="#case-study-conceptual-archaeological-networks-and-complexity"><span class="header-section-number">3.7</span> Case Study (Conceptual): Archaeological Networks and Complexity</a>
+  <ul class="collapse">
+  <li><a href="#research-question" id="toc-research-question" class="nav-link" data-scroll-target="#research-question"><span class="header-section-number">3.7.1</span> Research Question</a></li>
+  <li><a href="#data-and-curation-context" id="toc-data-and-curation-context" class="nav-link" data-scroll-target="#data-and-curation-context"><span class="header-section-number">3.7.2</span> Data and Curation Context</a></li>
+  <li><a href="#network-construction" id="toc-network-construction" class="nav-link" data-scroll-target="#network-construction"><span class="header-section-number">3.7.3</span> Network Construction</a></li>
+  <li><a href="#analysis-and-simulation" id="toc-analysis-and-simulation" class="nav-link" data-scroll-target="#analysis-and-simulation"><span class="header-section-number">3.7.4</span> Analysis and Simulation</a></li>
+  </ul></li>
+  <li><a href="#common-mistakes-from-a-cs-perspective" id="toc-common-mistakes-from-a-cs-perspective" class="nav-link" data-scroll-target="#common-mistakes-from-a-cs-perspective"><span class="header-section-number">3.8</span> Common Mistakes (from a CS Perspective)</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">3.9</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">3.10</span> Key Takeaways</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> 1. Introduction</h1>
+<section id="learning-objectives" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="learning-objectives"><span class="header-section-number">3.1</span> Learning Objectives</h2>
+<p>By the end of this chapter, you should be able to:</p>
+<ul>
+<li>Explain what computational archaeology is, in terms that connect directly to computer science concepts. [<span class="citation" data-cites="Kintigh2015-rs">Kintigh et al. (<a href="#ref-Kintigh2015-rs" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+<li>Describe why digital data management and modeling are central problems in contemporary archaeology. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Outline a basic archaeological data lifecycle from creation through reuse, including preservation and curation. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span><span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Explain what is meant by “network science” and “network models” in an archaeological context. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span>[<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+<li>Describe the role of agent-based modeling (ABM) as a simulation method for explaining past systems in archaeology. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li>Recognize where machine learning–style data tasks naturally arise in archaeological data work, while staying grounded in data modeling and quality practices. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="how-the-book-is-structured" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="how-the-book-is-structured"><span class="header-section-number">3.2</span> How the Book Is Structured</h2>
+<p>This book progresses from foundations to advanced methods and then to applied design. Chapters 2-4 establish data, programming, and statistical reasoning; Chapters 5-8 cover core computational methods (machine learning, GIS, network science, and agent-based modeling); Chapters 9-10 address validation, uncertainty, and governance; Chapters 11-12 synthesize these skills in projects and future-facing research directions.</p>
+<p>Throughout the book, the same workflow logic is reused: define the archaeological question, model the data, implement and validate methods, interpret uncertainty, and document ethical and reproducible practice. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<hr>
+</section>
+<section id="core-ideas" class="level2" data-number="3.3">
+<h2 data-number="3.3" class="anchored" data-anchor-id="core-ideas"><span class="header-section-number">3.3</span> Core Ideas</h2>
+<section id="what-is-computational-archaeology" class="level3" data-number="3.3.1">
+<h3 data-number="3.3.1" class="anchored" data-anchor-id="what-is-computational-archaeology"><span class="header-section-number">3.3.1</span> 1.1 What Is Computational Archaeology?</h3>
+<p>Computational archaeology is an approach to archaeological research that relies on formal data management, quantitative analysis, and modeling techniques, drawing heavily on methods and collaborations from computer science. [<span class="citation" data-cites="Kintigh2015-rs">Kintigh et al. (<a href="#ref-Kintigh2015-rs" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></p>
+<p>Recent work explicitly documents collaborations between archaeologists and computer scientists focused on large, complex archaeological datasets and their analysis. For example, synthesis workshops on “Cultural Dynamics, Deep Time, and Data” included multiple participants from both archaeology and computer science, emphasizing shared interests in data infrastructures and quantitative methods. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span> Similarly, trends in archaeological network research show archaeologists collaborating with computer scientists, physicists, and sociologists to develop original models and methods for archaeological questions. <span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></p>
+<p>In practice, computational archaeology includes:</p>
+<ul>
+<li>Designing and validating digital data models for field, lab, and survey data. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Managing and curating archaeological datasets in digital repositories. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li>Representing archaeological phenomena as networks and network data. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span>[<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+<li>Simulating past systems using methods such as agent-based modeling. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>This makes it a natural application domain for many core computer science skills.</p>
+</section>
+<section id="scope-from-data-to-models" class="level3" data-number="3.3.2">
+<h3 data-number="3.3.2" class="anchored" data-anchor-id="scope-from-data-to-models"><span class="header-section-number">3.3.2</span> 1.2 Scope: From Data to Models</h3>
+<p>Computational archaeology spans the full research data pipeline, not just “analysis at the end”:</p>
+<ul>
+<li><strong>Data creation and encoding</strong>: Archaeological observations are encoded in structured digital forms such as tables or geospatial layers. Choices at this stage—data models, codes, file formats—heavily constrain what can be done later. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li><strong>Editing, cleaning, and annotation</strong>: Before data can be reanalyzed, it often passes through “editorial review, revision and annotation,” requiring significant effort from domain experts acting as “data editors.” <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li><strong>Validation and modeling</strong>: Projects must address data validation and data modeling (organization and layout), because errors in coded data and poor modeling can severely impede reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li><strong>Preservation and curation</strong>: There are explicit digital repository infrastructures and legal/regulatory requirements to curate archaeological data, which affect how data is stored and accessed over time. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li><strong>Reuse, synthesis, and modeling</strong>: Once curated, data are combined, modeled as networks, or used in simulations such as agent-based models to explore cultural dynamics over long time scales. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>From a CS perspective, this encompasses database design, data quality assurance, formal modeling, and computational simulation.</p>
+</section>
+<section id="why-computer-science-matters" class="level3" data-number="3.3.3">
+<h3 data-number="3.3.3" class="anchored" data-anchor-id="why-computer-science-matters"><span class="header-section-number">3.3.3</span> 1.3 Why Computer Science Matters</h3>
+<p>Several developments in archaeology directly motivate the integration of computer science:</p>
+<ol type="1">
+<li><p><strong>Data volume and heterogeneity</strong><br>
+Archaeologists increasingly generate complex digital datasets (e.g., survey data, geospatial data, zooarchaeological and archaeobotanical records) with specialized data quality requirements for each domain. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> These datasets must be organized, validated, and stored in open, nonproprietary formats. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p></li>
+<li><p><strong>Need for robust data modeling and validation</strong><br>
+Many researchers lack formal training in data management, and poor data modeling—such as forcing complex phenomena into overly simple flat tables—creates major obstacles for later reuse and analysis. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Errors in coded data are hard to detect, and documentation often does not exactly match the data, multiplying the effort required for reuse. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p></li>
+<li><p><strong>Digital curation and infrastructure</strong><br>
+There are explicit digital archaeological data services (such as discipline-specific repositories) and legal/regulatory frameworks that require digital archaeological data to be curated by federal agencies and related bodies. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span> These infrastructures are moving from passive archiving to editorial services that add value through quality control and online access, paralleling broader data-center trends in other sciences. <span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></p></li>
+<li><p><strong>Complex modeling tasks</strong><br>
+Archaeology uses formal network models to address questions about relationships among individuals, groups, and material culture at multiple scales. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Peeples2024-er">Peeples et al. (<a href="#ref-Peeples2024-er" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span> It also uses agent-based simulations to explore how system-level patterns emerge from interacting parts. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> Both areas benefit from algorithmic thinking, graph algorithms, and software engineering.</p></li>
+</ol>
+<p>Computer scientists contribute by designing better data models and identifiers, improving validation and consistency, supporting open formats, and developing algorithms and tools for network and simulation-based analysis. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span>[<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="archaeological-data-lifecycle" class="level2" data-number="3.4">
+<h2 data-number="3.4" class="anchored" data-anchor-id="archaeological-data-lifecycle"><span class="header-section-number">3.4</span> Archaeological Data Lifecycle</h2>
+<section id="creation" class="level3" data-number="3.4.1">
+<h3 data-number="3.4.1" class="anchored" data-anchor-id="creation"><span class="header-section-number">3.4.1</span> 2.1 Creation</h3>
+<p>Data creation is where archaeological observations first become digital records. Improving practices here can drastically reduce downstream costs. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+<p>Key tasks include:</p>
+<ul>
+<li><strong>Data modeling at entry</strong>: Designing how complex phenomena are represented (e.g., decisions about table structures, fields, and encoding schemes). Poor modeling at the start of a project can negatively impact data quality and only become apparent during reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li><strong>Validation and decoding plans</strong>: Since errors in coded data are hard to notice and codebooks often do not match actual codes, systems should enforce validation rules and clear decoding schemes from the beginning. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+</section>
+<section id="editing-cleaning-and-annotation" class="level3" data-number="3.4.2">
+<h3 data-number="3.4.2" class="anchored" data-anchor-id="editing-cleaning-and-annotation"><span class="header-section-number">3.4.2</span> 2.2 Editing, Cleaning, and Annotation</h3>
+<p>Before data can be shared or reused, it typically undergoes:</p>
+<ul>
+<li><strong>Editorial review and revision</strong>: In collaborative projects, data often goes through a labor-intensive process involving “editorial review, revision and annotation,” carried out by knowledgeable “data editors.” <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li><strong>Translation and cleanup</strong>: Teams may need to translate codes, align fields, and correct inconsistencies, which becomes significantly more time-consuming when data modeling and documentation were weak at creation time. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+<p>Experience reusing others’ data helps researchers recognize what constitutes “good data,” and these expectations can feed back into improved data creation practices, forming “virtuous cycles” of better data creation and higher-impact reuse. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+</section>
+<section id="curation-and-preservation" class="level3" data-number="3.4.3">
+<h3 data-number="3.4.3" class="anchored" data-anchor-id="curation-and-preservation"><span class="header-section-number">3.4.3</span> 2.3 Curation and Preservation</h3>
+<p>The digital curation stage ensures that data remains accessible, interoperable, and citable:</p>
+<ul>
+<li><strong>Disciplinary repositories and infrastructures</strong>: Archaeology participates in national or international data services and archives, which act as hubs for digital archaeological datasets. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li><strong>Legal and regulatory requirements</strong>: Federal agencies are required to curate digital archaeological data resulting from their activities, making data curation a formal obligation rather than an optional add-on. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li><strong>Evolving data-center roles</strong>: More generally, data centers are shifting from static archives to editorial services that conduct quality control and enable users to access original data and combine it with other datasets online. <span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></li>
+</ul>
+<p>These developments make it possible to apply network, simulation, and other computational methods across multiple projects and regions, but only if data quality and interoperability are maintained. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></p>
+</section>
+<section id="reuse-integration-and-analysis" class="level3" data-number="3.4.4">
+<h3 data-number="3.4.4" class="anchored" data-anchor-id="reuse-integration-and-analysis"><span class="header-section-number">3.4.4</span> 2.4 Reuse, Integration, and Analysis</h3>
+<p>Emphasizing data reuse as a professional goal improves data management and amplifies research impact. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Reuse activities include:</p>
+<ul>
+<li><strong>Combining datasets</strong>: Data may be integrated across projects to build new, larger datasets, often as a foundation for network models or other formal analyses. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span><span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></li>
+<li><strong>Relational and contextual linking</strong>: Some work explicitly focuses on identifiers as a way to support a “relational and contextual view” of data, rather than treating datasets as isolated objects. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> This is conceptually aligned with network thinking, where nodes and relationships are central. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+<li><strong>Modeling and simulation</strong>: Curated data are used to construct empirical networks, generate and test spatial interaction models, and run simulations such as agent-based models to study complex systems over long time spans. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>From a CS viewpoint, these steps closely resemble data integration, schema alignment, and preparation for machine-learning or graph-analytic workflows, with a strong emphasis on data provenance and interpretability. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="framing-key-computational-approaches" class="level2" data-number="3.5">
+<h2 data-number="3.5" class="anchored" data-anchor-id="framing-key-computational-approaches"><span class="header-section-number">3.5</span> Framing Key Computational Approaches</h2>
+<section id="network-science-in-archaeology" class="level3" data-number="3.5.1">
+<h3 data-number="3.5.1" class="anchored" data-anchor-id="network-science-in-archaeology"><span class="header-section-number">3.5.1</span> 3.1 Network Science in Archaeology</h3>
+<p>Network science focuses on the study of network models, which are defined in terms of nodes and edges representing entities and their relationships. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span> In archaeology, network methods have a substantial and growing role.</p>
+<section id="what-is-a-network-model-here" class="level4" data-number="3.5.1.1">
+<h4 data-number="3.5.1.1" class="anchored" data-anchor-id="what-is-a-network-model-here"><span class="header-section-number">3.5.1.1</span> 3.1.1 What Is a Network Model Here?</h4>
+<p>In archaeological network research:</p>
+<ul>
+<li>A <strong>network model</strong> represents the conceptual process of deciding whether a phenomenon can be usefully abstracted using network concepts and represented as network data. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></li>
+<li><strong>Network data</strong> are characterized by their format: variables structured as relationships (dyads) rather than independent records. <span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span> This structure distinguishes network science from more standard tabular statistics. <span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+</ul>
+<p>The central question for archaeologists is whether their data can be represented as nodes and connections (edges), and whether that representation provides insights not easily obtained through standard approaches. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></p>
+</section>
+<section id="where-network-science-fits" class="level4" data-number="3.5.1.2">
+<h4 data-number="3.5.1.2" class="anchored" data-anchor-id="where-network-science-fits"><span class="header-section-number">3.5.1.2</span> 3.1.2 Where Network Science Fits</h4>
+<p>Network analysis has a long history in archaeology but has recently seen a rapid rise in use. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span> Formal network analyses drawing on graph theory, social network analysis, and complexity science have been applied to:</p>
+<ul>
+<li>Understanding relationships between network structure, node positions, and attributes/outcomes for individuals and groups at multiple social scales. <span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span></li>
+<li>Exploring spatial phenomena and the network drivers of long-term social change. <span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></li>
+<li>Modeling material culture networks, movement networks, spatial proximity networks, and visibility networks using archaeological data. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>Recent work shows archaeologists are not only importing techniques but also developing original network methods tailored to archaeological questions and collaborating with computer scientists to advance network science more broadly. <span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></p>
+</section>
+<section id="spatial-and-simulated-networks" class="level4" data-number="3.5.1.3">
+<h4 data-number="3.5.1.3" class="anchored" data-anchor-id="spatial-and-simulated-networks"><span class="header-section-number">3.5.1.3</span> 3.1.3 Spatial and Simulated Networks</h4>
+<p>Spatial data are widely available in archaeology, and spatial network models are especially common. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> Researchers:</p>
+<ul>
+<li>Use spatial information to reconstruct potential empirical networks by making assumptions about how space shapes interaction. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li>Use models of spatial interaction to generate expectations about network patterns, which can then be evaluated empirically. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>Network simulation methods—including agent-based modeling and exponential random graph modeling—are used to connect individual behavior, network formation rules, and large-scale patterns. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+</section>
+</section>
+<section id="agent-based-modeling-abm" class="level3" data-number="3.5.2">
+<h3 data-number="3.5.2" class="anchored" data-anchor-id="agent-based-modeling-abm"><span class="header-section-number">3.5.2</span> 3.2 Agent-Based Modeling (ABM)</h3>
+<p>Agent-based modeling is a class of computer simulations particularly suited to exploring how system-level characteristics emerge from the behavior and interactions of individual components. <span class="citation" data-cites="Lake2015-qd">(<a href="#ref-Lake2015-qd" role="doc-biblioref">Lake 2015</a>)</span></p>
+<p>In archaeological contexts:</p>
+<ul>
+<li>ABM is used to investigate how aggregate characteristics of a past system arise from the behavior of its parts, which are explicitly modeled as agents. <span class="citation" data-cites="Lake2015-qd">(<a href="#ref-Lake2015-qd" role="doc-biblioref">Lake 2015</a>)</span></li>
+<li>It is positioned as part of archaeological simulation more generally, connecting to broader questions such as why to use simulation, what assumptions simulations entail, and how we learn by simulating. <span class="citation" data-cites="Lake2015-qd">(<a href="#ref-Lake2015-qd" role="doc-biblioref">Lake 2015</a>)</span></li>
+</ul>
+<p>Within archaeological network research, ABM is one of several network-related simulation methods. [<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> It is often used to:</p>
+<ul>
+<li>Explore the role of individual human behavior in creating certain network structures or system-wide patterns that leave archaeologically visible traces. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>For computer science students, ABM in archaeology provides a domain for multi-agent systems, discrete-event simulation, and complexity science, grounded in empirical data about past societies. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+</section>
+<section id="machine-learning-style-tasks-and-data-work" class="level3" data-number="3.5.3">
+<h3 data-number="3.5.3" class="anchored" data-anchor-id="machine-learning-style-tasks-and-data-work"><span class="header-section-number">3.5.3</span> 3.3 Machine-Learning-Style Tasks and Data Work</h3>
+<p>While the texts cited here focus more on data management and network/simulation methods than on specific machine-learning algorithms, they describe several activities that align closely with machine-learning workflows:</p>
+<ul>
+<li><strong>Data preparation and cleaning</strong>: Complex archaeological datasets often require significant cleanup and translation work before they are usable, which parallels preprocessing in machine learning. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li><strong>Validation and type enforcement</strong>: Good data management involves explicit validation practices to promote consistency and reduce errors, including specifying data types (integers, decimals, Booleans) and adopting open, nonproprietary formats. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Such constraints are standard prerequisites for reliable automated analysis.</li>
+<li><strong>Integration and feature construction</strong>: Combining data from multiple sources to create new datasets is a core reuse pattern. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span> This is directly analogous to integrating heterogeneous inputs and constructing features for downstream models.</li>
+<li><strong>Tracking usage and impact</strong>: Data centers are encouraged to track data access using automated tools, providing usage metrics and indices that help with citation and evaluation. <span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span> These types of tracking systems can leverage computational methods familiar from logging and analytics applications.</li>
+</ul>
+<p>Thus, even when explicit machine-learning algorithms are not foregrounded, the archaeological data lifecycle presupposes many of the same concerns—data quality, modeling choices, reproducibility—that underlie robust machine-learning practice. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="worked-workflow-from-excavation-data-to-network-model" class="level2" data-number="3.6">
+<h2 data-number="3.6" class="anchored" data-anchor-id="worked-workflow-from-excavation-data-to-network-model"><span class="header-section-number">3.6</span> Worked Workflow: From Excavation Data to Network Model</h2>
+<p>This workflow illustrates how a computational archaeology project might proceed, tying together the data lifecycle and network modeling. It is schematic and focuses on steps explicitly described or implied in the literature.</p>
+<section id="step-1-initial-data-creation" class="level3" data-number="3.6.1">
+<h3 data-number="3.6.1" class="anchored" data-anchor-id="step-1-initial-data-creation"><span class="header-section-number">3.6.1</span> Step 1: Initial Data Creation</h3>
+<p>A field project records observations (e.g., artifact attributes, spatial locations) into a digital system:</p>
+<ul>
+<li>Project staff decide on a data model, perhaps organizing observations into flat tables such as spreadsheets. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li>Codes are assigned for categorical data, with separate documentation. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+</ul>
+<p>If complex phenomena are forced into overly simple, flat tables, this can impede future reuse. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+</section>
+<section id="step-2-validation-and-local-storage" class="level3" data-number="3.6.2">
+<h3 data-number="3.6.2" class="anchored" data-anchor-id="step-2-validation-and-local-storage"><span class="header-section-number">3.6.2</span> Step 2: Validation and Local Storage</h3>
+<p>During or shortly after entry:</p>
+<ul>
+<li>Validation rules are implemented to enforce data types (integers, decimals, Booleans), promote consistency, and reduce errors. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Open, nonproprietary file formats are used to maximize future accessibility. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+<p>These choices reduce the likelihood that major problems will only surface at the reuse stage. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+</section>
+<section id="step-3-editorial-review-and-cleanup" class="level3" data-number="3.6.3">
+<h3 data-number="3.6.3" class="anchored" data-anchor-id="step-3-editorial-review-and-cleanup"><span class="header-section-number">3.6.3</span> Step 3: Editorial Review and Cleanup</h3>
+<p>Before broader sharing:</p>
+<ul>
+<li>“Data editors” with domain knowledge perform editorial review, revision, and annotation. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li>They detect mismatches between codebooks and actual coded values, correct errors, and add clarifying annotations. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li>They may restructure the data model to better represent complex phenomena, reducing obstacles for subsequent reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+<p>This stage can involve significant labor, especially if initial modeling was suboptimal. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+</section>
+<section id="step-4-curation-in-a-repository" class="level3" data-number="3.6.4">
+<h3 data-number="3.6.4" class="anchored" data-anchor-id="step-4-curation-in-a-repository"><span class="header-section-number">3.6.4</span> Step 4: Curation in a Repository</h3>
+<p>The cleaned dataset is deposited in a disciplinary digital repository:</p>
+<ul>
+<li>The repository provides infrastructure for access and curation, in line with legal/regulatory obligations for digital archaeological data. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li>The repository may offer editorial-style services (quality control, tracking access) that add value beyond simple storage. <span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></li>
+</ul>
+<p>Once deposited, the data become available for reuse by other researchers. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span><span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></p>
+</section>
+<section id="step-5-reuse-and-integration" class="level3" data-number="3.6.5">
+<h3 data-number="3.6.5" class="anchored" data-anchor-id="step-5-reuse-and-integration"><span class="header-section-number">3.6.5</span> Step 5: Reuse and Integration</h3>
+<p>Another research team retrieves the dataset to study regional interaction patterns:</p>
+<ul>
+<li>They combine it with other curated datasets, aligning identifiers and data models to construct a larger integrated dataset. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></li>
+<li>Through this experience, they develop expectations about what constitutes “good data,” including clear identifiers, consistent types, and well-documented codes. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+</section>
+<section id="step-6-constructing-a-network-model" class="level3" data-number="3.6.6">
+<h3 data-number="3.6.6" class="anchored" data-anchor-id="step-6-constructing-a-network-model"><span class="header-section-number">3.6.6</span> Step 6: Constructing a Network Model</h3>
+<p>The integrated data are used to build a network representation:</p>
+<ul>
+<li>Researchers identify entities to act as nodes (e.g., sites, regions, or artifact types) and relationships to act as edges (e.g., co-occurrence, similarity, or movement). Deciding whether and how phenomena can be represented as nodes and edges is the core conceptual step in network modeling. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></li>
+<li>They construct network data, ensuring that relationships are explicitly encoded in a format suitable for network analysis. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+</ul>
+<p>Network methods are then applied to explore how network structure and positions relate to archaeological attributes and outcomes. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+</section>
+<section id="step-7-simulation-and-theory-testing" class="level3" data-number="3.6.7">
+<h3 data-number="3.6.7" class="anchored" data-anchor-id="step-7-simulation-and-theory-testing"><span class="header-section-number">3.6.7</span> Step 7: Simulation and Theory Testing</h3>
+<p>To interpret observed patterns:</p>
+<ul>
+<li>Researchers may build agent-based models to simulate how individual-level behavior could generate the observed network structures or spatial patterns visible in the data. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li>They can also use other network simulation methods, such as formal mathematical models, to theorize about generative processes. [<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>Findings then feed back into archaeological interpretation and may influence future data modeling choices, continuing the cycle. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="case-study-conceptual-archaeological-networks-and-complexity" class="level2" data-number="3.7">
+<h2 data-number="3.7" class="anchored" data-anchor-id="case-study-conceptual-archaeological-networks-and-complexity"><span class="header-section-number">3.7</span> Case Study (Conceptual): Archaeological Networks and Complexity</h2>
+<p>The following conceptual case study synthesizes documented trends and practices around archaeological networks and simulation. It does not describe a single named project but reflects the types of work discussed in the network-science-focused literature.</p>
+<section id="research-question" class="level3" data-number="3.7.1">
+<h3 data-number="3.7.1" class="anchored" data-anchor-id="research-question"><span class="header-section-number">3.7.1</span> Research Question</h3>
+<p>How do changing patterns of interaction among communities over long periods contribute to large-scale cultural change, as observed in the archaeological record?</p>
+</section>
+<section id="data-and-curation-context" class="level3" data-number="3.7.2">
+<h3 data-number="3.7.2" class="anchored" data-anchor-id="data-and-curation-context"><span class="header-section-number">3.7.2</span> Data and Curation Context</h3>
+<p>Researchers draw on:</p>
+<ul>
+<li>Curated spatial datasets of archaeological sites and associated material culture attributes from digital repositories and agency archives, which are maintained in part due to legal and regulatory curation requirements. <span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span></li>
+<li>Additional datasets (e.g., survey or zooarchaeological data) that have been subject to domain-specific data quality practices and deposited in open formats. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+<p>Because these data have been through editorial processes emphasizing validation, data typing, and nonproprietary formats, they are suitable for integration and network modeling. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+</section>
+<section id="network-construction" class="level3" data-number="3.7.3">
+<h3 data-number="3.7.3" class="anchored" data-anchor-id="network-construction"><span class="header-section-number">3.7.3</span> Network Construction</h3>
+<p>Researchers:</p>
+<ul>
+<li>Treat sites or regions as nodes and define edges based on spatial interaction assumptions, such as distance or modeled movement routes, consistent with the use of spatial information to reconstruct empirical networks. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li>Explore multiple network types, including material culture networks and movement networks, reflecting the diversity of network applications in archaeology. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></li>
+</ul>
+<p>This step explicitly uses network models to represent archaeological phenomena as nodes and relationships, after considering whether such abstraction is appropriate. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></p>
+</section>
+<section id="analysis-and-simulation" class="level3" data-number="3.7.4">
+<h3 data-number="3.7.4" class="anchored" data-anchor-id="analysis-and-simulation"><span class="header-section-number">3.7.4</span> Analysis and Simulation</h3>
+<p>The project employs several computational approaches:</p>
+<ul>
+<li><strong>Empirical network analysis</strong>: Using graph-theoretic and social-network-analytic concepts, researchers examine how network structure (centrality, clustering, etc.) relates to observed distributions of material culture and other attributes, across different social scales. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></li>
+<li><strong>Spatial network modeling</strong>: They generate expectations about how space should influence interaction networks and compare these against the empirical networks derived from data. <span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li><strong>Agent-based modeling</strong>: They construct ABMs where agents represent individuals or communities making interaction decisions. The ABMs are used to explore how local behavioral rules can generate the kinds of network structures and archaeological patterning observed in the empirical data. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li><strong>Complex systems perspective</strong>: Network simulation methods, including ABM and other formal models, are used to study past complex systems and their long-term dynamics. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>Through this case, computational archaeology integrates curated digital data, formal network representation, and simulation to address long-standing questions about culture and interaction over deep time. [<span class="citation" data-cites="Kintigh2015-rs">Kintigh et al. (<a href="#ref-Kintigh2015-rs" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span>[<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="common-mistakes-from-a-cs-perspective" class="level2" data-number="3.8">
+<h2 data-number="3.8" class="anchored" data-anchor-id="common-mistakes-from-a-cs-perspective"><span class="header-section-number">3.8</span> Common Mistakes (from a CS Perspective)</h2>
+<p>Several recurring problems in archaeological data and modeling practice are highlighted in the literature; CS students should recognize and avoid them.</p>
+<ol type="1">
+<li><p><strong>Poor Data Modeling at Creation Time</strong></p>
+<ul>
+<li>Inadequate data modeling—such as squeezing complex phenomena into overly simple, flat tables—can seriously impede later data reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Many researchers lack formal data management training, leading to models that are hard to extend, integrate, or analyze. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+</ul></li>
+<li><p><strong>Weak Validation and Coding Practices</strong></p>
+<ul>
+<li>Errors in coded data are difficult to notice, especially when documentation does not exactly match the actual codes used. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+<li>Failing to specify data types and validation rules increases inconsistency and error rates, generating costly cleanup work later. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul></li>
+<li><p><strong>Treating Datasets as Isolated Artifacts</strong></p>
+<ul>
+<li>Much prior work has treated datasets as relatively discrete and isolated, neglecting relational and contextual linkages across datasets. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>This limits the potential for combined analyses and for constructing networks across multiple projects.</li>
+</ul></li>
+<li><p><strong>Late, Costly “Fixes”</strong></p>
+<ul>
+<li>Adapting complex data “late in the game” is costly; many of these costs could have been avoided if data creation practices were aligned with community reuse needs from the start. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Underestimating these future costs leads to underinvestment in early-stage modeling and validation.</li>
+</ul></li>
+<li><p><strong>Uncritical Use of Network Methods</strong></p>
+<ul>
+<li>A key challenge is deciding whether and how archaeological data can be represented as nodes and edges. [<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></li>
+<li>Applying network methods without carefully assessing whether network abstraction is appropriate can lead to misleading or trivial results.</li>
+</ul></li>
+<li><p><strong>Ignoring Simulation Assumptions</strong></p>
+<ul>
+<li>Agent-based and other simulations rest on explicit assumptions about agents and interactions. If these assumptions are not carefully related to archaeological theory and evidence, simulations may be difficult to interpret. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul></li>
+</ol>
+<p>Avoiding these issues requires bringing standard CS practices—schema design, type systems, validation frameworks, and model criticism—into archaeological settings. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></p>
+<hr>
+</section>
+<section id="exercises" class="level2" data-number="3.9">
+<h2 data-number="3.9" class="anchored" data-anchor-id="exercises"><span class="header-section-number">3.9</span> Exercises</h2>
+<ol type="1">
+<li><p><strong>Data Modeling Critique</strong></p>
+<p>You are given a description: a project recorded detailed observations of tooth eruption and wear for multiple individuals in a single flat spreadsheet, using codes documented in a separate text file.</p>
+<ol type="a">
+<li>List at least three potential data management or reuse problems this design might create, as suggested by the discussion of data modeling and coded data. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Propose specific modeling or validation changes that could mitigate these problems in a revised design. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ol></li>
+<li><p><strong>Lifecycle Mapping</strong></p>
+<p>Draw a diagram of the archaeological data lifecycle described in this chapter, labeling at least: data creation, validation, editorial review, curation, and reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span><br>
+For each stage, give one concrete action or decision that is critical from a CS perspective.</p></li>
+<li><p><strong>Network Representation Exercise</strong></p>
+<p>Choose one archaeological phenomenon (e.g., movement between sites, similarity in artifact assemblages, or visibility between locations) and:</p>
+<ol type="a">
+<li>Specify what entities could act as nodes and what relationships could act as edges. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><br>
+</li>
+<li>Explain why representing this phenomenon as a network might reveal something not easily seen in a standard table or map. [<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span></li>
+</ol></li>
+<li><p><strong>Simulation Design Sketch</strong></p>
+<p>Outline an agent-based model for an archaeological question of your choice. Your outline should specify:</p>
+<ul>
+<li>The agents and their key attributes. <span class="citation" data-cites="Lake2015-qd">(<a href="#ref-Lake2015-qd" role="doc-biblioref">Lake 2015</a>)</span><br>
+</li>
+<li>The basic rules governing agent behavior and interaction. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><br>
+</li>
+<li>The aggregate patterns (e.g., network structures or spatial distributions) you would measure to compare against archaeological data. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul></li>
+<li><p><strong>Repository and Curation Analysis</strong></p>
+<p>Describe how disciplinary repositories and legal/regulatory requirements shape the design of computational workflows in archaeology. [<span class="citation" data-cites="Kintigh2015-rs">Kintigh et al. (<a href="#ref-Kintigh2015-rs" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span><br>
+Focus on at least two implications for how you would design data pipelines or software tools as a CS practitioner.</p></li>
+</ol>
+<hr>
+</section>
+<section id="key-takeaways" class="level2" data-number="3.10">
+<h2 data-number="3.10" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">3.10</span> Key Takeaways</h2>
+<ul>
+<li>Computational archaeology is deeply intertwined with computer science through shared concerns about data modeling, validation, curation, and formal modeling. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kintigh2015-rs">(<a href="#ref-Kintigh2015-rs" role="doc-biblioref">Kintigh et al. 2015</a>)</span>[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span></li>
+<li>Data management choices made at creation time—especially data modeling, validation, and identifier practices—have long-term consequences for cost, quality, and reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+<li>Digital infrastructures and regulatory frameworks ensure that archaeological data are curated in repositories, enabling large-scale reuse and synthesis across projects. [<span class="citation" data-cites="Kintigh2015-rs">Kintigh et al. (<a href="#ref-Kintigh2015-rs" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Costello2009-jz">(<a href="#ref-Costello2009-jz" role="doc-biblioref">Costello 2009</a>)</span></li>
+<li>Network science in archaeology centers on representing archaeological phenomena as nodes and edges, then using network models to study relationships and structures across scales, often leveraging spatial data and complexity-science perspectives. [<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span>[<span class="citation" data-cites="Brughmans2017-ry">Brughmans and Peeples (<a href="#ref-Brughmans2017-ry" role="doc-biblioref">2017</a>)</span>]<span class="citation" data-cites="Collar2015-op">(<a href="#ref-Collar2015-op" role="doc-biblioref">Collar et al. 2015</a>)</span>[<span class="citation" data-cites="Collar2015-op">Collar et al. (<a href="#ref-Collar2015-op" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+<li>Agent-based modeling provides a way to simulate how system-level archaeological patterns can emerge from individual or group behavior, linking theories of action to observed data. [<span class="citation" data-cites="Lake2015-qd">Lake (<a href="#ref-Lake2015-qd" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Brughmans2017-ry">(<a href="#ref-Brughmans2017-ry" role="doc-biblioref">Brughmans and Peeples 2017</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+<li>Many tasks central to machine-learning pipelines—data modeling, cleaning, integration, and tracking usage—are already core to archaeological data practice, making CS skills directly applicable to computational archaeology. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Brandes2013-vd">(<a href="#ref-Brandes2013-vd" role="doc-biblioref">Brandes et al. 2013</a>)</span></li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Brandes2013-vd" class="csl-entry" role="listitem">
+Brandes, Ulrik, Garry Robins, Ann McCranie, and Stanley Wasserman. 2013. <span>“What Is Network Science?”</span> <em>Network Science</em> 1 (1): 1–15. <a href="https://doi.org/10.1017/nws.2013.2">https://doi.org/10.1017/nws.2013.2</a>.
+</div>
+<div id="ref-Brughmans2017-ry" class="csl-entry" role="listitem">
+Brughmans, Tom, and Matt Peeples. 2017. <span>“Trends in Archaeological Network Research: A Bibliometric Analysis.”</span> <em>Journal of Historical Network Research</em> 1 (1): 1–24. <a href="https://doi.org/10.25517/jhnr.v1i1.10">https://doi.org/10.25517/jhnr.v1i1.10</a>.
+</div>
+<div id="ref-Brughmans2023-uj" class="csl-entry" role="listitem">
+Brughmans, Tom, and Matthew A Peeples. 2023. <em>Network Science in Archaeology</em>. Cambridge University Press.
+</div>
+<div id="ref-Carroll2020-fy" class="csl-entry" role="listitem">
+Carroll, Stephanie Russo, Ibrahim Garba, Oscar L Figueroa-Rodríguez, Jarita Holbrook, Raymond Lovett, Simeon Materechera, Mark Parsons, et al. 2020. <span>“The CARE Principles for Indigenous Data Governance.”</span> <em>Data Science Journal</em> 19 (1): 43. <a href="https://doi.org/10.5334/dsj-2020-043">https://doi.org/10.5334/dsj-2020-043</a>.
+</div>
+<div id="ref-Collar2015-op" class="csl-entry" role="listitem">
+Collar, Anna, Fiona Coward, Tom Brughmans, and Barbara J Mills. 2015. <span>“Networks in Archaeology: Phenomena, Abstraction, Representation.”</span> <em>Journal of Archaeological Method and Theory</em> 22 (1): 1–32. <a href="https://doi.org/10.1007/s10816-014-9235-6">https://doi.org/10.1007/s10816-014-9235-6</a>.
+</div>
+<div id="ref-Costello2009-jz" class="csl-entry" role="listitem">
+Costello, Mark J. 2009. <span>“Motivating Online Publication of Data.”</span> <em>Bioscience</em> 59 (5): 418–27. <a href="https://doi.org/10.1525/bio.2009.59.5.9">https://doi.org/10.1525/bio.2009.59.5.9</a>.
+</div>
+<div id="ref-Kansa2022-pw" class="csl-entry" role="listitem">
+Kansa, Eric C, and Sarah Whitcher Kansa. 2022. <span>“Promoting Data Quality and Reuse in Archaeology Through Collaborative Identifier Practices.”</span> <em>Proc. Natl. Acad. Sci. U. S. A.</em> 119 (43): e2109313118. <a href="https://doi.org/10.1073/pnas.2109313118">https://doi.org/10.1073/pnas.2109313118</a>.
+</div>
+<div id="ref-Kansa2014-pj" class="csl-entry" role="listitem">
+Kansa, Eric C, Sarah Whitcher Kansa, and Benjamin Arbuckle. 2014. <span>“Publishing and Pushing: Mixing Models for Communicating Research Data in Archaeology.”</span> <em>International Journal of Digital Curation</em> 9 (1): 57–70. <a href="https://doi.org/10.2218/ijdc.v9i1.301">https://doi.org/10.2218/ijdc.v9i1.301</a>.
+</div>
+<div id="ref-Kintigh2015-rs" class="csl-entry" role="listitem">
+Kintigh, Keith W, Jeffrey H Altschul, Ann P Kinzig, W Fredrick Limp, William K Michener, Jeremy A Sabloff, Edward J Hackett, Timothy A Kohler, Bertram Ludäscher, and Clifford A Lynch. 2015. <span>“Cultural Dynamics, Deep Time, and Data.”</span> <em>Adv. Archaeol. Pract.</em> 3 (01): 1–15. <a href="https://doi.org/10.7183/2326-3768.3.1.1">https://doi.org/10.7183/2326-3768.3.1.1</a>.
+</div>
+<div id="ref-Lake2015-qd" class="csl-entry" role="listitem">
+Lake, Mark W. 2015. <span>“Explaining the Past with ABM: On Modelling Philosophy.”</span> In, 3–35. Springer International Publishing. <a href="https://doi.org/10.1007/978-3-319-00008-4_1">https://doi.org/10.1007/978-3-319-00008-4_1</a>.
+</div>
+<div id="ref-Nicholson2023-oq" class="csl-entry" role="listitem">
+Nicholson, Christopher, Sarah Whitcher Kansa, Neha Gupta, and Rachel Fernandez. 2023. <span>“Will It Ever Be FAIR?: Making Archaeological Data Findable, Accessible, Interoperable, and Reusable.”</span> <em>Adv. Archaeol. Pr.</em> 11 (1): 63–75. <a href="https://doi.org/10.1017/aap.2022.40">https://doi.org/10.1017/aap.2022.40</a>.
+</div>
+<div id="ref-Peeples2019-ay" class="csl-entry" role="listitem">
+Peeples, Matthew A. 2019. <span>“Finding a Place for Networks in Archaeology.”</span> <em>J Archaeol Res</em>, 1–49. <a href="https://doi.org/10.1007/s10814-019-09127-8">https://doi.org/10.1007/s10814-019-09127-8</a>.
+</div>
+<div id="ref-Peeples2024-er" class="csl-entry" role="listitem">
+Peeples, Matthew A, Jessica Munson, Barbara Mills, and Tom Brughmans. 2024. <span>“Introduction.”</span> In, 1–14. Oxford University Press. <a href="https://books.google.com/books?hl=en&amp;lr=&amp;id=2Q3iEAAAQBAJ&amp;oi=fnd&amp;pg=PA103&amp;ots=ZpuHBWJxOc&amp;sig=BDb3npMKg--sZdgqDIgpKIngqpI">https://books.google.com/books?hl=en&amp;lr=&amp;id=2Q3iEAAAQBAJ&amp;oi=fnd&amp;pg=PA103&amp;ots=ZpuHBWJxOc&amp;sig=BDb3npMKg--sZdgqDIgpKIngqpI</a>.
+</div>
+</div>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./index.html" class="pagination-link" aria-label="Open Book of Computational Archaeology">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./2_data_foundations.html" class="pagination-link" aria-label="2. Data Foundations for Archaeology">
+        <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

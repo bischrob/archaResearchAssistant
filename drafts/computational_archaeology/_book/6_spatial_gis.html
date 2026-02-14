@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-99.9.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>7&nbsp; 6. Spatial Analysis and GIS – Open Book of Computational Archaeology</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./7_network_science.html" rel="next">
+<link href="./5_machine_learning.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-494121dfa8658343c03537e94414993d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-08ba49fb381fd3f8c97a5af9c3db1c30.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./6_spatial_gis.html"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Open Book of Computational Archaeology</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./1_introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./2_data_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./3_programming_workflows.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./4_statistics_inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./5_machine_learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./6_spatial_gis.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./7_network_science.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./8_agent_based_modeling.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./9_uncertainty_sensitivity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10_ethics_governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11_projects_case_studies.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12_future_directions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">12. Future Directions in Computational Archaeology</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#spatial-analysis-and-gis" id="toc-spatial-analysis-and-gis" class="nav-link active" data-scroll-target="#spatial-analysis-and-gis"><span class="header-section-number">8</span> 6. Spatial Analysis and GIS</a>
+  <ul class="collapse">
+  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link" data-scroll-target="#learning-objectives"><span class="header-section-number">8.0.1</span> Learning Objectives</a></li>
+  <li><a href="#core-ideas" id="toc-core-ideas" class="nav-link" data-scroll-target="#core-ideas"><span class="header-section-number">8.0.2</span> Core Ideas</a></li>
+  <li><a href="#worked-workflow-building-a-gis-based-predictive-model" id="toc-worked-workflow-building-a-gis-based-predictive-model" class="nav-link" data-scroll-target="#worked-workflow-building-a-gis-based-predictive-model"><span class="header-section-number">8.0.3</span> Worked Workflow: Building a GIS-Based Predictive Model</a></li>
+  <li><a href="#case-study-neolithic-predictive-modeling-in-the-apulian-tavoliere" id="toc-case-study-neolithic-predictive-modeling-in-the-apulian-tavoliere" class="nav-link" data-scroll-target="#case-study-neolithic-predictive-modeling-in-the-apulian-tavoliere"><span class="header-section-number">8.0.4</span> Case Study: Neolithic Predictive Modeling in the Apulian Tavoliere</a></li>
+  <li><a href="#common-mistakes-and-pitfalls" id="toc-common-mistakes-and-pitfalls" class="nav-link" data-scroll-target="#common-mistakes-and-pitfalls"><span class="header-section-number">8.0.5</span> Common Mistakes and Pitfalls</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">8.0.6</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">8.0.7</span> Key Takeaways</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="spatial-analysis-and-gis" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> 6. Spatial Analysis and GIS</h1>
+<section id="learning-objectives" class="level3" data-number="8.0.1">
+<h3 data-number="8.0.1" class="anchored" data-anchor-id="learning-objectives"><span class="header-section-number">8.0.1</span> Learning Objectives</h3>
+<p>By the end of this chapter you should be able to:</p>
+<ul>
+<li>Explain what a Geographic Information System (GIS) is and why it is central to archaeological spatial analysis. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span><span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li>Distinguish between raster and vector data models and understand their roles in archaeological GIS. [<span class="citation" data-cites="Anderson2008-do">Anderson and Burke (<a href="#ref-Anderson2008-do" role="doc-biblioref">2008</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Describe how GIS manages spatial and non-spatial (attribute) data, including coordinate and map transformations. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Formulate and execute basic spatial queries and data transformations in an archaeological context. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Outline how predictive models of archaeological site location are developed in a GIS environment. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span>[<span class="citation" data-cites="Ullah2024-hz">Ullah, Clow, and Meling (<a href="#ref-Ullah2024-hz" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+<li>Describe how GIS is used for visibility (viewshed) and movement (cost-surface/mobility) analyses in landscape archaeology. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Explain how digital elevation models (DEMs) and 3D/multi-dimensional GIS support terrain and 3D analyses in archaeology. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Recognize common methodological and theoretical pitfalls in archaeological GIS and spatial analysis. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Aldenderfer1998-tw">(<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">Aldenderfer 1998</a>)</span>[<span class="citation" data-cites="Ullah2024-hz">Ullah, Clow, and Meling (<a href="#ref-Ullah2024-hz" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span>[<span class="citation" data-cites="Brouwer-Burg2016-na">Brouwer Burg, Peeters, and Lovis (<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="core-ideas" class="level3" data-number="8.0.2">
+<h3 data-number="8.0.2" class="anchored" data-anchor-id="core-ideas"><span class="header-section-number">8.0.2</span> Core Ideas</h3>
+<section id="gis-and-spatial-thinking-in-archaeology" class="level4" data-number="8.0.2.1">
+<h4 data-number="8.0.2.1" class="anchored" data-anchor-id="gis-and-spatial-thinking-in-archaeology"><span class="header-section-number">8.0.2.1</span> 6.1 GIS and Spatial Thinking in Archaeology</h4>
+<p>Spatial thinking has been central to archaeology from its beginnings because almost all archaeological material has a spatial component, and understanding past lives requires reasoning about spatial relationships in the material record. <span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span> Effective spatial analysis is described as an essential element of archaeological research, and recent methodological work has focused on providing authoritative yet accessible guides to spatial techniques in archaeology. <span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span></p>
+<p>The most recent phase of spatial archaeology has been characterized by the increasing importance of spatial technologies, especially GIS, both for managing complex spatial data and for conducting spatial analyses. <span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span> Within archaeology, GIS is widely used as an environment for managing, integrating, and displaying large and complex forms of spatial data, and as a platform for locational and spatial analysis. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></p>
+</section>
+<section id="what-is-a-gis-in-archaeological-practice" class="level4" data-number="8.0.2.2">
+<h4 data-number="8.0.2.2" class="anchored" data-anchor-id="what-is-a-gis-in-archaeological-practice"><span class="header-section-number">8.0.2.2</span> 6.2 What is a GIS in Archaeological Practice?</h4>
+<p>GIS provides:</p>
+<ul>
+<li><strong>A common analytic environment</strong> that brings together diverse spatial datasets (such as maps and survey data) and allows them to be compared, combined, and analyzed. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li><strong>Spatial data management</strong>, including transforming map coordinate systems so that data from different sources can be integrated, building vector topologies, cleaning digitized datasets, and creating geospatial metadata. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li><strong>Database management</strong> that links spatial data with non-spatial (attribute) datasets, allowing archaeologists to explore relationships — for example, linking provenience information for projectile points with their morphological attributes to examine spatial patterns in variability. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li><strong>Spatial data analysis tools</strong> for locational and spatial analysis, including functions for visibility (viewsheds) and movement (cost-surfaces) across landscapes, and the mathematical combination of spatial datasets to generate new derived data. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+</ul>
+<p>Archaeological GIS is strongly associated with applications such as site discovery, predictive modeling, visibility and movement modeling, and landscape-scale spatial analysis. <span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></p>
+</section>
+<section id="raster-and-vector-models" class="level4" data-number="8.0.2.3">
+<h4 data-number="8.0.2.3" class="anchored" data-anchor-id="raster-and-vector-models"><span class="header-section-number">8.0.2.3</span> 6.3 Raster and Vector Models</h4>
+<p>Archaeological GIS practice makes explicit use of vector-based and raster-based data models. [<span class="citation" data-cites="Anderson2008-do">Anderson and Burke (<a href="#ref-Anderson2008-do" role="doc-biblioref">2008</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></p>
+<ul>
+<li><p><strong>Vector-based GIS</strong> represents discrete spatial entities such as points, lines, and areas, and supports operations such as building vector topologies and cleaning digitized spatial datasets. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span> This is crucial for integrating map-based data, coordinate-based data, and survey data. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p></li>
+<li><p><strong>Raster-based GIS</strong> is tightly linked to image integration and digital elevation modeling, since elevation data and images are commonly stored as regular grids in GIS. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span> Elevation models in GIS are described as digital elevation models, with specific sections devoted to storing elevation data, creating elevation models, and deriving products and visualizations from them. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p></li>
+</ul>
+<p>GIS texts in archaeology distinguish clearly between “vector and raster based GIS”, and discuss their respective advantages for archaeological applications, as well as potential limitations related to costs, user knowledge, and data quality. [<span class="citation" data-cites="Anderson2008-do">Anderson and Burke (<a href="#ref-Anderson2008-do" role="doc-biblioref">2008</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></p>
+</section>
+<section id="coordinate-systems-and-data-integration" class="level4" data-number="8.0.2.4">
+<h4 data-number="8.0.2.4" class="anchored" data-anchor-id="coordinate-systems-and-data-integration"><span class="header-section-number">8.0.2.4</span> 6.4 Coordinate Systems and Data Integration</h4>
+<p>A core capability of GIS in archaeology is transforming map coordinate systems to enable integration of data collected from different sources. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span> Archaeological GIS manuals emphasize:</p>
+<ul>
+<li>Integrating spatial information from <strong>map-based data</strong>, <strong>coordinates</strong>, <strong>survey data</strong>, <strong>images</strong>, and existing digital resources. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Clarifying relationships between spatial and attribute data, and integrating attribute data into spatial databases. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Addressing <strong>data quality</strong>, <strong>metadata</strong>, and interoperability to ensure that integrated spatial datasets can be meaningfully analyzed. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul>
+<p>These activities depend on consistent handling of coordinate information and transformation, so that sites digitized from different maps, surveys, or imagery can be brought into a common spatial reference frame for analysis. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="spatial-queries-and-spatial-data-manipulation" class="level4" data-number="8.0.2.5">
+<h4 data-number="8.0.2.5" class="anchored" data-anchor-id="spatial-queries-and-spatial-data-manipulation"><span class="header-section-number">8.0.2.5</span> 6.5 Spatial Queries and Spatial Data Manipulation</h4>
+<p>Once spatial and attribute data are integrated, work in GIS turns to spatial queries and transformations. Archaeological GIS guidance frames this stage as where “the fun starts,” focusing on: <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<ul>
+<li><strong>Searching the spatial database</strong>, including spatial searches and attribute-based searches. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Producing <strong>summaries</strong> (e.g., counts or statistics) over spatial subsets. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Performing <strong>simple transformations of a single data theme</strong>, such as reclassifying values, buffering, or other basic spatial operations. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Undertaking <strong>spatial data modeling</strong>, involving combinations and transformations of multiple spatial layers to derive new datasets. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul>
+<p>These capabilities underpin locational and spatial analysis in archaeology, such as identifying patterns of artifact distributions, characterizing site catchments, and exploring associations between environmental variables and site locations. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="predictive-modeling-in-archaeology" class="level4" data-number="8.0.2.6">
+<h4 data-number="8.0.2.6" class="anchored" data-anchor-id="predictive-modeling-in-archaeology"><span class="header-section-number">8.0.2.6</span> 6.6 Predictive Modeling in Archaeology</h4>
+<p>Predictive archaeological modeling is a major application of GIS and spatial analysis. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<ul>
+<li>Foundational work on predictive archaeological modeling establishes its fundamental principles and practice, positioning it within broader quantitative and GIS-based approaches in archaeology. <span class="citation" data-cites="Aldenderfer1998-tw">(<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">Aldenderfer 1998</a>)</span></li>
+<li>GIS-based predictive models are recognized as important topics in preventive archaeology, where they support decision systems by reducing archaeological risk and guiding research and management. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+<li>Over the years, many predictive models in GIS environments have been developed, differing in methodological approach and parameters used. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+<li>It is noted that relatively few predictive models explicitly incorporate <strong>spatial autocorrelation</strong>, even though approaches that include spatial autocorrelation can provide more effective results by accounting for spatial relationships among sites. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>GIS-based predictive modeling is also one of the dominant foci in funded archaeological GIS research and in the methodological literature, alongside site discovery, visibility modeling, movement modeling, and landscape-scale analysis. <span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></p>
+</section>
+<section id="visibility-and-movement-modeling" class="level4" data-number="8.0.2.7">
+<h4 data-number="8.0.2.7" class="anchored" data-anchor-id="visibility-and-movement-modeling"><span class="header-section-number">8.0.2.7</span> 6.7 Visibility and Movement Modeling</h4>
+<p>Visibility and movement modeling are central GIS-based analyses in archaeology. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<ul>
+<li>GIS provides tools for examining <strong>visibility (viewsheds)</strong> across landscapes, allowing archaeologists to assess what could be seen from specific locations. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li>Archaeological GIS manuals treat visibility analysis in depth, including:
+<ul>
+<li>The importance of visibility in archaeological analysis. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Archaeological approaches to visibility. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>How GIS calculates visibility. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Analyses of visibility within samples of sites (cumulative viewsheds) and among groups of sites (multiple and cumulative viewsheds). <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Problems with viewshed analysis, issues of intervisibility and reciprocity, and how archaeologists have applied and critiqued visibility analyses. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+<li>Movement modeling is supported through <strong>cost-surface</strong> and related analyses, where GIS tools for movement across landscapes are explicitly noted as part of spatial data analysis capability. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li>Archaeological reviews of GIS applications note that visibility modeling and mobility modeling are major methodological foci in recent work, reflecting their importance in landscape-scale spatial analysis. [<span class="citation" data-cites="Ullah2024-hz">Ullah, Clow, and Meling (<a href="#ref-Ullah2024-hz" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+</ul>
+</section>
+<section id="d-terrain-modeling-and-3d-gis" class="level4" data-number="8.0.2.8">
+<h4 data-number="8.0.2.8" class="anchored" data-anchor-id="d-terrain-modeling-and-3d-gis"><span class="header-section-number">8.0.2.8</span> 6.8 3D Terrain Modeling and 3D GIS</h4>
+<p>Digital elevation models (DEMs) and 3D/multi-dimensional GIS extend spatial analysis into three dimensions. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<ul>
+<li>Archaeological GIS texts devote chapters to <strong>digital elevation models</strong>, covering:
+<ul>
+<li>Uses of elevation models.</li>
+<li>Representation of elevation data in maps.</li>
+<li>Storing elevation data in GIS.</li>
+<li>Creating elevation models from source data.</li>
+<li>Products derived from elevation models.</li>
+<li>Visualization of terrain. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+<li>Elevation models underlie many terrain-related analyses, including visibility analysis, which depends on the representation of 3D terrain to calculate line-of-sight. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Discussions of <strong>multi-dimensional GIS (3D-GIS)</strong> describe it as a developing direction in archaeological GIS, alongside object-oriented and temporal GIS. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Recent archaeological GIS literature highlights <strong>3D GIS</strong> as a growing area, along with visibility modeling, mobility modeling, and work on landscape affordances and big data. <span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+</ul>
+<p>These developments show that 3D terrain modeling and 3D GIS are now central to advanced archaeological spatial analysis.</p>
+</section>
+<section id="gis-method-and-theory" class="level4" data-number="8.0.2.9">
+<h4 data-number="8.0.2.9" class="anchored" data-anchor-id="gis-method-and-theory"><span class="header-section-number">8.0.2.9</span> 6.9 GIS, Method, and Theory</h4>
+<p>GIS in archaeology has often been adopted as a methodological tool for managing spatial data and conducting spatial analyses, with most usage being applications-focused or methods-focused. <span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span> At the same time, there has been sustained critical discussion of:</p>
+<ul>
+<li>How GIS relates to spatial thinking and spatial storytelling in archaeology. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span><span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+<li>Whether GIS should be considered “the answer” to spatial thinking, or one among many spatial technologies. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span><span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+<li>The inherently quantitative nature of many GIS analyses, and the need to interrogate assumptions and uncertainties. [<span class="citation" data-cites="Ullah2024-hz">Ullah, Clow, and Meling (<a href="#ref-Ullah2024-hz" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Brouwer-Burg2016-na">(<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">Brouwer Burg, Peeters, and Lovis 2016</a>)</span></li>
+<li>How uncertainty and sensitivity analysis should be incorporated into archaeological computational modeling, including GIS-based models. <span class="citation" data-cites="Brouwer-Burg2016-na">(<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">Brouwer Burg, Peeters, and Lovis 2016</a>)</span></li>
+</ul>
+<p>Recent edited volumes on archaeological spatial analysis seek to improve archaeological spatial literacy and provide methodological guidance on spatial techniques that can be operationalized in GIS, rather than offering only GIS-specific workflows. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="worked-workflow-building-a-gis-based-predictive-model" class="level3" data-number="8.0.3">
+<h3 data-number="8.0.3" class="anchored" data-anchor-id="worked-workflow-building-a-gis-based-predictive-model"><span class="header-section-number">8.0.3</span> Worked Workflow: Building a GIS-Based Predictive Model</h3>
+<p>This section walks through a generalized workflow for GIS-based predictive modeling in preventive archaeology, based on GIS and spatial analysis literature in archaeology. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span>[<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<section id="step-1-define-the-research-and-management-problem" class="level4" data-number="8.0.3.1">
+<h4 data-number="8.0.3.1" class="anchored" data-anchor-id="step-1-define-the-research-and-management-problem"><span class="header-section-number">8.0.3.1</span> Step 1: Define the Research and Management Problem</h4>
+<p>Preventive archaeology uses predictive models to reduce archaeological risk and support decision systems. A typical problem might be: identify areas with high potential for archaeological sites within a planned development area so that impacts can be minimized. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="step-2-assemble-spatial-and-attribute-data" class="level4" data-number="8.0.3.2">
+<h4 data-number="8.0.3.2" class="anchored" data-anchor-id="step-2-assemble-spatial-and-attribute-data"><span class="header-section-number">8.0.3.2</span> Step 2: Assemble Spatial and Attribute Data</h4>
+<p>Use GIS as an environment for integrating spatial and attribute data. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<ul>
+<li>Collect spatial data such as:
+<ul>
+<li>Existing site locations derived from surveys or excavations.</li>
+<li>Environmental variables (e.g., elevation, slope) extracted from digital elevation models. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Map-based data (topographic maps, land-use maps) and image data (e.g., aerial photographs), integrated via digitizing or image registration. <span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+<li>Collect attribute data such as:
+<ul>
+<li>Site characteristics (period, type, size).</li>
+<li>Relevant environmental or cultural variables linked to spatial entities. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+</ul>
+<p>Clarify the relationship between spatial and attribute data and ensure that spatial and non-spatial components are correctly linked through database management within the GIS. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="step-3-coordinate-system-transformation-and-data-cleaning" class="level4" data-number="8.0.3.3">
+<h4 data-number="8.0.3.3" class="anchored" data-anchor-id="step-3-coordinate-system-transformation-and-data-cleaning"><span class="header-section-number">8.0.3.3</span> Step 3: Coordinate System Transformation and Data Cleaning</h4>
+<p>Transform map coordinate systems to bring all datasets into a common spatial reference frame. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span> Build vector topologies where needed (for example, ensuring polygons close and line networks connect properly), and clean newly digitized spatial datasets to remove errors and inconsistencies. <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></p>
+<p>Address data quality and create geospatial metadata to document sources, transformations, and limitations, facilitating later interpretation and reuse. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="step-4-exploratory-spatial-analysis" class="level4" data-number="8.0.3.4">
+<h4 data-number="8.0.3.4" class="anchored" data-anchor-id="step-4-exploratory-spatial-analysis"><span class="header-section-number">8.0.3.4</span> Step 4: Exploratory Spatial Analysis</h4>
+<p>Perform exploratory spatial analysis to understand patterns before modeling. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<ul>
+<li>Use spatial searches and summaries to examine environmental characteristics around known sites (e.g., their elevation or proximity to certain features). [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Consider the potential role of <strong>spatial autocorrelation</strong>, since many archaeological phenomena are spatially structured; although often neglected, approaches including spatial autocorrelation can strengthen predictive models. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>This phase may involve basic spatial statistics and visualization to identify relationships between site locations and environmental variables. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="step-5-construct-the-predictive-model" class="level4" data-number="8.0.3.5">
+<h4 data-number="8.0.3.5" class="anchored" data-anchor-id="step-5-construct-the-predictive-model"><span class="header-section-number">8.0.3.5</span> Step 5: Construct the Predictive Model</h4>
+<p>Use GIS spatial data modeling capabilities — the mathematical combination of spatial datasets — to generate predictive surfaces. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<ul>
+<li>Select predictor variables based on theoretical and empirical considerations (for example, terrain, proximity to resources).</li>
+<li>Combine raster or vector layers to compute a suitability or probability surface representing predicted archaeological potential. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+<li>Explicitly incorporate spatial autocorrelation where possible to account for relationships among existing sites. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>The result is a predictive model that differentiates areas of higher and lower archaeological risk, supporting preventive measures and research planning. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="step-6-evaluate-document-and-use-the-model" class="level4" data-number="8.0.3.6">
+<h4 data-number="8.0.3.6" class="anchored" data-anchor-id="step-6-evaluate-document-and-use-the-model"><span class="header-section-number">8.0.3.6</span> Step 6: Evaluate, Document, and Use the Model</h4>
+<p>Critically evaluate the model’s performance and limitations, drawing on broader discussions about uncertainty and sensitivity analysis in archaeological computational modeling. [<span class="citation" data-cites="Brouwer-Burg2016-na">Brouwer Burg, Peeters, and Lovis (<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<ul>
+<li>Assess how changes in input parameters or data quality affect model outcomes, recognizing that GIS outputs are not infallible. <span class="citation" data-cites="Brouwer-Burg2016-na">(<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">Brouwer Burg, Peeters, and Lovis 2016</a>)</span></li>
+<li>Document all assumptions, data sources, transformations, and model steps in metadata and reports. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>Deploy the model as part of a support decision system (SDS) in preventive archaeology to guide survey strategies and management decisions. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="case-study-neolithic-predictive-modeling-in-the-apulian-tavoliere" class="level3" data-number="8.0.4">
+<h3 data-number="8.0.4" class="anchored" data-anchor-id="case-study-neolithic-predictive-modeling-in-the-apulian-tavoliere"><span class="header-section-number">8.0.4</span> Case Study: Neolithic Predictive Modeling in the Apulian Tavoliere</h3>
+<p>A published case study demonstrates a GIS-based predictive modeling approach applied to Neolithic sites in the Apulian Tavoliere (Southern Italy). <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<section id="context-and-goals" class="level4" data-number="8.0.4.1">
+<h4 data-number="8.0.4.1" class="anchored" data-anchor-id="context-and-goals"><span class="header-section-number">8.0.4.1</span> Context and Goals</h4>
+<p>The study focuses on <strong>predictive modeling for preventive archaeology</strong>, using GIS and spatial analysis to support decision systems and reduce archaeological risk. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span> It notes that many predictive models exist, differing in methodology and parameters, but relatively few incorporate spatial autocorrelation. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="methodological-approach" class="level4" data-number="8.0.4.2">
+<h4 data-number="8.0.4.2" class="anchored" data-anchor-id="methodological-approach"><span class="header-section-number">8.0.4.2</span> Methodological Approach</h4>
+<p>The authors combine traditional predictive modeling techniques with methods that explicitly incorporate <strong>spatial autocorrelation analysis</strong>, thereby accounting for spatial relationships among Neolithic sites. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span> This approach is implemented in a GIS environment, leveraging GIS capabilities for:</p>
+<ul>
+<li>Integrating spatial site data and environmental variables.</li>
+<li>Performing spatial analyses that examine both local conditions and the broader spatial structure of the dataset. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>By including spatial autocorrelation, the model is designed to yield more effective predictive results than models that ignore such spatial dependencies. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="outcomes-and-significance" class="level4" data-number="8.0.4.3">
+<h4 data-number="8.0.4.3" class="anchored" data-anchor-id="outcomes-and-significance"><span class="header-section-number">8.0.4.3</span> Outcomes and Significance</h4>
+<p>The case study illustrates:</p>
+<ul>
+<li>The importance of selecting appropriate methods and parameters in GIS-based predictive models.</li>
+<li>The value of combining traditional GIS-based predictive modeling with spatial autocorrelation analysis to capture spatial relationships among archaeological sites. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul>
+<p>It exemplifies the broader trend in archaeological GIS toward more sophisticated spatial modeling that is sensitive to spatial autocorrelation and other spatial statistical issues. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="common-mistakes-and-pitfalls" class="level3" data-number="8.0.5">
+<h3 data-number="8.0.5" class="anchored" data-anchor-id="common-mistakes-and-pitfalls"><span class="header-section-number">8.0.5</span> Common Mistakes and Pitfalls</h3>
+<section id="treating-gis-as-infallible" class="level4" data-number="8.0.5.1">
+<h4 data-number="8.0.5.1" class="anchored" data-anchor-id="treating-gis-as-infallible"><span class="header-section-number">8.0.5.1</span> 1. Treating GIS as Infallible</h4>
+<p>Archaeological literature cautions against assuming that GIS outputs are inherently correct. Titles such as “It must be right, GIS told me so! Questioning the infallibility of GIS as a methodological tool” highlight critical concerns, and broader work on uncertainty and sensitivity in archaeological computational modeling emphasizes that GIS-based models must be evaluated carefully. <span class="citation" data-cites="Brouwer-Burg2016-na">(<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">Brouwer Burg, Peeters, and Lovis 2016</a>)</span></p>
+<p>Ignoring uncertainty, data quality, and sensitivity can lead to overconfident conclusions about predictive models, viewsheds, or other spatial analyses. [<span class="citation" data-cites="Brouwer-Burg2016-na">Brouwer Burg, Peeters, and Lovis (<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="using-gis-only-as-mapping-software" class="level4" data-number="8.0.5.2">
+<h4 data-number="8.0.5.2" class="anchored" data-anchor-id="using-gis-only-as-mapping-software"><span class="header-section-number">8.0.5.2</span> 2. Using GIS Only as Mapping Software</h4>
+<p>Reviews of archaeological GIS use indicate that most applications remain focused on data management and routine spatial analysis, with GIS frequently treated as just a tool for storing and displaying spatial data rather than engaging with deeper spatial theory or more advanced analysis. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span><span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></p>
+<p>This can limit archaeological insight and underutilize the analytical and theoretical potential of GIS, especially when spatial thinking and spatial literacy are not foregrounded. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span>[<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></p>
+</section>
+<section id="ignoring-spatial-autocorrelation-in-predictive-models" class="level4" data-number="8.0.5.3">
+<h4 data-number="8.0.5.3" class="anchored" data-anchor-id="ignoring-spatial-autocorrelation-in-predictive-models"><span class="header-section-number">8.0.5.3</span> 3. Ignoring Spatial Autocorrelation in Predictive Models</h4>
+<p>Predictive modeling studies note that many models do not consider spatial autocorrelation, despite its importance for capturing spatial relationships among sites. <span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span> Reviews of quantitative methods in archaeology stress the relevance of spatial statistics and autocorrelation for understanding spatial structure in archaeological data. <span class="citation" data-cites="Aldenderfer1998-tw">(<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">Aldenderfer 1998</a>)</span></p>
+<p>Failure to account for spatial autocorrelation can bias model results and reduce their effectiveness for preventive archaeology and research. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></p>
+</section>
+<section id="neglecting-data-integration-and-metadata" class="level4" data-number="8.0.5.4">
+<h4 data-number="8.0.5.4" class="anchored" data-anchor-id="neglecting-data-integration-and-metadata"><span class="header-section-number">8.0.5.4</span> 4. Neglecting Data Integration and Metadata</h4>
+<p>GIS texts emphasize that integrating spatial information from diverse sources (maps, coordinates, surveys, images, and existing digital resources) requires careful attention to relationships between spatial and attribute data, data quality, and metadata. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<p>Common pitfalls include:</p>
+<ul>
+<li>Poorly documented coordinate transformations.</li>
+<li>Inadequate or missing metadata.</li>
+<li>Mislinked attribute tables and spatial layers.</li>
+</ul>
+<p>These issues can undermine later analyses and interpretations. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+</section>
+<section id="over-reliance-on-2d-underuse-of-3d-and-temporal-dimensions" class="level4" data-number="8.0.5.5">
+<h4 data-number="8.0.5.5" class="anchored" data-anchor-id="over-reliance-on-2d-underuse-of-3d-and-temporal-dimensions"><span class="header-section-number">8.0.5.5</span> 5. Over-Reliance on 2D, Underuse of 3D and Temporal Dimensions</h4>
+<p>While multi-dimensional GIS (3D-GIS) and temporal GIS (TGIS) are recognized as important future directions, many analyses remain restricted to 2D, potentially overlooking important aspects of elevation, visibility, and change over time. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<p>Similarly, digital elevation models and 3D visualization capabilities are available but may not be fully exploited in routine archaeological GIS analysis. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="exercises" class="level3" data-number="8.0.6">
+<h3 data-number="8.0.6" class="anchored" data-anchor-id="exercises"><span class="header-section-number">8.0.6</span> Exercises</h3>
+<ol type="1">
+<li><p><strong>Conceptual Exercise: GIS Capabilities</strong></p>
+<ul>
+<li>List the main capabilities of GIS in archaeology in terms of:
+<ul>
+<li>Spatial data management.</li>
+<li>Database management.</li>
+<li>Spatial data analysis.</li>
+</ul></li>
+<li>For each capability, provide a brief archaeological example (e.g., linking projectile point morphology to provenance to explore spatial patterns). <span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+</ul></li>
+<li><p><strong>Raster vs Vector Thought Experiment</strong></p>
+<ul>
+<li>Suppose you are studying Neolithic site distributions and wish to analyze both site locations and terrain.
+<ul>
+<li>Identify which aspects of your analysis are best represented using vector data and which using raster data.</li>
+<li>Explain how digital elevation models (DEMs) would be stored and used in your GIS. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Spatial Query Design</strong></p>
+<ul>
+<li>Describe in prose (no software required) how you would:
+<ul>
+<li>Search a spatial database to find all sites within a given distance of a river.</li>
+<li>Summarize environmental characteristics (e.g., elevation) for those sites using GIS summaries. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Predictive Modeling Outline</strong></p>
+<ul>
+<li>Based on the Apulian Tavoliere case study, outline a workflow for a GIS-based predictive model for a different region.
+<ul>
+<li>Specify the types of data you would integrate.</li>
+<li>Identify at least one way you would include spatial autocorrelation analysis. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Visibility and Movement Analysis Planning</strong></p>
+<ul>
+<li>Design a conceptual plan for:
+<ul>
+<li>A visibility study using viewshed and cumulative viewshed analysis for a set of hilltop sites.</li>
+<li>A movement study using cost-surface or related analysis to model mobility between settlements.<br>
+Describe how digital elevation models would support these analyses. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+</ul></li>
+</ul></li>
+<li><p><strong>Critical Reflection on GIS and Theory</strong></p>
+<ul>
+<li>Write a short essay explaining:
+<ul>
+<li>Why archaeological spatial analysis requires more than just technical GIS skills.</li>
+<li>How recent work on archaeological spatial analysis and re-mapping archaeology seeks to improve spatial literacy and integrate theory with GIS practice. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span>[<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span><span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+</ul></li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="key-takeaways" class="level3" data-number="8.0.7">
+<h3 data-number="8.0.7" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">8.0.7</span> Key Takeaways</h3>
+<ul>
+<li>Effective spatial analysis is essential to archaeological research, and GIS has become a central spatial technology in archaeology, used for both data management and spatial analysis. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span>[<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span></li>
+<li>GIS provides an integrated environment for spatial data management (including coordinate transformations and topology building), database management (linking spatial and non-spatial data), and spatial data analysis (including visibility, movement, and the mathematical combination of spatial datasets). [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Archaeological GIS relies on both vector and raster models: vector for discrete features and topological structures, raster for images and digital elevation models, which underpin many terrain, visibility, and 3D analyses. [<span class="citation" data-cites="Anderson2008-do">Anderson and Burke (<a href="#ref-Anderson2008-do" role="doc-biblioref">2008</a>)</span>]<span class="citation" data-cites="Conolly2006-bn">(<a href="#ref-Conolly2006-bn" role="doc-biblioref">Conolly and Lake 2006</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Predictive modeling is a major GIS application in preventive archaeology; models differ in approach and parameters, and those that incorporate spatial autocorrelation can provide more effective results by accounting for spatial relationships among sites. [<span class="citation" data-cites="Aldenderfer1998-tw">Aldenderfer (<a href="#ref-Aldenderfer1998-tw" role="doc-biblioref">1998</a>)</span>]<span class="citation" data-cites="Danese2014-bx">(<a href="#ref-Danese2014-bx" role="doc-biblioref">Danese et al. 2014</a>)</span></li>
+<li>Visibility analysis (viewsheds, cumulative and multiple viewsheds) and movement modeling (cost-surfaces and mobility modeling) are key landscape-scale GIS techniques in archaeology. [<span class="citation" data-cites="Conolly2006-bn">Conolly and Lake (<a href="#ref-Conolly2006-bn" role="doc-biblioref">2006</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span><span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Digital elevation models and multi-dimensional (3D-GIS) capabilities enable advanced terrain and 3D spatial analysis, and are recognized as important directions for archaeological GIS. [<span class="citation" data-cites="Wheatley2002-hc">Wheatley and Gillings (<a href="#ref-Wheatley2002-hc" role="doc-biblioref">2002</a>)</span>]<span class="citation" data-cites="Wheatley2002-hc">(<a href="#ref-Wheatley2002-hc" role="doc-biblioref">Wheatley and Gillings 2002</a>)</span></li>
+<li>Archaeologists are increasingly attentive to the theoretical and methodological implications of GIS, emphasizing spatial literacy, critical reflection, and explicit attention to uncertainty and sensitivity rather than treating GIS outputs as infallible. [<span class="citation" data-cites="Gillings2020-mc"><em>Archaeological Spatial Analysis: A Methodological Guide</em> (<a href="#ref-Gillings2020-mc" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Gillings2020-mc">(<a href="#ref-Gillings2020-mc" role="doc-biblioref"><em>Archaeological Spatial Analysis: A Methodological Guide</em> 2020</a>)</span>[<span class="citation" data-cites="Ullah2024-hz">Ullah, Clow, and Meling (<a href="#ref-Ullah2024-hz" role="doc-biblioref">2024</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span>[<span class="citation" data-cites="Brouwer-Burg2016-na">Brouwer Burg, Peeters, and Lovis (<a href="#ref-Brouwer-Burg2016-na" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Ullah2024-hz">(<a href="#ref-Ullah2024-hz" role="doc-biblioref">Ullah, Clow, and Meling 2024</a>)</span></li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Aldenderfer1998-tw" class="csl-entry" role="listitem">
+Aldenderfer, Mark. 1998. <span>“Quantitative Methods in Archaeology: A Review of Recent Trends and Developments.”</span> <em>Journal of Archaeological Research</em> 6 (2): 91–120. <a href="https://doi.org/10.1007/BF02446161">https://doi.org/10.1007/BF02446161</a>.
+</div>
+<div id="ref-Anderson2008-do" class="csl-entry" role="listitem">
+Anderson, Kirsten L, and Ariane Burke. 2008. <span>“Refining the Definition of Cultural Levels at Karabi Tamchin: A Quantitative Approach to Vertical Intra-Site Spatial Analysis.”</span> <em>J. Archaeol. Sci.</em> 35 (8): 2274–85. <a href="https://doi.org/10.1016/j.jas.2008.02.011">https://doi.org/10.1016/j.jas.2008.02.011</a>.
+</div>
+<div id="ref-Gillings2020-mc" class="csl-entry" role="listitem">
+<em>Archaeological Spatial Analysis: A Methodological Guide</em>. 2020. Routledge.
+</div>
+<div id="ref-Brouwer-Burg2016-na" class="csl-entry" role="listitem">
+Brouwer Burg, Marieka, Hans Peeters, and William A Lovis. 2016. <span>“Introduction to Uncertainty and Sensitivity Analysis in Archaeological Computational Modeling.”</span> In, 1–20. Springer International Publishing. <a href="https://doi.org/10.1007/978-3-319-27833-9_1">https://doi.org/10.1007/978-3-319-27833-9_1</a>.
+</div>
+<div id="ref-Conolly2006-bn" class="csl-entry" role="listitem">
+Conolly, James, and Mark W Lake. 2006. <em>Geographical Information Systems in Archaeology</em>. Cambridge University Press. <a href="https://market.android.com/details?id=book-MfiUAwAAQBAJ">https://market.android.com/details?id=book-MfiUAwAAQBAJ</a>.
+</div>
+<div id="ref-Danese2014-bx" class="csl-entry" role="listitem">
+Danese, Maria, Nicola Masini, Marilisa Biscione, and Rosa Lasaponara. 2014. <span>“Predictive Modeling for Preventive Archaeology: Overview and Case Study.”</span> <em>Open Geosci.</em> 6 (1): 42–55. <a href="https://doi.org/10.2478/s13533-012-0160-5">https://doi.org/10.2478/s13533-012-0160-5</a>.
+</div>
+<div id="ref-Ullah2024-hz" class="csl-entry" role="listitem">
+Ullah, Isaac I, Zachery Clow, and Juliette Meling. 2024. <span>“Paradigm or Practice? Situating GIS in Contemporary Archaeological Method and Theory.”</span> <em>J. Archaeol. Method Theory</em> 31 (3): 1185–1231. <a href="https://doi.org/10.1007/s10816-023-09638-1">https://doi.org/10.1007/s10816-023-09638-1</a>.
+</div>
+<div id="ref-Wheatley2002-hc" class="csl-entry" role="listitem">
+Wheatley, David, and Mark Gillings. 2002. <em>Spatial Technology and Archaeology: The Archaeological Applications of GIS</em>. Taylor &amp; Francis Group.
+</div>
+</div>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./5_machine_learning.html" class="pagination-link" aria-label="5. Machine Learning in Archaeology">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./7_network_science.html" class="pagination-link" aria-label="7. Network Science for Past Societies">
+        <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

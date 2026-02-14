@@ -1,0 +1,35 @@
+project:
+  type: book
+
+book:
+  title: "Open Book of Computational Archaeology"
+  author: "Research Assistant"
+  date: "2026-02-14"
+  chapters:
+    - index.qmd
+    - 1_introduction.qmd
+    - 2_data_foundations.qmd
+    - 3_programming_workflows.qmd
+    - 4_statistics_inference.qmd
+    - 5_machine_learning.qmd
+    - 6_spatial_gis.qmd
+    - 7_network_science.qmd
+    - 8_agent_based_modeling.qmd
+    - 9_uncertainty_sensitivity.qmd
+    - 10_ethics_governance.qmd
+    - 11_projects_case_studies.qmd
+    - 12_future_directions.qmd
+
+bibliography: references.bib
+
+format:
+  html:
+    theme:
+      - sandstone
+      - theme.scss
+    toc: true
+    number-sections: true
+    code-copy: true
+    smooth-scroll: true
+  pdf:
+    documentclass: scrreprt
