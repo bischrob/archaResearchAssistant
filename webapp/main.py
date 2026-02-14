@@ -57,6 +57,8 @@ class JobState:
     finished_at: float | None = None
     error: str | None = None
     result: dict[str, Any] | None = None
+    progress_percent: float = 0.0
+    progress_message: str = "Idle"
     cancel_event: threading.Event = field(default_factory=threading.Event)
     thread: threading.Thread | None = None
     proc: subprocess.Popen | None = None
@@ -84,6 +86,8 @@ class JobManager:
             job.result = None
             job.cancel_event = threading.Event()
             job.proc = None
+            job.progress_percent = 0.0
+            job.progress_message = "Starting..."
 
             def wrapped() -> None:
                 try:
@@ -129,10 +133,47 @@ class JobManager:
                 "finished_at": job.finished_at,
                 "error": job.error,
                 "result": job.result,
+                "progress_percent": round(job.progress_percent, 1),
+                "progress_message": job.progress_message,
             }
+
+    def set_progress(self, name: str, percent: float, message: str) -> None:
+        with self._lock:
+            job = self._jobs[name]
+            job.progress_percent = max(0.0, min(100.0, float(percent)))
+            job.progress_message = message
 
 
 jobs = JobManager()
+
+
+def _count_local_pdfs(root_dir: str) -> int:
+    root = Path(root_dir)
+    return sum(1 for p in root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf")
+
+
+def _count_remote_pdfs(remote_path: str) -> int | None:
+    try:
+        proc = subprocess.run(
+            [
+                "rclone",
+                "lsf",
+                remote_path,
+                "--recursive",
+                "--files-only",
+                "--include",
+                "*.pdf",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            return None
+        lines = [x for x in proc.stdout.splitlines() if x.strip()]
+        return len(lines)
+    except Exception:
+        return None
 
 
 @app.get("/")
@@ -159,6 +200,12 @@ def sync_pdfs(req: SyncRequest) -> dict:
         cmd = [str(SYNC_SCRIPT)]
         if req.dry_run:
             cmd.append("--dry-run")
+
+        remote_path = "gdrive:Library/Paperpile/allPapers"
+        local_dir = "pdfs"
+        total_remote = _count_remote_pdfs(remote_path)
+        jobs.set_progress("sync", 0.0, "Starting sync")
+
         proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         with jobs._lock:
             job.proc = proc
@@ -169,9 +216,17 @@ def sync_pdfs(req: SyncRequest) -> dict:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+                jobs.set_progress("sync", job.progress_percent, "Cancelled")
                 return {"ok": False, "cancelled": True}
+            if total_remote and total_remote > 0:
+                local_count = _count_local_pdfs(str(ROOT / local_dir))
+                pct = min(99.0, (local_count / total_remote) * 100.0)
+                jobs.set_progress("sync", pct, f"Local PDFs: {local_count}/{total_remote}")
+            else:
+                jobs.set_progress("sync", 50.0, "Sync in progress")
             time.sleep(0.2)
         out, err = proc.communicate()
+        jobs.set_progress("sync", 100.0, "Sync complete")
         return {
             "ok": proc.returncode == 0,
             "returncode": proc.returncode,
@@ -195,6 +250,7 @@ def sync_stop() -> dict:
 @app.post("/api/ingest")
 def ingest(req: IngestRequest) -> dict:
     def run(job: JobState) -> dict:
+        jobs.set_progress("ingest", 0.0, "Selecting files")
         selected = choose_pdfs(
             mode=req.mode,
             source_dir=req.source_dir,
@@ -207,7 +263,9 @@ def ingest(req: IngestRequest) -> dict:
             settings=Settings(),
             should_cancel=lambda: job.cancel_event.is_set(),
             skip_existing=not req.override_existing,
+            progress_callback=lambda percent, message: jobs.set_progress("ingest", percent, message),
         )
+        jobs.set_progress("ingest", 100.0, "Ingest complete")
         return {
             "ok": True,
             "summary": {
@@ -241,6 +299,7 @@ def query(req: QueryRequest) -> dict:
     def run(job: JobState) -> dict:
         if job.cancel_event.is_set():
             raise RuntimeError("Query cancelled by user.")
+        jobs.set_progress("query", 10.0, "Encoding and querying")
         settings = Settings()
         store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
         try:
@@ -249,6 +308,7 @@ def query(req: QueryRequest) -> dict:
             store.close()
         if job.cancel_event.is_set():
             raise RuntimeError("Query cancelled by user.")
+        jobs.set_progress("query", 100.0, "Query complete")
         return {"ok": True, "query": req.query, "results": rows}
 
     return jobs.start("query", run)

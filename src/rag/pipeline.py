@@ -126,6 +126,7 @@ def ingest_pdfs(
     settings: Settings | None = None,
     should_cancel=None,
     skip_existing: bool = True,
+    progress_callback=None,
 ) -> IngestSummary:
     settings = settings or Settings()
     existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
@@ -133,6 +134,8 @@ def ingest_pdfs(
     selected_pdfs = [p for p in selected_pdfs if p.stem not in existing_ids]
 
     if not selected_pdfs:
+        if progress_callback:
+            progress_callback(100.0, "Nothing to ingest (all selected PDFs already exist).")
         return IngestSummary(
             ingested_articles=0,
             total_chunks=0,
@@ -144,9 +147,13 @@ def ingest_pdfs(
 
     articles = []
     failures: list[dict] = []
+    total_steps = max(1, len(selected_pdfs) * 2)
+    parse_done = 0
     for p in selected_pdfs:
         if should_cancel and should_cancel():
             raise RuntimeError("Ingest cancelled by user.")
+        if progress_callback:
+            progress_callback((parse_done / total_steps) * 100.0, f"Parsing {p.name}")
         try:
             articles.append(
                 load_article(
@@ -157,8 +164,14 @@ def ingest_pdfs(
             )
         except Exception as exc:
             failures.append({"pdf": str(p), "error": str(exc)})
+        parse_done += 1
+        if progress_callback:
+            progress_callback((parse_done / total_steps) * 100.0, f"Parsed {parse_done}/{len(selected_pdfs)} files")
 
     if not articles:
+        if failures:
+            preview = "; ".join(f"{Path(x['pdf']).name}: {x['error']}" for x in failures[:5])
+            raise ValueError(f"No readable PDFs were ingested. Failed files: {preview}")
         raise ValueError("No readable PDFs were ingested. Check source files.")
 
     store = GraphStore(
@@ -169,9 +182,24 @@ def ingest_pdfs(
     )
     try:
         store.setup_schema(vector_dimensions=store.embedding_dimension)
-        store.ingest_articles(articles, should_cancel=should_cancel)
+        if progress_callback:
+            progress_callback((parse_done / total_steps) * 100.0, "Uploading parsed data to Neo4j")
+
+        def on_article_upload(idx: int, total_articles: int, message: str) -> None:
+            if progress_callback:
+                pct = ((parse_done + idx) / total_steps) * 100.0
+                progress_callback(pct, message)
+
+        store.ingest_articles(
+            articles,
+            should_cancel=should_cancel,
+            article_progress_callback=on_article_upload,
+        )
     finally:
         store.close()
+
+    if progress_callback:
+        progress_callback(100.0, "Ingest complete")
 
     return IngestSummary(
         ingested_articles=len(articles),

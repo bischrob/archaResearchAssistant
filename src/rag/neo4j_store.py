@@ -62,7 +62,12 @@ class GraphStore:
             for stmt in statements:
                 session.run(stmt, dims=vector_dimensions)
 
-    def ingest_articles(self, articles: list[ArticleDoc], should_cancel=None) -> None:
+    def ingest_articles(
+        self,
+        articles: list[ArticleDoc],
+        should_cancel=None,
+        article_progress_callback=None,
+    ) -> None:
         chunk_texts = [chunk.text for article in articles for chunk in article.chunks]
         if not chunk_texts:
             return
@@ -70,7 +75,7 @@ class GraphStore:
 
         emb_iter = iter(embeddings)
         with self.driver.session() as session:
-            for article in articles:
+            for article_idx, article in enumerate(articles, start=1):
                 if should_cancel and should_cancel():
                     raise RuntimeError("Ingest cancelled by user.")
                 session.run(
@@ -159,6 +164,9 @@ class GraphStore:
                         title_norm=citation.normalized_title,
                         article_id=article.article_id,
                     )
+
+                if article_progress_callback:
+                    article_progress_callback(article_idx, len(articles), f"Uploaded {article.article_id}")
 
         if should_cancel and should_cancel():
             raise RuntimeError("Ingest cancelled by user.")
