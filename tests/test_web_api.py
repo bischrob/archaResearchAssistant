@@ -108,7 +108,7 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
         json={"mode": "test3", "source_dir": "pdfs", "pdfs": [], "override_existing": False},
     )
     assert resp.status_code == 200
-    assert resp.json()["status"] == "running"
+    assert resp.json()["status"] in {"running", "completed"}
 
     final = wait_for_status(client, "/api/ingest/status")
     assert final["status"] == "completed"

@@ -31,7 +31,7 @@
       <div>
         <h2>System</h2>
         <button id="healthBtn">Refresh Health</button>
-        <pre id="healthOut" class="output"></pre>
+        <div id="healthOut" class="output"></div>
       </div>
 
       <div>
@@ -39,7 +39,7 @@
         <label><input type="checkbox" id="syncDryRun" /> Dry run</label>
         <button id="syncBtn">Run Sync</button>
         <button id="syncStopBtn">Stop Sync</button>
-        <pre id="syncOut" class="output"></pre>
+        <div id="syncOut" class="output"></div>
       </div>
     </section>
 
@@ -62,7 +62,7 @@
       <textarea id="customPdfs" rows="4" placeholder="pdfs/file1.pdf&#10;pdfs/file2.pdf"></textarea>
       <button id="ingestBtn">Run Ingest</button>
       <button id="ingestStopBtn">Stop Ingest</button>
-      <pre id="ingestOut" class="output"></pre>
+      <div id="ingestOut" class="output"></div>
     </section>
 
     <section class="panel">
@@ -73,7 +73,7 @@
       </div>
       <button id="queryBtn">Run Query</button>
       <button id="queryStopBtn">Stop Query</button>
-      <div id="queryResults"></div>
+      <div id="queryResults" class="output"></div>
     </section>
   </main>
 
