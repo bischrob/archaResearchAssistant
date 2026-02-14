@@ -426,6 +426,60 @@ class GraphStore:
             )
             return [dict(r) for r in result]
 
+    def title_query(self, query_terms: list[str], limit: int) -> list[dict]:
+        terms = [t.strip().lower() for t in query_terms if t and t.strip()]
+        if not terms:
+            return []
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (a:Article)<-[:IN_ARTICLE]-(c:Chunk)
+                WHERE any(term IN $terms WHERE
+                    toLower(coalesce(a.title, '')) CONTAINS term OR
+                    toLower(coalesce(a.citekey, '')) CONTAINS term OR
+                    toLower(coalesce(a.title_norm, '')) CONTAINS term
+                )
+                WITH c, a,
+                     sum(CASE WHEN any(term IN $terms WHERE
+                        toLower(coalesce(a.title, '')) CONTAINS term OR
+                        toLower(coalesce(a.citekey, '')) CONTAINS term OR
+                        toLower(coalesce(a.title_norm, '')) CONTAINS term
+                     ) THEN 1 ELSE 0 END) AS title_score
+                CALL {
+                    WITH a
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
+                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                WITH c, a, authors, title_score,
+                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
+                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                RETURN c.id AS chunk_id,
+                       c.text AS chunk_text,
+                       c.index AS chunk_index,
+                       c.page_start AS page_start,
+                       c.page_end AS page_end,
+                       a.id AS article_id,
+                       a.title AS article_title,
+                       a.year AS article_year,
+                       a.citekey AS article_citekey,
+                       a.doi AS article_doi,
+                       a.source_path AS article_source_path,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..8] AS authors,
+                       toFloat(title_score) AS title_score,
+                       cites_out,
+                       cited_by
+                ORDER BY title_score DESC, article_year DESC
+                LIMIT $limit
+                """,
+                terms=terms,
+                limit=limit,
+            )
+            return [dict(r) for r in result]
+
     def graph_stats(self) -> dict:
         query = """
         MATCH (a:Article) WITH count(a) AS articles

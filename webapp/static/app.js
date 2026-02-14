@@ -183,10 +183,14 @@ function renderIngestJob(job) {
   const skipped = summary.skipped_existing_pdfs || [];
   const skippedMeta = summary.skipped_no_metadata_pdfs || [];
   const failed = summary.failed_pdfs || [];
+  const batchResults = summary.batch_results || [];
   out.innerHTML = `
     ${statusHeader(job, "Ingest Job")}
     ${progressBlock(job)}
     <div class="kv">
+      <strong>Mode</strong><span>${escapeHtml(summary.mode ?? "-")}</span>
+      <strong>Batch Size</strong><span>${escapeHtml(summary.batch_size ?? "-")}</span>
+      <strong>Batches</strong><span>${escapeHtml(summary.batch_total ?? "-")}</span>
       <strong>Ingested Articles</strong><span>${escapeHtml(summary.ingested_articles ?? 0)}</span>
       <strong>Total Chunks</strong><span>${escapeHtml(summary.total_chunks ?? 0)}</span>
       <strong>Total References</strong><span>${escapeHtml(summary.total_references ?? 0)}</span>
@@ -195,6 +199,32 @@ function renderIngestJob(job) {
       <strong>Failed Files</strong><span>${escapeHtml(failed.length)}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
+    ${batchResults.length ? `
+      <details open>
+        <summary>Batch Results (${batchResults.length})</summary>
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>Batch</th><th>Input PDFs</th><th>Ingested</th><th>Chunks</th><th>References</th><th>Skipped Existing</th><th>Skipped No Metadata</th><th>Failed</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${batchResults.map((b) => `
+              <tr>
+                <td>${escapeHtml(`${b.batch_number}/${b.batch_total}`)}</td>
+                <td>${escapeHtml(b.input_pdfs ?? 0)}</td>
+                <td>${escapeHtml(b.ingested_articles ?? 0)}</td>
+                <td>${escapeHtml(b.total_chunks ?? 0)}</td>
+                <td>${escapeHtml(b.total_references ?? 0)}</td>
+                <td>${escapeHtml(b.skipped_existing_count ?? 0)}</td>
+                <td>${escapeHtml(b.skipped_no_metadata_count ?? 0)}</td>
+                <td>${escapeHtml(b.failed_count ?? 0)}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </details>
+    ` : ""}
     ${selected.length ? `<details><summary>Selected PDFs (${selected.length})</summary><ul class="list-box">${selected.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skipped.length ? `<details><summary>Skipped Existing PDFs (${skipped.length})</summary><ul class="list-box">${skipped.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skippedMeta.length ? `<details><summary>Skipped No Metadata PDFs (${skippedMeta.length})</summary><ul class="list-box">${skippedMeta.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}

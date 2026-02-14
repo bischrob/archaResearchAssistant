@@ -21,15 +21,15 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--mode",
-        default="test3",
-        choices=["test3", "all", "custom"],
-        help="test3 ingests first N (see --partial-count), all ingests all PDFs in --pdf-dir, custom uses --pdf list.",
+        default="batch",
+        choices=["batch", "all", "custom", "test3"],
+        help="batch ingests first N (see --partial-count), all ingests all PDFs in --pdf-dir, custom uses --pdf list. test3 is accepted as a legacy alias.",
     )
     parser.add_argument(
         "--partial-count",
         type=int,
         default=3,
-        help="Number of PDFs to ingest in test3 mode after existing-skip and metadata filtering.",
+        help="Batch size. Used as first-N for batch mode and as per-batch size for all mode in the web UI.",
     )
     parser.add_argument(
         "--pdf",

@@ -6,10 +6,27 @@ from typing import Any
 from .neo4j_store import GraphStore
 from .pdf_processing import STOPWORDS
 
+INTENT_STOPWORDS = {
+    "summarize",
+    "summary",
+    "simple",
+    "simply",
+    "explain",
+    "explanation",
+    "terms",
+    "overview",
+    "describe",
+    "discuss",
+    "research",
+    "work",
+    "paper",
+    "papers",
+}
+
 
 def tokenize_query(text: str) -> list[str]:
     tokens = re.findall(r"[A-Za-z][A-Za-z0-9'-]*", text.lower())
-    return [t for t in tokens if t not in STOPWORDS and len(t) > 1]
+    return [t for t in tokens if t not in STOPWORDS and t not in INTENT_STOPWORDS and len(t) > 1]
 
 
 def _token_set(text: str) -> set[str]:
@@ -18,14 +35,26 @@ def _token_set(text: str) -> set[str]:
 
 def parse_query_terms(query: str) -> dict[str, Any]:
     tokens = tokenize_query(query)
+    # Preserve token order while removing duplicates.
+    dedup_tokens = list(dict.fromkeys(tokens))
     years = {int(y) for y in re.findall(r"\b(19\d{2}|20\d{2})\b", query)}
     phrases = [p.strip().lower() for p in re.findall(r'"([^"]+)"', query) if p.strip()]
-    author_terms = [t for t in tokens if len(t) >= 4]
+    author_terms = [t for t in dedup_tokens if len(t) >= 4]
+    # Likely proper-noun/acronym terms from original question are high-priority.
+    raw_terms = re.findall(r"[A-Za-z][A-Za-z0-9'-]*", query)
+    must_terms = []
+    for raw in raw_terms:
+        if len(raw) < 4:
+            continue
+        if any(ch.isupper() for ch in raw[1:]) or raw.isupper():
+            must_terms.append(raw.lower())
+    must_terms = list(dict.fromkeys(must_terms))
     return {
-        "tokens": tokens,
+        "tokens": dedup_tokens,
         "years": years,
         "phrases": phrases,
         "author_terms": author_terms,
+        "must_terms": must_terms,
     }
 
 
@@ -87,6 +116,7 @@ def contextual_retrieve(store: GraphStore, query: str, limit: int = 8) -> list[d
     vector_hits = store.vector_query(query, limit=candidate_k)
     token_hits = store.token_query(plan["tokens"], limit=candidate_k)
     author_hits = store.author_query(plan["author_terms"], limit=candidate_k)
+    title_hits = store.title_query(plan["tokens"], limit=candidate_k)
 
     by_chunk: dict[str, dict[str, Any]] = {}
     for row in vector_hits:
@@ -118,7 +148,37 @@ def contextual_retrieve(store: GraphStore, query: str, limit: int = 8) -> list[d
             row["retrieval_sources"] = ["author"]
             by_chunk[cid] = row
 
+    for row in title_hits:
+        cid = row["chunk_id"]
+        title_score = float(row.get("title_score", 0.0))
+        if cid in by_chunk:
+            by_chunk[cid]["combined_score"] += min(2.0, 0.35 * title_score)
+            by_chunk[cid].setdefault("retrieval_sources", []).append("title")
+            by_chunk[cid]["title_score"] = title_score
+        else:
+            row["combined_score"] = min(2.0, 0.35 * title_score)
+            row["retrieval_sources"] = ["title"]
+            by_chunk[cid] = row
+
     ranked = sorted(by_chunk.values(), key=lambda x: x.get("combined_score", 0.0), reverse=True)
+
+    must_terms = plan.get("must_terms") or []
+    if must_terms:
+        strict = []
+        for row in ranked:
+            hay = " ".join(
+                [
+                    str(row.get("article_title") or ""),
+                    str(row.get("chunk_text") or ""),
+                    " ".join(row.get("authors") or ([row.get("author")] if row.get("author") else [])),
+                    str(row.get("article_citekey") or ""),
+                ]
+            ).lower()
+            if any(mt in hay for mt in must_terms):
+                strict.append(row)
+        if strict:
+            ranked = strict
+
     primary = rerank_hits(query, ranked, top_k=limit, plan=plan)
 
     # Low-confidence fallback: if no top row meaningfully matches title/author fields,

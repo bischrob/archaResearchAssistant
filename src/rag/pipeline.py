@@ -140,7 +140,7 @@ def _get_existing_article_ids(settings: Settings) -> set[str]:
 
 
 def choose_pdfs(
-    mode: str = "test3",
+    mode: str = "batch",
     source_dir: str = "pdfs",
     explicit_pdfs: list[str] | None = None,
     skip_existing: bool = True,
@@ -149,6 +149,8 @@ def choose_pdfs(
     partial_count: int = 3,
 ) -> list[Path]:
     mode = mode.lower().strip()
+    if mode == "test3":
+        mode = "batch"
     explicit_pdfs = explicit_pdfs or []
 
     source_root = Path(source_dir)
@@ -164,11 +166,11 @@ def choose_pdfs(
     else:
         if mode == "all":
             selected = all_pdfs
-        elif mode == "test3":
+        elif mode == "batch":
             readable = [p for p in all_pdfs if _has_pdf_header(p)]
             selected = readable
         else:
-            raise ValueError("Unsupported mode. Use 'test3', 'all', or 'custom'.")
+            raise ValueError("Unsupported mode. Use 'batch', 'all', or 'custom'.")
 
     missing = [p for p in selected if not p.exists()]
     if missing:
@@ -183,7 +185,7 @@ def choose_pdfs(
         paperpile_index = load_paperpile_index(cfg.paperpile_json)
         selected = [p for p in selected if find_metadata_for_pdf(paperpile_index, p.name)]
 
-    if mode == "test3":
+    if mode == "batch":
         selected = selected[:partial_n]
 
     if not selected:
