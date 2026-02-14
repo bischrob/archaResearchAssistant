@@ -93,6 +93,7 @@ button:hover { background: #005457; }
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .status-pill {
@@ -149,4 +150,53 @@ details {
 
 .empty {
   color: var(--muted);
+}
+
+.preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.preview-table th,
+.preview-table td {
+  border: 1px solid var(--border);
+  padding: 6px 7px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.preview-table th {
+  background: #f1e7d3;
+}
+
+.progress {
+  margin: 6px 0 10px;
+}
+
+.progress-track {
+  width: 100%;
+  height: 10px;
+  background: #e7dcc8;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #d6c7aa;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #b35c00, #d9862e);
+  transition: width 0.25s ease;
+}
+
+.progress-label {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

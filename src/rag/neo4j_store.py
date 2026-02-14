@@ -84,19 +84,43 @@ class GraphStore:
                     SET a.title = $title,
                         a.title_norm = $title_norm,
                         a.year = $year,
-                        a.source_path = $source_path
-                    MERGE (p:Author {name_norm: $author_norm})
-                    SET p.name = $author_name
-                    MERGE (p)-[:WROTE]->(a)
+                        a.source_path = $source_path,
+                        a.citekey = $citekey,
+                        a.paperpile_id = $paperpile_id,
+                        a.doi = $doi,
+                        a.journal = $journal,
+                        a.publisher = $publisher
                     """,
                     id=article.article_id,
                     title=article.title,
                     title_norm=article.normalized_title,
                     year=article.year,
                     source_path=article.source_path,
-                    author_norm=article.author.lower(),
-                    author_name=article.author,
+                    citekey=article.citekey,
+                    paperpile_id=article.paperpile_id,
+                    doi=article.doi,
+                    journal=article.journal,
+                    publisher=article.publisher,
                 )
+
+                for pos, author_name in enumerate(article.authors):
+                    author_name = (author_name or "").strip()
+                    if not author_name:
+                        continue
+                    session.run(
+                        """
+                        MERGE (p:Author {name_norm: $author_norm})
+                        SET p.name = $author_name
+                        WITH p
+                        MATCH (a:Article {id: $article_id})
+                        MERGE (p)-[w:WROTE]->(a)
+                        SET w.position = $position
+                        """,
+                        author_norm=author_name.lower(),
+                        author_name=author_name,
+                        article_id=article.article_id,
+                        position=pos,
+                    )
 
                 for chunk in article.chunks:
                     if should_cancel and should_cancel():
@@ -284,10 +308,15 @@ class GraphStore:
                 MATCH (t:Token)<-[m:MENTIONS]-(c:Chunk)-[:IN_ARTICLE]->(a:Article)
                 WHERE t.value IN $tokens
                 WITH c, a, sum(m.count) AS token_score
-                MATCH (auth:Author)-[:WROTE]->(a)
+                CALL {
+                    WITH a
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
                 OPTIONAL MATCH (a)-[:CITES]->(out:Article)
                 OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH c, a, auth, token_score,
+                WITH c, a, authors, token_score,
                      [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
                      [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
                 RETURN c.id AS chunk_id,
@@ -298,7 +327,8 @@ class GraphStore:
                        a.id AS article_id,
                        a.title AS article_title,
                        a.year AS article_year,
-                       auth.name AS author,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..8] AS authors,
                        token_score,
                        cites_out,
                        cited_by
@@ -318,10 +348,15 @@ class GraphStore:
                 CALL db.index.vector.queryNodes('chunk_embedding', $k, $embedding)
                 YIELD node, score
                 MATCH (node)-[:IN_ARTICLE]->(a:Article)
-                MATCH (auth:Author)-[:WROTE]->(a)
+                CALL {
+                    WITH a
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
                 OPTIONAL MATCH (a)-[:CITES]->(out:Article)
                 OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH node, a, auth, score,
+                WITH node, a, authors, score,
                      [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
                      [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
                 RETURN node.id AS chunk_id,
@@ -332,7 +367,8 @@ class GraphStore:
                        a.id AS article_id,
                        a.title AS article_title,
                        a.year AS article_year,
-                       auth.name AS author,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..8] AS authors,
                        score AS vector_score,
                        cites_out,
                        cited_by

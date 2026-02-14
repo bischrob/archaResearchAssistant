@@ -10,6 +10,6 @@ class Settings:
     neo4j_user: str = os.getenv("NEO4J_USER", "neo4j")
     neo4j_password: str = os.getenv("NEO4J_PASSWORD", "archaResearchAssistant")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    paperpile_json: str = os.getenv("PAPERPILE_JSON", "Paperpile.json")
     chunk_size_words: int = int(os.getenv("CHUNK_SIZE_WORDS", "220"))
     chunk_overlap_words: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "45"))
-
