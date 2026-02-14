@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from src.rag.config import Settings
 from src.rag.neo4j_store import GraphStore
-from src.rag.paperpile_metadata import load_paperpile_index
+from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
 
@@ -326,7 +326,7 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
         max_rows = 300
         rows = []
         for p in resolved[:max_rows]:
-            meta = paperpile.get(p.name.lower()) or {}
+            meta = find_metadata_for_pdf(paperpile, p.name) or {}
             rows.append(
                 {
                     "path": str(p),

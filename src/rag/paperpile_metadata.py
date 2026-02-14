@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import unicodedata
 from pathlib import Path
 
 
@@ -34,6 +36,16 @@ def _score(meta: dict) -> int:
     return sum(1 for k in keys if meta.get(k)) + len(meta.get("authors") or [])
 
 
+def normalize_filename_key(filename: str) -> str:
+    base = Path(filename).name
+    stem = Path(base).stem
+    norm = unicodedata.normalize("NFKD", stem)
+    norm = "".join(ch for ch in norm if not unicodedata.combining(ch))
+    norm = norm.casefold()
+    norm = re.sub(r"[^a-z0-9]+", "", norm)
+    return norm
+
+
 def load_paperpile_index(paperpile_json_path: str) -> dict[str, dict]:
     path = Path(paperpile_json_path)
     if not path.exists():
@@ -45,6 +57,7 @@ def load_paperpile_index(paperpile_json_path: str) -> dict[str, dict]:
         return {}
 
     by_basename: dict[str, dict] = {}
+    by_normalized: dict[str, dict] = {}
     for record in data:
         if not isinstance(record, dict):
             continue
@@ -82,5 +95,25 @@ def load_paperpile_index(paperpile_json_path: str) -> dict[str, dict]:
             existing = by_basename.get(key)
             if existing is None or _score(meta) > _score(existing):
                 by_basename[key] = dict(meta)
+
+            nkey = normalize_filename_key(basename)
+            if nkey:
+                existing_n = by_normalized.get(nkey)
+                if existing_n is None or _score(meta) > _score(existing_n):
+                    by_normalized[nkey] = dict(meta)
+
+    # Keep exact basename keys plus normalized aliases.
+    for nkey, meta in by_normalized.items():
+        by_basename[f"norm::{nkey}"] = meta
     return by_basename
 
+
+def find_metadata_for_pdf(index: dict[str, dict], filename: str) -> dict | None:
+    base = Path(filename).name.lower()
+    meta = index.get(base)
+    if meta:
+        return meta
+    nkey = normalize_filename_key(base)
+    if not nkey:
+        return None
+    return index.get(f"norm::{nkey}")
