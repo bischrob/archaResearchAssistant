@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .config import Settings
 from .neo4j_store import GraphStore
-from .paperpile_metadata import load_paperpile_index
+from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 from .pdf_processing import load_article
 
 
@@ -113,7 +113,7 @@ def choose_pdfs(
 
     if require_metadata:
         paperpile_index = load_paperpile_index(cfg.paperpile_json)
-        selected = [p for p in selected if p.name.lower() in paperpile_index]
+        selected = [p for p in selected if find_metadata_for_pdf(paperpile_index, p.name)]
 
     if mode == "test3":
         selected = selected[:3]
@@ -141,8 +141,8 @@ def ingest_pdfs(
     existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
     skipped_existing = [str(p) for p in selected_pdfs if p.stem in existing_ids]
     selected_pdfs = [p for p in selected_pdfs if p.stem not in existing_ids]
-    skipped_no_metadata = [str(p) for p in selected_pdfs if p.name.lower() not in paperpile_index]
-    selected_pdfs = [p for p in selected_pdfs if p.name.lower() in paperpile_index]
+    skipped_no_metadata = [str(p) for p in selected_pdfs if not find_metadata_for_pdf(paperpile_index, p.name)]
+    selected_pdfs = [p for p in selected_pdfs if find_metadata_for_pdf(paperpile_index, p.name)]
 
     if not selected_pdfs:
         if progress_callback:
@@ -172,7 +172,7 @@ def ingest_pdfs(
                     pdf_path=p,
                     chunk_size_words=settings.chunk_size_words,
                     chunk_overlap_words=settings.chunk_overlap_words,
-                    metadata=paperpile_index.get(p.name.lower()),
+                    metadata=find_metadata_for_pdf(paperpile_index, p.name),
                 )
             )
         except Exception as exc:

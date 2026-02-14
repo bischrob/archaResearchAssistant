@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from src.rag.paperpile_metadata import load_paperpile_index
+from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 
 
 def test_load_paperpile_index_maps_attachment_basename(tmp_path: Path) -> None:
@@ -30,3 +30,22 @@ def test_load_paperpile_index_maps_attachment_basename(tmp_path: Path) -> None:
     assert meta["paperpile_id"] == "abc123"
     assert meta["authors"] == ["Doe J"]
 
+
+def test_find_metadata_for_pdf_handles_special_char_variants(tmp_path: Path) -> None:
+    payload = [
+        {
+            "_id": "x1",
+            "title": "Special Name",
+            "published": {"year": "2020"},
+            "author": [{"formatted": "Alpha A"}],
+            "attachments": [{"filename": "allPapers//García-2019—An_Example(PDF).pdf"}],
+        }
+    ]
+    path = tmp_path / "Paperpile.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    idx = load_paperpile_index(str(path))
+
+    # Local file variants with different punctuation/diacritics still resolve.
+    meta = find_metadata_for_pdf(idx, "Garcia 2019 - An Example PDF.pdf")
+    assert meta is not None
+    assert meta["title"] == "Special Name"
