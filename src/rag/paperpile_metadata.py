@@ -117,3 +117,15 @@ def find_metadata_for_pdf(index: dict[str, dict], filename: str) -> dict | None:
     if not nkey:
         return None
     return index.get(f"norm::{nkey}")
+
+
+def iter_pdf_files(pdf_root: str | Path) -> list[Path]:
+    root = Path(pdf_root)
+    return sorted(
+        [p for p in root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf"],
+        key=lambda p: str(p).lower(),
+    )
+
+
+def find_unmatched_pdfs(pdf_root: str | Path, metadata_index: dict[str, dict]) -> list[Path]:
+    return [p for p in iter_pdf_files(pdf_root) if not find_metadata_for_pdf(metadata_index, p.name)]

@@ -89,7 +89,12 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
     p = tmp_path / "a.pdf"
     p.write_text("x")
 
-    monkeypatch.setattr(webmain, "choose_pdfs", lambda **kwargs: [p])
+    choose_calls = []
+    monkeypatch.setattr(
+        webmain,
+        "choose_pdfs",
+        lambda **kwargs: (choose_calls.append(kwargs) or [p]),
+    )
     captured = {}
 
     def fake_ingest_pdfs(**kwargs):
@@ -107,7 +112,7 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
     monkeypatch.setattr(webmain, "ingest_pdfs", fake_ingest_pdfs)
     resp = client.post(
         "/api/ingest",
-        json={"mode": "test3", "source_dir": "pdfs", "pdfs": [], "override_existing": False},
+        json={"mode": "test3", "source_dir": "pdfs", "pdfs": [], "override_existing": False, "partial_count": 7},
     )
     assert resp.status_code == 200
     assert resp.json()["status"] in {"running", "completed"}
@@ -117,6 +122,7 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
     assert final["result"]["summary"]["ingested_articles"] == 1
     assert captured["wipe"] is False
     assert captured["skip_existing"] is True
+    assert choose_calls[0]["partial_count"] == 7
 
 
 def test_ingest_endpoint_override_existing(monkeypatch, tmp_path: Path, client):
@@ -161,7 +167,12 @@ def test_ingest_status_failed(monkeypatch, client):
 def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
     p = tmp_path / "demo.pdf"
     p.write_text("x")
-    monkeypatch.setattr(webmain, "choose_pdfs", lambda **kwargs: [p])
+    choose_calls = []
+    monkeypatch.setattr(
+        webmain,
+        "choose_pdfs",
+        lambda **kwargs: (choose_calls.append(kwargs) or [p]),
+    )
 
     class FakeStore:
         def __init__(self, *args, **kwargs):
@@ -182,7 +193,7 @@ def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
 
     resp = client.post(
         "/api/ingest/preview",
-        json={"mode": "custom", "source_dir": "pdfs", "pdfs": [str(p)], "override_existing": False},
+        json={"mode": "custom", "source_dir": "pdfs", "pdfs": [str(p)], "override_existing": False, "partial_count": 9},
     )
     assert resp.status_code == 200
     data = resp.json()
@@ -192,6 +203,8 @@ def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
     assert data["rows"][0]["file"] == p.name
     assert data["rows"][0]["metadata_found"] is True
     assert data["rows"][0]["title"] == "Demo Title"
+    assert choose_calls[0]["skip_existing"] is True
+    assert choose_calls[0]["partial_count"] == 9
 
 
 def test_query_validation_and_success(monkeypatch, client):

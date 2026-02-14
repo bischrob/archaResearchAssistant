@@ -23,7 +23,13 @@ def parse_args() -> argparse.Namespace:
         "--mode",
         default="test3",
         choices=["test3", "all", "custom"],
-        help="test3 ingests first 3, all ingests all PDFs in --pdf-dir, custom uses --pdf list.",
+        help="test3 ingests first N (see --partial-count), all ingests all PDFs in --pdf-dir, custom uses --pdf list.",
+    )
+    parser.add_argument(
+        "--partial-count",
+        type=int,
+        default=3,
+        help="Number of PDFs to ingest in test3 mode after existing-skip and metadata filtering.",
     )
     parser.add_argument(
         "--pdf",
@@ -47,6 +53,7 @@ def main() -> None:
         explicit_pdfs=args.pdf,
         skip_existing=not args.override_existing,
         require_metadata=True,
+        partial_count=args.partial_count,
     )
 
     print("Selected PDFs:")

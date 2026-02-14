@@ -146,6 +146,7 @@ def choose_pdfs(
     skip_existing: bool = True,
     require_metadata: bool = True,
     settings: Settings | None = None,
+    partial_count: int = 3,
 ) -> list[Path]:
     mode = mode.lower().strip()
     explicit_pdfs = explicit_pdfs or []
@@ -155,6 +156,8 @@ def choose_pdfs(
         [p for p in source_root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf"],
         key=lambda p: str(p).lower(),
     )
+
+    partial_n = max(1, int(partial_count))
 
     if mode == "custom":
         selected = [_resolve_custom_pdf_path(p, source_dir) for p in explicit_pdfs]
@@ -181,7 +184,7 @@ def choose_pdfs(
         selected = [p for p in selected if find_metadata_for_pdf(paperpile_index, p.name)]
 
     if mode == "test3":
-        selected = selected[:3]
+        selected = selected[:partial_n]
 
     if not selected:
         if skip_existing:
