@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-99.9.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>4&nbsp; 3. Programming and Reproducible Workflows – Open Book of Computational Archaeology</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./4_statistics_inference.html" rel="next">
+<link href="./2_data_foundations.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-494121dfa8658343c03537e94414993d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-08ba49fb381fd3f8c97a5af9c3db1c30.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./3_programming_workflows.html"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Open Book of Computational Archaeology</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./1_introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./2_data_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./3_programming_workflows.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./4_statistics_inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./5_machine_learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./6_spatial_gis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./7_network_science.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./8_agent_based_modeling.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./9_uncertainty_sensitivity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10_ethics_governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11_projects_case_studies.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12_future_directions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">12. Future Directions in Computational Archaeology</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#programming-and-reproducible-workflows" id="toc-programming-and-reproducible-workflows" class="nav-link active" data-scroll-target="#programming-and-reproducible-workflows"><span class="header-section-number">5</span> 3. Programming and Reproducible Workflows</a>
+  <ul class="collapse">
+  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link" data-scroll-target="#learning-objectives"><span class="header-section-number">5.0.1</span> Learning Objectives</a></li>
+  <li><a href="#core-ideas" id="toc-core-ideas" class="nav-link" data-scroll-target="#core-ideas"><span class="header-section-number">5.0.2</span> Core Ideas</a></li>
+  <li><a href="#worked-workflow-from-field-data-to-reusable-dataset" id="toc-worked-workflow-from-field-data-to-reusable-dataset" class="nav-link" data-scroll-target="#worked-workflow-from-field-data-to-reusable-dataset"><span class="header-section-number">5.0.3</span> Worked Workflow: From Field Data to Reusable Dataset</a></li>
+  <li><a href="#case-study-data-editors-cleanup-and-the-cost-of-weak-workflows" id="toc-case-study-data-editors-cleanup-and-the-cost-of-weak-workflows" class="nav-link" data-scroll-target="#case-study-data-editors-cleanup-and-the-cost-of-weak-workflows"><span class="header-section-number">5.0.4</span> Case Study: Data Editors, Cleanup, and the Cost of Weak Workflows</a></li>
+  <li><a href="#common-mistakes" id="toc-common-mistakes" class="nav-link" data-scroll-target="#common-mistakes"><span class="header-section-number">5.0.5</span> Common Mistakes</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">5.0.6</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">5.0.7</span> Key Takeaways</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="programming-and-reproducible-workflows" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> 3. Programming and Reproducible Workflows</h1>
+<section id="learning-objectives" class="level3" data-number="5.0.1">
+<h3 data-number="5.0.1" class="anchored" data-anchor-id="learning-objectives"><span class="header-section-number">5.0.1</span> Learning Objectives</h3>
+<p>By the end of this chapter, you should be able to:</p>
+<ul>
+<li>Explain why reproducible computational workflows matter for archaeological data reuse and quality. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Faniel2013-bx">Faniel et al. (<a href="#ref-Faniel2013-bx" role="doc-biblioref">2013</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Describe how version control supports incremental improvement and transparent change tracking in research data. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Distinguish between ad hoc data handling (e.g., spreadsheets) and structured, well‑modeled workflows and databases. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Identify validation and data modeling practices that reduce downstream cleanup costs and errors. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Relate reproducible workflows to broader principles for data reuse (e.g., FAIR) and community standards. [<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="core-ideas" class="level3" data-number="5.0.2">
+<h3 data-number="5.0.2" class="anchored" data-anchor-id="core-ideas"><span class="header-section-number">5.0.2</span> Core Ideas</h3>
+<section id="why-reproducible-workflows-in-archaeology" class="level4" data-number="5.0.2.1">
+<h4 data-number="5.0.2.1" class="anchored" data-anchor-id="why-reproducible-workflows-in-archaeology"><span class="header-section-number">5.0.2.1</span> 3.1 Why Reproducible Workflows in Archaeology?</h4>
+<p>Digital archaeological data increasingly move into web‑based repositories and publication venues, rather than being confined to printed monographs and reports. <span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span> New digital repositories have been created specifically to publish field and cultural heritage data online. <span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span> Policies such as funder‑mandated data management plans and open access expectations highlight growing attention to research data as a key output of archaeological work. [<span class="citation" data-cites="Faniel2013-bx">Faniel et al. (<a href="#ref-Faniel2013-bx" role="doc-biblioref">2013</a>)</span>]<span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+<p>However, data are often difficult to reuse because of problems that arise from the very beginning of data creation through later dissemination and archiving. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> Reuse can require significant editorial review, revision, annotation, and cleanup by data editors with domain expertise. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> When data are hard to interpret, inconsistently coded, or poorly structured, downstream users face high costs and may struggle to integrate them into new analyses. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span></p>
+<p>Reproducible computational workflows—built around programmatic tools, transparent procedures, and documented decisions—directly address these problems by:</p>
+<ul>
+<li>Making it easier to track how data were processed and analyzed over time. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Encouraging good data modeling and validation practices at the point of creation. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Supporting integration and interoperability with other datasets and tools, which aligns with findable, accessible, interoperable, and reusable (FAIR) principles. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+</section>
+<section id="version-control-and-incremental-improvement" class="level4" data-number="5.0.2.2">
+<h4 data-number="5.0.2.2" class="anchored" data-anchor-id="version-control-and-incremental-improvement"><span class="header-section-number">5.0.2.2</span> 3.2 Version Control and Incremental Improvement</h4>
+<p>Traditional publishing is oriented toward fixed, final products, but data and analyses often benefit from continual and incremental improvements. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> Data publishing in archaeology can explicitly take advantage of version control systems to support this ongoing refinement. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+<p>Using version control in a research workflow enables:</p>
+<ul>
+<li>Incremental updates to data and code, instead of one‑off, opaque revisions. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>A recorded history of changes that can be reviewed by collaborators or future reusers. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Better alignment with emerging guidance on data management required by major funders, which increasingly expect explicit planning for how data will be curated and updated. [<span class="citation" data-cites="Faniel2013-bx">Faniel et al. (<a href="#ref-Faniel2013-bx" role="doc-biblioref">2013</a>)</span>]<span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+</ul>
+<p>In a reproducible archaeological workflow, scripts, notebooks, and even data models can be tracked under version control so that each change to cleaning rules, coding schemes, or analysis steps is documented and reversible. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+</section>
+<section id="scripts-notebooks-and-data-pipelines" class="level4" data-number="5.0.2.3">
+<h4 data-number="5.0.2.3" class="anchored" data-anchor-id="scripts-notebooks-and-data-pipelines"><span class="header-section-number">5.0.2.3</span> 3.3 Scripts, Notebooks, and Data Pipelines</h4>
+<p>Many archaeologists still collect and manage data primarily using paper forms, customized spreadsheets, GIS projects, or ad hoc databases. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span> These approaches often lack a shared, reusable platform for exchanging methods, making data collection and transformation a “hit‑or‑miss, ad hoc affair.” <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></p>
+<p>Programmatic workflows using scripts and notebooks can turn this ad hoc handling into explicit data pipelines that:</p>
+<ul>
+<li>Read raw field or laboratory data from structured sources. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Apply cleaning, validation, and reformatting operations. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Output well‑formed relational data that are granular, non‑redundant, and robust to later integration. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></li>
+</ul>
+<p>Relational database management systems (DBMSs) that separate the data “back end” (tables) from the “front end” (forms, reports, or other interfaces) help preserve data integrity and avoid accidental changes. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span> Well‑formed relational data are fine‑grained, regular, compact, and better suited for efficient analysis and sharing. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span> Scripts and pipelines that feed into such structures support reproducibility by ensuring that transformations from raw capture to relational tables are repeatable and inspectable. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></p>
+</section>
+<section id="data-modeling-and-validation" class="level4" data-number="5.0.2.4">
+<h4 data-number="5.0.2.4" class="anchored" data-anchor-id="data-modeling-and-validation"><span class="header-section-number">5.0.2.4</span> 3.4 Data Modeling and Validation</h4>
+<p>Poor data modeling and weak validation practices are major barriers to later data reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Modeling complex archaeological phenomena as overly simple, flat tables (e.g., spreadsheets) can impede reuse because important relationships and constraints are lost. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> Many researchers lack formal training in data management and modeling, which exacerbates these issues. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p>
+<p>Better practices, supported by programmatic workflows, include:</p>
+<ul>
+<li>Explicitly modeling relationships (e.g., via linked tables in relational databases), which helps avoid redundancy and protect data integrity. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Enforcing data types (integers, decimals, Boolean values) to promote consistency and reduce errors. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Applying validation and decoding checks to catch mismatches between coded values and their documentation, which otherwise greatly multiplies the effort required for reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Using open and nonproprietary file formats to improve long‑term accessibility and interoperability. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+<p>Implementing these constraints within scripts, databases, and pipelines prevents many errors at the point of data entry and transformation, rather than leaving them to be discovered during later reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+</section>
+<section id="reuse-fair-and-community-standards" class="level4" data-number="5.0.2.5">
+<h4 data-number="5.0.2.5" class="anchored" data-anchor-id="reuse-fair-and-community-standards"><span class="header-section-number">5.0.2.5</span> 3.5 Reuse, FAIR, and Community Standards</h4>
+<p>Data reuse is increasingly recognized as a professional goal that motivates better data management practices throughout the data lifecycle, from creation through archiving. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span> Experience reusing others’ data helps researchers develop clearer expectations about what constitutes “good data,” and these expectations can feed back into improved data creation, forming “virtuous cycles” of better data practices and higher‑impact reuse. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+<p>The FAIR framework articulates conditions that support such reuse:</p>
+<ul>
+<li>Findable: data and metadata are registered or indexed in searchable resources. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Accessible: data and metadata can be retrieved by identifiers using open, standardized protocols, with authentication as needed. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Interoperable: data use formal, shared languages and vocabularies and include qualified references to other (meta)data so they can integrate with other workflows. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Reusable: data and metadata are richly described, licensed clearly, associated with detailed provenance, and aligned with domain‑relevant community standards. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<p>Reproducible computational workflows make it easier to document provenance (how data were generated and transformed) and to align with shared standards, both of which are central to reusability. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span> They also support the kinds of quality control and editorial services that modern data centers increasingly provide as part of online data publication. [<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="worked-workflow-from-field-data-to-reusable-dataset" class="level3" data-number="5.0.3">
+<h3 data-number="5.0.3" class="anchored" data-anchor-id="worked-workflow-from-field-data-to-reusable-dataset"><span class="header-section-number">5.0.3</span> Worked Workflow: From Field Data to Reusable Dataset</h3>
+<p>This section outlines a conceptual, stepwise workflow that illustrates how programming and reproducible practices can transform raw archaeological data into a reusable resource.</p>
+<section id="step-1-plan-for-reuse-at-data-creation" class="level4" data-number="5.0.3.1">
+<h4 data-number="5.0.3.1" class="anchored" data-anchor-id="step-1-plan-for-reuse-at-data-creation"><span class="header-section-number">5.0.3.1</span> Step 1: Plan for Reuse at Data Creation</h4>
+<p>Because adapting complex data late in a project is costly, teams should align data creation practices with broader community reuse needs from the start. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> This planning includes:</p>
+<ul>
+<li>Designing data models that reflect the complexity of archaeological observations rather than forcing them into oversimplified flat tables. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Anticipating specialized quality concerns relevant to particular data types (e.g., survey, geospatial, zooarchaeological, archaeobotanical), even though details vary across subfields. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Committing to open, nonproprietary formats and clear identifier practices that support a relational and contextual view of data. [<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+</section>
+<section id="step-2-capture-and-store-data-in-a-structured-system" class="level4" data-number="5.0.3.2">
+<h4 data-number="5.0.3.2" class="anchored" data-anchor-id="step-2-capture-and-store-data-in-a-structured-system"><span class="header-section-number">5.0.3.2</span> Step 2: Capture and Store Data in a Structured System</h4>
+<p>Instead of leaving data scattered across unstandardized spreadsheets, a well‑formed relational database is set up with:</p>
+<ul>
+<li>Granular tables that avoid redundancy and sparseness. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Explicit relationships between tables, which help preserve data integrity. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>A back‑end / front‑end separation, where forms and reports do not directly alter the underlying data structures. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></li>
+</ul>
+<p>Scripts or controlled forms feed field and lab observations into this database, applying immediate checks for required fields, valid codes, and appropriate data types. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></p>
+</section>
+<section id="step-3-implement-programmatic-validation-and-decoding" class="level4" data-number="5.0.3.3">
+<h4 data-number="5.0.3.3" class="anchored" data-anchor-id="step-3-implement-programmatic-validation-and-decoding"><span class="header-section-number">5.0.3.3</span> Step 3: Implement Programmatic Validation and Decoding</h4>
+<p>Next, programmatic routines (e.g., scripts) are used to validate the database contents:</p>
+<ul>
+<li>Coded fields are decoded and cross‑checked against their documentation to identify mismatches, which are otherwise hard to detect and greatly increase reuse effort. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Data types are enforced so that integers, decimals, and Boolean values appear where expected, reducing inconsistency and error rates. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Additional checks ensure regularity and compactness of the relational structure. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></li>
+</ul>
+<p>These validation scripts can be rerun whenever new data are entered, forming part of a repeatable pipeline. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+</section>
+<section id="step-4-track-changes-with-version-control" class="level4" data-number="5.0.3.4">
+<h4 data-number="5.0.3.4" class="anchored" data-anchor-id="step-4-track-changes-with-version-control"><span class="header-section-number">5.0.3.4</span> Step 4: Track Changes with Version Control</h4>
+<p>All database schemas, validation scripts, and transformation notebooks are stored under version control, allowing:</p>
+<ul>
+<li>Continuous incremental improvements to data management rather than a single, frozen version. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Transparent documentation of how validation rules, code lists, and data models evolve over time. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Easier collaboration around data publishing practices that support integration and analysis. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+</ul>
+<p>This versioned record contributes to the provenance information needed for future data reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+</section>
+<section id="step-5-prepare-data-and-metadata-for-publication" class="level4" data-number="5.0.3.5">
+<h4 data-number="5.0.3.5" class="anchored" data-anchor-id="step-5-prepare-data-and-metadata-for-publication"><span class="header-section-number">5.0.3.5</span> Step 5: Prepare Data and Metadata for Publication</h4>
+<p>Before deposit in a digital repository, the team:</p>
+<ul>
+<li>Exports data to open, nonproprietary formats. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Assembles rich metadata, including detailed attributes, usage licenses, and provenance. [<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Aligns terminology and structure with community standards where available. [<span class="citation" data-cites="Kansa2022-pw">Kansa and Kansa (<a href="#ref-Kansa2022-pw" role="doc-biblioref">2022</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<p>Repositories and data centers can then provide additional quality control and online publication services, adding value through their editorial role. [<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span> The resulting dataset is more findable, accessible, interoperable, and reusable. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="case-study-data-editors-cleanup-and-the-cost-of-weak-workflows" class="level3" data-number="5.0.4">
+<h3 data-number="5.0.4" class="anchored" data-anchor-id="case-study-data-editors-cleanup-and-the-cost-of-weak-workflows"><span class="header-section-number">5.0.4</span> Case Study: Data Editors, Cleanup, and the Cost of Weak Workflows</h3>
+<p>Collaborative archaeological studies that integrate data from multiple projects reveal the impact of initial data management choices on later reuse.</p>
+<p>In one such context, data intended for collaborative analysis had to pass through intensive editorial review, revision, and annotation before they could be effectively reused. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> This process required significant effort and domain expertise from dedicated “data editors.” <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> Several key issues emerged:</p>
+<ul>
+<li>Errors in coded data were difficult to detect, especially where coding documentation did not precisely match the coded values in the dataset. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Data stored in coded form, even when some documentation existed, greatly multiplied the effort needed for reuse because codes had to be carefully decoded and reconciled. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Poor data modeling, particularly attempts to capture complex archaeological phenomena in overly simple flat tables, made it harder to reinterpret or recombine data for new questions. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></li>
+</ul>
+<p>Subsequent work on data quality and reuse emphasizes that adapting complex data “late in the game” is costly, and many of these costs could be reduced if projects aligned data creation practices with wider community reuse needs from the outset. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+<p>The experience of acting as data reusers in such projects helps researchers develop clearer expectations about “good data” and, in turn, become better data creators. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> This feedback loop can help establish virtuous cycles where improved data creation leads to more and better reuses, which further reinforces good practice. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p>
+<p>Reproducible computational workflows—featuring explicit data models, validation checks, and version‑controlled scripts—directly respond to the challenges observed in these collaborative integrations. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></p>
+<hr>
+</section>
+<section id="common-mistakes" class="level3" data-number="5.0.5">
+<h3 data-number="5.0.5" class="anchored" data-anchor-id="common-mistakes"><span class="header-section-number">5.0.5</span> Common Mistakes</h3>
+<p>Common pitfalls in programming and reproducible workflows for computational archaeology include:</p>
+<ol type="1">
+<li><p><strong>Treating spreadsheets as final databases</strong><br>
+Relying on flat spreadsheets to represent complex archaeological phenomena can obscure relationships and constraints, making reuse and integration difficult. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> Well‑formed relational data are better suited for clean, reusable structures. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></p></li>
+<li><p><strong>Deferring data modeling decisions until late in a project</strong><br>
+Many data modeling problems only become apparent during reuse, when they are expensive to fix. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Late adaptation of complex data leads to significant cleanup and translation work. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p></li>
+<li><p><strong>Using opaque codes without rigorous documentation and validation</strong><br>
+Coded data can hide errors, especially when codebooks do not match the actual content. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span> This discrepancy greatly multiplies the effort required for reuse. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p></li>
+<li><p><strong>Ignoring validation and data type enforcement</strong><br>
+Failing to specify and enforce appropriate data types (integer, decimal, Boolean, etc.) encourages inconsistent entries and errors that compromise data quality. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p></li>
+<li><p><strong>Relying on proprietary formats and closed tools</strong><br>
+When data are locked into proprietary formats, long‑term accessibility and interoperability suffer. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span> Open, nonproprietary formats are more suitable for sharing and reuse. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></p></li>
+<li><p><strong>Treating data as static, final products</strong><br>
+Approaching data like traditional publications overlooks the benefits of ongoing, version‑controlled refinement, which is central to robust data publishing. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span></p></li>
+<li><p><strong>Under‑documenting provenance and context</strong><br>
+Without detailed provenance and contextual information, future reusers struggle to understand how data were created and processed, undermining reusability. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Faniel2013-bx">Faniel et al. (<a href="#ref-Faniel2013-bx" role="doc-biblioref">2013</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p></li>
+</ol>
+<hr>
+</section>
+<section id="exercises" class="level3" data-number="5.0.6">
+<h3 data-number="5.0.6" class="anchored" data-anchor-id="exercises"><span class="header-section-number">5.0.6</span> Exercises</h3>
+<ol type="1">
+<li><strong>Diagnose a Flat Table</strong><br>
+You are given a single, large spreadsheet that attempts to capture all information from an excavation, including artifacts, stratigraphic units, and spatial coordinates in one table.
+<ul>
+<li>Identify at least three potential data modeling problems that could impede reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Propose a relational redesign (list of tables and relationships) that would improve granularity, reduce redundancy, and protect data integrity. <span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span></li>
+</ul></li>
+<li><strong>Validation Rules Design</strong><br>
+For a zooarchaeological dataset with coded taxonomic and anatomical fields:
+<ul>
+<li>List specific validation checks you would implement to ensure that coded values match their documentation. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Describe how you would enforce data types for key quantitative measurements (e.g., lengths, weights). <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul></li>
+<li><strong>Versioning a Data Pipeline</strong><br>
+Imagine you have a script that cleans and transforms survey data for publication in an online repository.
+<ul>
+<li>Describe how you would use version control to manage ongoing improvements to this script and to the underlying data model. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Explain how the version history contributes to data provenance and reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span>[<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul></li>
+<li><strong>Aligning with FAIR</strong><br>
+Choose a hypothetical archaeological dataset (e.g., an archaeobotanical assemblage). For each FAIR component, specify one concrete action you would take to improve:
+<ul>
+<li>Findability (e.g., indexing or registration). <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Accessibility (e.g., protocols, metadata availability). <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Interoperability (e.g., shared vocabularies, references). <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Reusability (e.g., license, provenance, community standards). <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul></li>
+<li><strong>Reflecting on Reuse Experience</strong><br>
+Assume you have just attempted to reuse a legacy dataset that lacked clear codebooks and had ambiguous tabular structures.
+<ul>
+<li>Identify at least three difficulties you encountered. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span><br>
+</li>
+<li>For each, state a concrete change you would make in your own future data creation practices to avoid imposing similar burdens on others. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="key-takeaways" class="level3" data-number="5.0.7">
+<h3 data-number="5.0.7" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">5.0.7</span> Key Takeaways</h3>
+<ul>
+<li>Reproducible computational workflows are crucial in archaeology because data move through a complex lifecycle from creation to dissemination and reuse, and poor practices at early stages lead to costly cleanup later. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Faniel2013-bx">(<a href="#ref-Faniel2013-bx" role="doc-biblioref">Faniel et al. 2013</a>)</span><br>
+</li>
+<li>Version control supports continual, incremental improvement of datasets and code, aligning data publishing with ongoing refinement rather than fixed final products. <span class="citation" data-cites="Kansa2014-pj">(<a href="#ref-Kansa2014-pj" role="doc-biblioref">Kansa, Kansa, and Arbuckle 2014</a>)</span><br>
+</li>
+<li>Well‑modeled relational data, supported by DBMSs that separate back end and front end, yield granular, non‑redundant, and robust structures better suited to analysis and sharing than ad hoc spreadsheets. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Ross2015-bx">(<a href="#ref-Ross2015-bx" role="doc-biblioref">Ross et al. 2015</a>)</span><br>
+</li>
+<li>Data validation, decoding of codes, and enforcement of data types are essential practices that reduce errors and significantly lower the effort required for data reuse. [<span class="citation" data-cites="Kansa2014-pj">Kansa, Kansa, and Arbuckle (<a href="#ref-Kansa2014-pj" role="doc-biblioref">2014</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><br>
+</li>
+<li>Open, nonproprietary formats and rich metadata—including licenses, provenance, and alignment with community standards—are central to making data findable, accessible, interoperable, and reusable. [<span class="citation" data-cites="Costello2009-jz">Costello (<a href="#ref-Costello2009-jz" role="doc-biblioref">2009</a>)</span>]<span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><br>
+</li>
+<li>Experience reusing other researchers’ data informs better data creation and can establish virtuous cycles where high‑quality, well‑documented datasets lead to more impactful reuse and improved community norms. <span class="citation" data-cites="Kansa2022-pw">(<a href="#ref-Kansa2022-pw" role="doc-biblioref">Kansa and Kansa 2022</a>)</span></li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Costello2009-jz" class="csl-entry" role="listitem">
+Costello, Mark J. 2009. <span>“Motivating Online Publication of Data.”</span> <em>Bioscience</em> 59 (5): 418–27. <a href="https://doi.org/10.1525/bio.2009.59.5.9">https://doi.org/10.1525/bio.2009.59.5.9</a>.
+</div>
+<div id="ref-Faniel2013-bx" class="csl-entry" role="listitem">
+Faniel, Ixchel M, Eric C Kansa, Sarah Whitcher Kansa, Julianna Barrera-Gomez, and Elizabeth Yakel. 2013. <span>“The Challenges of Digging Data: A Study of Context in Archaeological Data Reuse.”</span> In, 295–304. ACM. <a href="https://doi.org/10.1145/2467696.2467712">https://doi.org/10.1145/2467696.2467712</a>.
+</div>
+<div id="ref-Kansa2022-pw" class="csl-entry" role="listitem">
+Kansa, Eric C, and Sarah Whitcher Kansa. 2022. <span>“Promoting Data Quality and Reuse in Archaeology Through Collaborative Identifier Practices.”</span> <em>Proc. Natl. Acad. Sci. U. S. A.</em> 119 (43): e2109313118. <a href="https://doi.org/10.1073/pnas.2109313118">https://doi.org/10.1073/pnas.2109313118</a>.
+</div>
+<div id="ref-Kansa2014-pj" class="csl-entry" role="listitem">
+Kansa, Eric C, Sarah Whitcher Kansa, and Benjamin Arbuckle. 2014. <span>“Publishing and Pushing: Mixing Models for Communicating Research Data in Archaeology.”</span> <em>International Journal of Digital Curation</em> 9 (1): 57–70. <a href="https://doi.org/10.2218/ijdc.v9i1.301">https://doi.org/10.2218/ijdc.v9i1.301</a>.
+</div>
+<div id="ref-Nicholson2023-oq" class="csl-entry" role="listitem">
+Nicholson, Christopher, Sarah Whitcher Kansa, Neha Gupta, and Rachel Fernandez. 2023. <span>“Will It Ever Be FAIR?: Making Archaeological Data Findable, Accessible, Interoperable, and Reusable.”</span> <em>Adv. Archaeol. Pr.</em> 11 (1): 63–75. <a href="https://doi.org/10.1017/aap.2022.40">https://doi.org/10.1017/aap.2022.40</a>.
+</div>
+<div id="ref-Ross2015-bx" class="csl-entry" role="listitem">
+Ross, Shawn, Brian Ballsun-Stanton, Adela Sobotkova, and Penny Crook. 2015. <span>“Building the Bazaar: Enhancing Archaeological Field Recording Through an Open Source Approach.”</span> In, 111–29. Sciendo. <a href="https://doi.org/10.1515/9783110440171-009">https://doi.org/10.1515/9783110440171-009</a>.
+</div>
+</div>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./2_data_foundations.html" class="pagination-link" aria-label="2. Data Foundations for Archaeology">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./4_statistics_inference.html" class="pagination-link" aria-label="4. Statistics and Inference in Archaeological Analysis">
+        <span class="nav-page-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

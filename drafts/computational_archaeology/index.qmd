@@ -1,0 +1,35 @@
+---
+title: "Open Book of Computational Archaeology"
+---
+
+# Welcome
+
+This book introduces computational archaeology for college students with a computer science lens.
+
+## Roadmap
+
+- Foundations: data models, programming workflows, and statistical reasoning.
+- Core methods: machine learning, GIS, network science, and agent-based modeling.
+- Practice: uncertainty analysis, ethics and governance, and project-based learning.
+- Synthesis: future directions and interdisciplinary opportunities.
+
+## How to Use This Book
+
+- Read chapters sequentially for a first pass.
+- Complete hands-on exercises in each methods chapter.
+- Build toward the capstone projects in Chapter 11.
+
+## Chapter Map
+
+1. `1_introduction.qmd`: field overview and shared vocabulary.
+2. `2_data_foundations.qmd`: data models, identifiers, metadata, and quality.
+3. `3_programming_workflows.qmd`: reproducible coding and pipeline design.
+4. `4_statistics_inference.qmd`: quantitative reasoning and inference basics.
+5. `5_machine_learning.qmd`: supervised and unsupervised ML in archaeology.
+6. `6_spatial_gis.qmd`: GIS, spatial modeling, and terrain workflows.
+7. `7_network_science.qmd`: graph models and archaeological network analysis.
+8. `8_agent_based_modeling.qmd`: simulation logic and ABM design.
+9. `9_uncertainty_sensitivity.qmd`: robustness, validation, and sensitivity checks.
+10. `10_ethics_governance.qmd`: FAIR+CARE, data sovereignty, and ethics.
+11. `11_projects_case_studies.qmd`: project blueprints and applied case studies.
+12. `12_future_directions.qmd`: emerging methods and career directions.

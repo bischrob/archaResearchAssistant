@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-99.9.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>11&nbsp; 10. Ethics, Data Governance, and Community Collaboration – Open Book of Computational Archaeology</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./11_projects_case_studies.html" rel="next">
+<link href="./9_uncertainty_sensitivity.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-494121dfa8658343c03537e94414993d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-08ba49fb381fd3f8c97a5af9c3db1c30.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./10_ethics_governance.html"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Open Book of Computational Archaeology</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./1_introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./2_data_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./3_programming_workflows.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./4_statistics_inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./5_machine_learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./6_spatial_gis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./7_network_science.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./8_agent_based_modeling.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./9_uncertainty_sensitivity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10_ethics_governance.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11_projects_case_studies.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12_future_directions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">12. Future Directions in Computational Archaeology</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#ethics-data-governance-and-community-collaboration" id="toc-ethics-data-governance-and-community-collaboration" class="nav-link active" data-scroll-target="#ethics-data-governance-and-community-collaboration"><span class="header-section-number">12</span> 10. Ethics, Data Governance, and Community Collaboration</a>
+  <ul class="collapse">
+  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link" data-scroll-target="#learning-objectives"><span class="header-section-number">12.1</span> Learning Objectives</a></li>
+  <li><a href="#core-ideas" id="toc-core-ideas" class="nav-link" data-scroll-target="#core-ideas"><span class="header-section-number">12.2</span> Core Ideas</a>
+  <ul class="collapse">
+  <li><a href="#reproducibility-as-an-ethical-obligation" id="toc-reproducibility-as-an-ethical-obligation" class="nav-link" data-scroll-target="#reproducibility-as-an-ethical-obligation"><span class="header-section-number">12.2.1</span> 1. Reproducibility as an Ethical Obligation</a></li>
+  <li><a href="#fair-care-technical-and-social-dimensions" id="toc-fair-care-technical-and-social-dimensions" class="nav-link" data-scroll-target="#fair-care-technical-and-social-dimensions"><span class="header-section-number">12.2.2</span> 2. FAIR + CARE: Technical and Social Dimensions</a></li>
+  <li><a href="#indigenous-data-sovereignty-and-governance" id="toc-indigenous-data-sovereignty-and-governance" class="nav-link" data-scroll-target="#indigenous-data-sovereignty-and-governance"><span class="header-section-number">12.2.3</span> 3. Indigenous Data Sovereignty and Governance</a></li>
+  <li><a href="#collective-benefit-and-equitable-value" id="toc-collective-benefit-and-equitable-value" class="nav-link" data-scroll-target="#collective-benefit-and-equitable-value"><span class="header-section-number">12.2.4</span> 4. Collective Benefit and Equitable Value</a></li>
+  <li><a href="#responsibility-capacity-and-ethics-across-the-data-life-cycle" id="toc-responsibility-capacity-and-ethics-across-the-data-life-cycle" class="nav-link" data-scroll-target="#responsibility-capacity-and-ethics-across-the-data-life-cycle"><span class="header-section-number">12.2.5</span> 5. Responsibility, Capacity, and Ethics Across the Data Life Cycle</a></li>
+  </ul></li>
+  <li><a href="#worked-workflow-an-ethical-reproducible-data-life-cycle" id="toc-worked-workflow-an-ethical-reproducible-data-life-cycle" class="nav-link" data-scroll-target="#worked-workflow-an-ethical-reproducible-data-life-cycle"><span class="header-section-number">12.3</span> Worked Workflow: An Ethical, Reproducible Data Life Cycle</a>
+  <ul class="collapse">
+  <li><a href="#step-1-project-scoping-and-governance" id="toc-step-1-project-scoping-and-governance" class="nav-link" data-scroll-target="#step-1-project-scoping-and-governance"><span class="header-section-number">12.3.1</span> Step 1: Project Scoping and Governance</a></li>
+  <li><a href="#step-2-ethical-study-design-and-consent" id="toc-step-2-ethical-study-design-and-consent" class="nav-link" data-scroll-target="#step-2-ethical-study-design-and-consent"><span class="header-section-number">12.3.2</span> Step 2: Ethical Study Design and Consent</a></li>
+  <li><a href="#step-3-data-collection-and-documentation" id="toc-step-3-data-collection-and-documentation" class="nav-link" data-scroll-target="#step-3-data-collection-and-documentation"><span class="header-section-number">12.3.3</span> Step 3: Data Collection and Documentation</a></li>
+  <li><a href="#step-4-curation-security-and-access" id="toc-step-4-curation-security-and-access" class="nav-link" data-scroll-target="#step-4-curation-security-and-access"><span class="header-section-number">12.3.4</span> Step 4: Curation, Security, and Access</a></li>
+  <li><a href="#step-5-analysis-reproducibility-and-community-review" id="toc-step-5-analysis-reproducibility-and-community-review" class="nav-link" data-scroll-target="#step-5-analysis-reproducibility-and-community-review"><span class="header-section-number">12.3.5</span> Step 5: Analysis, Reproducibility, and Community Review</a></li>
+  <li><a href="#step-6-publication-sharing-and-longterm-stewardship" id="toc-step-6-publication-sharing-and-longterm-stewardship" class="nav-link" data-scroll-target="#step-6-publication-sharing-and-longterm-stewardship"><span class="header-section-number">12.3.6</span> Step 6: Publication, Sharing, and Long‑Term Stewardship</a></li>
+  </ul></li>
+  <li><a href="#case-study-faircare-in-archaeological-data-platforms" id="toc-case-study-faircare-in-archaeological-data-platforms" class="nav-link" data-scroll-target="#case-study-faircare-in-archaeological-data-platforms"><span class="header-section-number">12.4</span> Case Study: FAIR+CARE in Archaeological Data Platforms</a></li>
+  <li><a href="#common-mistakes" id="toc-common-mistakes" class="nav-link" data-scroll-target="#common-mistakes"><span class="header-section-number">12.5</span> Common Mistakes</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">12.6</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">12.7</span> Key Takeaways</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="ethics-data-governance-and-community-collaboration" class="level1" data-number="12">
+<h1 data-number="12"><span class="header-section-number">12</span> 10. Ethics, Data Governance, and Community Collaboration</h1>
+<section id="learning-objectives" class="level2" data-number="12.1">
+<h2 data-number="12.1" class="anchored" data-anchor-id="learning-objectives"><span class="header-section-number">12.1</span> Learning Objectives</h2>
+<p>By the end of this chapter, you should be able to:</p>
+<ul>
+<li>Explain how FAIR and CARE principles jointly shape ethical archaeological data practice (“FAIR+CARE”). [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Describe Indigenous data sovereignty and why it matters for computational archaeology. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Identify responsibilities around consent, control, and benefit-sharing when working with Indigenous data. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Outline a reproducible, ethically grounded workflow for managing archaeological data. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Recognize common ethical pitfalls in digital and computational heritage work, including 3D and XR technologies. [<span class="citation" data-cites="Csoba-DeHass2025-wt">Csoba DeHass et al. (<a href="#ref-Csoba-DeHass2025-wt" role="doc-biblioref">2025</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="core-ideas" class="level2" data-number="12.2">
+<h2 data-number="12.2" class="anchored" data-anchor-id="core-ideas"><span class="header-section-number">12.2</span> Core Ideas</h2>
+<section id="reproducibility-as-an-ethical-obligation" class="level3" data-number="12.2.1">
+<h3 data-number="12.2.1" class="anchored" data-anchor-id="reproducibility-as-an-ethical-obligation"><span class="header-section-number">12.2.1</span> 1. Reproducibility as an Ethical Obligation</h3>
+<p>Infrastructure that supports reuse of scholarly data is urgently needed, because current digital ecosystems prevent the community from extracting maximum benefit from research investments. <span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span> Good data management is not an end in itself but a conduit to knowledge discovery, innovation, and data reuse by the broader community. <span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span> In computational archaeology, this means that making your workflows and datasets reusable is part of your ethical responsibility to both science and affected communities. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+<p>The FAIR Guiding Principles—Findable, Accessible, Interoperable, Reusable—were designed to improve infrastructure for data reuse and transform scholarly data sharing. [<span class="citation" data-cites="Wilkinson2016-vv">Wilkinson et al. (<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span> FAIR emphasizes that machines as well as humans should be able to automatically find and use data. <span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span> In archaeology, FAIR is being promoted through data life‑cycle frameworks that address creation, curation, and dissemination. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+</section>
+<section id="fair-care-technical-and-social-dimensions" class="level3" data-number="12.2.2">
+<h3 data-number="12.2.2" class="anchored" data-anchor-id="fair-care-technical-and-social-dimensions"><span class="header-section-number">12.2.2</span> 2. FAIR + CARE: Technical and Social Dimensions</h3>
+<p>FAIR alone focuses on characteristics of data (findability, accessibility, interoperability, reusability) to facilitate sharing across entities. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span> However, open data and open science movements based only on FAIR do not fully engage with Indigenous Peoples’ rights and interests, and they tend to ignore power differentials and historical contexts. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> As a result, efforts to increase openness can be in tension with Indigenous demands for greater control over the use of Indigenous data and knowledge for collective benefit. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>The CARE Principles—Collective Benefit, Authority to Control, Responsibility, and Ethics—are people‑ and purpose‑oriented and were developed to reflect the role of data in advancing Indigenous innovation and self‑determination. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> They complement FAIR by encouraging open data movements to consider both people and purpose in their advocacy and practices. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Archaeological data have complex technical, professional, social, economic, cultural, legal, and policy entanglements, so FAIR and CARE must be implemented together as “FAIR+CARE” to guide intentional data creation, curation, and dissemination. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+<p>When FAIR is implemented with CARE, it can connect the reuse of information about past populations to issues of trust, transparency, ethical practice, and “better science.” <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span> This combined framework is promoted explicitly in archaeology as a way to manage data ethically and responsibly. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+</section>
+<section id="indigenous-data-sovereignty-and-governance" class="level3" data-number="12.2.3">
+<h3 data-number="12.2.3" class="anchored" data-anchor-id="indigenous-data-sovereignty-and-governance"><span class="header-section-number">12.2.3</span> 3. Indigenous Data Sovereignty and Governance</h3>
+<p>The UN Declaration on the Rights of Indigenous Peoples (UNDRIP) reaffirms Indigenous rights to self‑governance and authority over their cultural heritage—languages, knowledge, practices, technologies, natural resources, territories—which together can be understood as “Indigenous data.” <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Indigenous data include data collected by governments and institutions about Indigenous Peoples and their territories. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Indigenous data are intrinsic to Indigenous Peoples’ capacity to realize their human rights and responsibilities. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Indigenous data sovereignty reinforces the right to engage in decision‑making in accordance with Indigenous values and collective interests. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>The CARE framework articulates specific governance rights. Indigenous Peoples have rights and interests in both Indigenous Knowledge and Indigenous data, including collective and individual rights to free, prior, and informed consent in data collection and use, as well as in the development of data policies and protocols. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Indigenous data governance supports Indigenous nations and governing bodies in determining how Indigenous Peoples, lands, territories, resources, knowledges, and geographical indicators are represented and identified within data. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>Indigenous Peoples also have the right to data that are relevant to their worldviews and that empower self‑determination and effective self‑governance, and these data must be accessible to Indigenous nations and communities to support Indigenous governance. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> They further have the right to develop cultural governance protocols for Indigenous data and to be active leaders in stewardship and access, especially for Indigenous Knowledge. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+</section>
+<section id="collective-benefit-and-equitable-value" class="level3" data-number="12.2.4">
+<h3 data-number="12.2.4" class="anchored" data-anchor-id="collective-benefit-and-equitable-value"><span class="header-section-number">12.2.4</span> 4. Collective Benefit and Equitable Value</h3>
+<p>CARE’s “Collective Benefit” principle emphasizes that governments and institutions must actively support Indigenous nations and communities in using and reusing data to establish foundations for Indigenous innovation, value generation, and self‑determined development. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Data can enrich planning, implementation, and evaluation processes for Indigenous service and policy needs, and can improve governance and citizen engagement. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>Ethical use of open data can improve transparency and decision‑making by providing Indigenous nations and communities with better understanding of their peoples, territories, and resources, and with insight into third‑party policies and programs affecting them. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Any value created from Indigenous data should benefit Indigenous communities equitably and contribute to Indigenous aspirations for wellbeing. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+</section>
+<section id="responsibility-capacity-and-ethics-across-the-data-life-cycle" class="level3" data-number="12.2.5">
+<h3 data-number="12.2.5" class="anchored" data-anchor-id="responsibility-capacity-and-ethics-across-the-data-life-cycle"><span class="header-section-number">12.2.5</span> 5. Responsibility, Capacity, and Ethics Across the Data Life Cycle</h3>
+<p>The CARE “Responsibility” principle requires that those working with Indigenous data share how data are used to support self‑determination and collective benefit, with accountability demonstrated through meaningful and openly available evidence of these efforts and the benefits accruing to Indigenous Peoples. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Indigenous data use is considered unviable unless embedded in relationships based on respect, reciprocity, trust, and mutual understanding, as defined by the Indigenous Peoples concerned. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>Responsibility also includes ensuring that data creation, interpretation, and use uphold or respect the dignity of Indigenous nations and communities. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Use of Indigenous data invokes a reciprocal responsibility to enhance data literacy within Indigenous communities and to support development of an Indigenous data workforce and digital infrastructure for data creation, management, security, governance, and application. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Resources must be provided to generate data grounded in Indigenous languages, worldviews, lived experiences, values, and principles. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<p>Under the “Ethics” principle, Indigenous rights and wellbeing should be the primary concern at all stages of the data life cycle and across the data ecosystem. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Ethical data should not stigmatize or portray Indigenous Peoples, cultures, or knowledges in deficit terms, and must align with Indigenous ethical frameworks and rights affirmed in UNDRIP. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> Assessment of benefits and harms should be made from the perspective of the Indigenous Peoples to whom the data relate. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="worked-workflow-an-ethical-reproducible-data-life-cycle" class="level2" data-number="12.3">
+<h2 data-number="12.3" class="anchored" data-anchor-id="worked-workflow-an-ethical-reproducible-data-life-cycle"><span class="header-section-number">12.3</span> Worked Workflow: An Ethical, Reproducible Data Life Cycle</h2>
+<p>This workflow shows how FAIR+CARE can structure a computational archaeology project involving Indigenous data.</p>
+<section id="step-1-project-scoping-and-governance" class="level3" data-number="12.3.1">
+<h3 data-number="12.3.1" class="anchored" data-anchor-id="step-1-project-scoping-and-governance"><span class="header-section-number">12.3.1</span> Step 1: Project Scoping and Governance</h3>
+<ul>
+<li>Begin by recognizing Indigenous Peoples’ rights and interests in both Indigenous Knowledge and data, including their authority to control such data. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Engage Indigenous governing bodies early to co‑develop data policies and protocols, respecting their free, prior, and informed consent in collection and use. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Identify community priorities for how data can support self‑determination, governance, and wellbeing. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul>
+</section>
+<section id="step-2-ethical-study-design-and-consent" class="level3" data-number="12.3.2">
+<h3 data-number="12.3.2" class="anchored" data-anchor-id="step-2-ethical-study-design-and-consent"><span class="header-section-number">12.3.2</span> Step 2: Ethical Study Design and Consent</h3>
+<ul>
+<li>Design the project so that any value created from Indigenous data will benefit Indigenous communities in an equitable manner and contribute to their aspirations for wellbeing. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Ensure planned data are relevant to Indigenous worldviews and governance needs, and that resulting datasets will be made available and accessible to the communities for their own governance and decision‑making. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Agree on consent procedures that include input into collection methods, future uses, and publication and sharing conditions. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul>
+</section>
+<section id="step-3-data-collection-and-documentation" class="level3" data-number="12.3.3">
+<h3 data-number="12.3.3" class="anchored" data-anchor-id="step-3-data-collection-and-documentation"><span class="header-section-number">12.3.3</span> Step 3: Data Collection and Documentation</h3>
+<ul>
+<li>Collect data in ways that uphold the dignity of Indigenous nations and communities and avoid stigmatizing or deficit‑based representations. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Document how data relate to Indigenous lands, territories, resources, and knowledges so that Indigenous Peoples can later determine appropriate representation and identification within data systems. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Plan metadata and formats to support FAIR (machine‑actionable, interoperable, reusable) while embedding CARE‑aligned governance and restrictions where required. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+</section>
+<section id="step-4-curation-security-and-access" class="level3" data-number="12.3.4">
+<h3 data-number="12.3.4" class="anchored" data-anchor-id="step-4-curation-security-and-access"><span class="header-section-number">12.3.4</span> Step 4: Curation, Security, and Access</h3>
+<ul>
+<li>Implement the FAIR principles to make data findable, accessible, interoperable, and reusable in appropriate repositories or platforms. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>At the same time, implement CARE by:
+<ul>
+<li>Applying Indigenous cultural governance protocols for access and stewardship. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Documenting Indigenous authority to control specific data and specifying conditions of reuse. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Ensuring that open access is not granted where it would conflict with Indigenous rights, wellbeing, or ethical frameworks. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul></li>
+<li>Facilitate Indigenous access to the data to support their governance and decision‑making. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul>
+</section>
+<section id="step-5-analysis-reproducibility-and-community-review" class="level3" data-number="12.3.5">
+<h3 data-number="12.3.5" class="anchored" data-anchor-id="step-5-analysis-reproducibility-and-community-review"><span class="header-section-number">12.3.5</span> Step 5: Analysis, Reproducibility, and Community Review</h3>
+<ul>
+<li>Structure computational workflows and code so that they contribute to knowledge integration and reuse under FAIR principles. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span></li>
+<li>Share analytic methods and results with Indigenous partners, explaining how analyses support self‑determination and collective benefit. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Invite community feedback on interpretations to avoid deficit framings and misrepresentation. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul>
+</section>
+<section id="step-6-publication-sharing-and-longterm-stewardship" class="level3" data-number="12.3.6">
+<h3 data-number="12.3.6" class="anchored" data-anchor-id="step-6-publication-sharing-and-longterm-stewardship"><span class="header-section-number">12.3.6</span> Step 6: Publication, Sharing, and Long‑Term Stewardship</h3>
+<ul>
+<li>When publishing, describe how FAIR and CARE have guided data management and how benefits to Indigenous communities have been pursued. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Use dissemination channels that also support Indigenous innovation and local self‑determined development processes. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Make evidence of responsibilities and benefits openly available where appropriate, strengthening accountability. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Support the development of Indigenous data literacy, workforce, and digital infrastructure as part of long‑term collaboration. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="case-study-faircare-in-archaeological-data-platforms" class="level2" data-number="12.4">
+<h2 data-number="12.4" class="anchored" data-anchor-id="case-study-faircare-in-archaeological-data-platforms"><span class="header-section-number">12.4</span> Case Study: FAIR+CARE in Archaeological Data Platforms</h2>
+<p>Archaeological data management platforms such as Open Context and tDAR have been used to preserve and improve access to archaeological data. <span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span> Drawing on two decades of work with these systems, researchers have introduced a data life‑cycle framework grounded in the FAIR Guiding Principles to improve archaeology’s capacity to manage data ethically and responsibly. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p>
+<p>These efforts emphasize that:</p>
+<ul>
+<li>FAIR is necessary to improve data findability, accessibility, interoperability, and reusability and to transform the landscape of scholarly data sharing. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span></li>
+<li>Implementation of FAIR in archaeology must consider the CARE Principles for Indigenous Data Governance, because archaeological data are entangled with social, cultural, legal, economic, and policy issues. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Presenting FAIR and CARE in tandem (“FAIR+CARE”) is essential to address elevated perceptions of risk around data sharing and open science and to promote trust, transparency, and better science. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<p>In practice, this has meant building systems and workflows that:</p>
+<ul>
+<li>Incorporate metadata and access controls reflecting Indigenous authority to control data and cultural protocols for stewardship. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Make datasets technically reusable while respecting community‑defined conditions, including limits on openness. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Frame data reuse in ways that can support Indigenous governance, planning, and evaluation, rather than solely external research agendas. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul>
+<p>This case illustrates how computational infrastructures can be designed to align technical reproducibility with Indigenous data sovereignty and ethical obligations.</p>
+<hr>
+</section>
+<section id="common-mistakes" class="level2" data-number="12.5">
+<h2 data-number="12.5" class="anchored" data-anchor-id="common-mistakes"><span class="header-section-number">12.5</span> Common Mistakes</h2>
+<ol type="1">
+<li><p><strong>Treating FAIR as value‑neutral and sufficient.</strong><br>
+Applying FAIR only as a technical checklist, without considering power differentials, historical contexts, and Indigenous rights and interests, ignores documented limitations of open data movements. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p></li>
+<li><p><strong>Equating “open” with “ethical.”</strong><br>
+Assuming that more openness is always better can create tension with Indigenous Peoples’ assertions of control over Indigenous data and knowledge for collective benefit. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span> CARE explicitly indicates that some data must be governed, not simply opened. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Ignoring Indigenous authority to control data.</strong><br>
+Failing to recognize Indigenous Peoples’ rights and interests in Indigenous data and knowledge, and their collective and individual rights to free, prior, and informed consent, violates CARE principles and Indigenous data sovereignty. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Instrumentalizing community “benefit.”</strong><br>
+Designing projects that primarily benefit external researchers or institutions, while only nominally addressing Indigenous wellbeing or innovation, contradicts CARE’s requirement that value created from Indigenous data equitably benefit Indigenous communities and support their aspirations. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Weak accountability and opaque reuse.</strong><br>
+Not providing meaningful, openly available evidence of how data use supports Indigenous self‑determination and collective benefit undermines the Responsibility principle and erodes trust. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Deficit‑based or stigmatizing representations.</strong><br>
+Producing or sharing data and interpretations that stigmatize Indigenous Peoples or present cultures and knowledge in terms of deficit conflicts with CARE’s Ethics principle. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Unstructured use of emerging digital tools.</strong><br>
+In heritage contexts, technologies such as XR (VR/AR/MR), 3D scanning, generative AI, and unauthorized “guerilla scanning” introduce new risks around unauthorized capture, monetization, and circulation of cultural objects and knowledge. <span class="citation" data-cites="Csoba-DeHass2025-wt">(<a href="#ref-Csoba-DeHass2025-wt" role="doc-biblioref">Csoba DeHass et al. 2025</a>)</span> Without Indigenous governance and CARE‑aligned protocols, these uses can conflict with Indigenous Data Governance, defined as the right and authority of Indigenous Peoples and Tribal Nations to govern data originating from their knowledges. <span class="citation" data-cites="Csoba-DeHass2025-wt">(<a href="#ref-Csoba-DeHass2025-wt" role="doc-biblioref">Csoba DeHass et al. 2025</a>)</span></p></li>
+</ol>
+<hr>
+</section>
+<section id="exercises" class="level2" data-number="12.6">
+<h2 data-number="12.6" class="anchored" data-anchor-id="exercises"><span class="header-section-number">12.6</span> Exercises</h2>
+<ol type="1">
+<li><p><strong>Short Essay (Conceptual).</strong><br>
+Explain how the FAIR and CARE principles complement each other in archaeological data management. Use examples to show why FAIR alone is insufficient for ethical practice involving Indigenous data. Support your arguments with citations to the definitions and critiques of FAIR and CARE. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span>[<span class="citation" data-cites="Wilkinson2016-vv">Wilkinson et al. (<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">2016</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></p></li>
+<li><p><strong>Workflow Critique (Applied).</strong><br>
+Draft a simple data life‑cycle for a computational archaeology project using remote sensing data from Indigenous territories. Identify at least three points where Indigenous Authority to Control and free, prior, and informed consent must shape decisions. Discuss how you would document responsibility and collective benefit. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></p></li>
+<li><p><strong>Case Analysis (Ethics and Technology).</strong><br>
+Using the glossary definitions of XR, guerilla scanning, and Indigenous Data Governance, analyze potential ethical issues that arise when archaeologists or other actors create and share 3D scans of cultural objects online without community involvement. Propose governance measures aligned with CARE to address these issues. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Csoba-DeHass2025-wt">(<a href="#ref-Csoba-DeHass2025-wt" role="doc-biblioref">Csoba DeHass et al. 2025</a>)</span></p></li>
+<li><p><strong>Policy Design (Governance).</strong><br>
+Draft a one‑page outline of a data sharing policy for an archaeological repository that wants to adopt FAIR+CARE. Specify how the repository will handle:</p>
+<ul>
+<li>Requests for open access to datasets involving Indigenous data.</li>
+<li>Documentation of community consent and governance protocols.</li>
+<li>Evidence of benefits to Indigenous communities and accountability mechanisms. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+</ul></li>
+</ol>
+<hr>
+</section>
+<section id="key-takeaways" class="level2" data-number="12.7">
+<h2 data-number="12.7" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">12.7</span> Key Takeaways</h2>
+<ul>
+<li>Good data management is a conduit to knowledge discovery and reuse; FAIR principles were developed to improve infrastructure for data reuse and transform scholarly data sharing, including in archaeology. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Wilkinson2016-vv">(<a href="#ref-Wilkinson2016-vv" role="doc-biblioref">Wilkinson et al. 2016</a>)</span><span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>The movement toward open data and open science, grounded in FAIR alone, does not fully engage with Indigenous Peoples’ rights and interests and often ignores power differentials and historical contexts. <span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Indigenous data sovereignty affirms Indigenous rights to self‑governance and authority over Indigenous data and cultural heritage, reinforcing decision‑making in accordance with Indigenous values and collective interests. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>CARE—Collective Benefit, Authority to Control, Responsibility, Ethics—complements FAIR by centering people and purpose, emphasizing equitable benefit, consent, Indigenous governance, accountability, and non‑stigmatizing data practices. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span><span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span></li>
+<li>Archaeological data are deeply entangled with social, cultural, legal, and political issues; implementing FAIR+CARE together is therefore crucial to build trust, transparency, ethical practice, and better science. [<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Ethical computational archaeology requires workflows that recognize Indigenous authority, ensure free, prior, and informed consent, support Indigenous governance and wellbeing, and provide clear evidence of responsibility and benefit throughout the data life cycle. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Nicholson2023-oq">Nicholson et al. (<a href="#ref-Nicholson2023-oq" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Nicholson2023-oq">(<a href="#ref-Nicholson2023-oq" role="doc-biblioref">Nicholson et al. 2023</a>)</span></li>
+<li>Emerging digital tools, including XR and 3D technologies, must be governed under Indigenous Data Governance and CARE principles to avoid unauthorized capture, misuse, or commodification of Indigenous heritage. [<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Carroll2020-fy">(<a href="#ref-Carroll2020-fy" role="doc-biblioref">Carroll et al. 2020</a>)</span>[<span class="citation" data-cites="Carroll2020-fy">Carroll et al. (<a href="#ref-Carroll2020-fy" role="doc-biblioref">2020</a>)</span>]<span class="citation" data-cites="Csoba-DeHass2025-wt">(<a href="#ref-Csoba-DeHass2025-wt" role="doc-biblioref">Csoba DeHass et al. 2025</a>)</span></li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Carroll2020-fy" class="csl-entry" role="listitem">
+Carroll, Stephanie Russo, Ibrahim Garba, Oscar L Figueroa-Rodríguez, Jarita Holbrook, Raymond Lovett, Simeon Materechera, Mark Parsons, et al. 2020. <span>“The CARE Principles for Indigenous Data Governance.”</span> <em>Data Science Journal</em> 19 (1): 43. <a href="https://doi.org/10.5334/dsj-2020-043">https://doi.org/10.5334/dsj-2020-043</a>.
+</div>
+<div id="ref-Csoba-DeHass2025-wt" class="csl-entry" role="listitem">
+Csoba DeHass, Medeia, Lori Collins, Alexandra Taitt, Julie Raymond-Yakoubian, Travis Doering, Lisa Navraq Ellanna, Eric Hollinger, et al. 2025. <span>“Ethical Considerations in the Use of 3D Technologies to Preserve and Perpetuate Indigenous Heritage.”</span> <em>Am. Antiq.</em> 90 (2): 282–306. <a href="https://doi.org/10.1017/aaq.2024.82">https://doi.org/10.1017/aaq.2024.82</a>.
+</div>
+<div id="ref-Nicholson2023-oq" class="csl-entry" role="listitem">
+Nicholson, Christopher, Sarah Whitcher Kansa, Neha Gupta, and Rachel Fernandez. 2023. <span>“Will It Ever Be FAIR?: Making Archaeological Data Findable, Accessible, Interoperable, and Reusable.”</span> <em>Adv. Archaeol. Pr.</em> 11 (1): 63–75. <a href="https://doi.org/10.1017/aap.2022.40">https://doi.org/10.1017/aap.2022.40</a>.
+</div>
+<div id="ref-Wilkinson2016-vv" class="csl-entry" role="listitem">
+Wilkinson, Mark D, Michel Dumontier, I Jsbrand Jan Aalbersberg, Gabrielle Appleton, Myles Axton, Arie Baak, Niklas Blomberg, et al. 2016. <span>“The FAIR Guiding Principles for Scientific Data Management and Stewardship.”</span> <em>Sci. Data</em> 3 (1): 160018. <a href="https://doi.org/10.1038/sdata.2016.18">https://doi.org/10.1038/sdata.2016.18</a>.
+</div>
+</div>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./9_uncertainty_sensitivity.html" class="pagination-link" aria-label="9. Uncertainty, Validation, and Sensitivity Analysis">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./11_projects_case_studies.html" class="pagination-link" aria-label="11. Student Projects and Case Studies">
+        <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>

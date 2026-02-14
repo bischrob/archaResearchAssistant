@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-99.9.9">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>8&nbsp; 7. Network Science for Past Societies – Open Book of Computational Archaeology</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="site_libs/quarto-nav/headroom.min.js"></script>
+<script src="site_libs/clipboard/clipboard.min.js"></script>
+<script src="site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="site_libs/quarto-search/fuse.min.js"></script>
+<script src="site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="./">
+<link href="./8_agent_based_modeling.html" rel="next">
+<link href="./6_spatial_gis.html" rel="prev">
+<script src="site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="site_libs/quarto-html/popper.min.js"></script>
+<script src="site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="site_libs/quarto-html/anchor.min.js"></script>
+<link href="site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="site_libs/quarto-html/quarto-syntax-highlighting-494121dfa8658343c03537e94414993d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="site_libs/bootstrap/bootstrap-08ba49fb381fd3f8c97a5af9c3db1c30.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<style>html{ scroll-behavior: smooth; }</style>
+
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./7_network_science.html"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="./">Open Book of Computational Archaeology</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Open Book of Computational Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./1_introduction.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">1. Introduction</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./2_data_foundations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">2. Data Foundations for Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./3_programming_workflows.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">3. Programming and Reproducible Workflows</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./4_statistics_inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">4. Statistics and Inference in Archaeological Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./5_machine_learning.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">5. Machine Learning in Archaeology</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./6_spatial_gis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./7_network_science.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./8_agent_based_modeling.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./9_uncertainty_sensitivity.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">9. Uncertainty, Validation, and Sensitivity Analysis</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./10_ethics_governance.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">10. Ethics, Data Governance, and Community Collaboration</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./11_projects_case_studies.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">11. Student Projects and Case Studies</span></span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="./12_future_directions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">12. Future Directions in Computational Archaeology</span></span></a>
+  </div>
+</li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#network-science-for-past-societies" id="toc-network-science-for-past-societies" class="nav-link active" data-scroll-target="#network-science-for-past-societies"><span class="header-section-number">9</span> 7. Network Science for Past Societies</a>
+  <ul class="collapse">
+  <li><a href="#learning-objectives" id="toc-learning-objectives" class="nav-link" data-scroll-target="#learning-objectives"><span class="header-section-number">9.1</span> Learning Objectives</a></li>
+  <li><a href="#core-ideas" id="toc-core-ideas" class="nav-link" data-scroll-target="#core-ideas"><span class="header-section-number">9.2</span> Core Ideas</a>
+  <ul class="collapse">
+  <li><a href="#networks-and-network-science-in-archaeology" id="toc-networks-and-network-science-in-archaeology" class="nav-link" data-scroll-target="#networks-and-network-science-in-archaeology"><span class="header-section-number">9.2.1</span> Networks and Network Science in Archaeology</a></li>
+  <li><a href="#network-data-and-representations" id="toc-network-data-and-representations" class="nav-link" data-scroll-target="#network-data-and-representations"><span class="header-section-number">9.2.2</span> Network Data and Representations</a></li>
+  <li><a href="#types-of-networks" id="toc-types-of-networks" class="nav-link" data-scroll-target="#types-of-networks"><span class="header-section-number">9.2.3</span> Types of Networks</a></li>
+  <li><a href="#archaeological-network-domains" id="toc-archaeological-network-domains" class="nav-link" data-scroll-target="#archaeological-network-domains"><span class="header-section-number">9.2.4</span> Archaeological Network Domains</a></li>
+  <li><a href="#centrality-and-its-stability" id="toc-centrality-and-its-stability" class="nav-link" data-scroll-target="#centrality-and-its-stability"><span class="header-section-number">9.2.5</span> Centrality and Its Stability</a></li>
+  <li><a href="#temporal-networks" id="toc-temporal-networks" class="nav-link" data-scroll-target="#temporal-networks"><span class="header-section-number">9.2.6</span> Temporal Networks</a></li>
+  </ul></li>
+  <li><a href="#worked-workflow-from-archaeological-data-to-network-analysis" id="toc-worked-workflow-from-archaeological-data-to-network-analysis" class="nav-link" data-scroll-target="#worked-workflow-from-archaeological-data-to-network-analysis"><span class="header-section-number">9.3</span> Worked Workflow: From Archaeological Data to Network Analysis</a>
+  <ul class="collapse">
+  <li><a href="#define-research-questions-and-network-scope" id="toc-define-research-questions-and-network-scope" class="nav-link" data-scroll-target="#define-research-questions-and-network-scope"><span class="header-section-number">9.3.1</span> 1. Define Research Questions and Network Scope</a></li>
+  <li><a href="#assemble-and-structure-network-data" id="toc-assemble-and-structure-network-data" class="nav-link" data-scroll-target="#assemble-and-structure-network-data"><span class="header-section-number">9.3.2</span> 2. Assemble and Structure Network Data</a></li>
+  <li><a href="#choose-network-type-and-representation" id="toc-choose-network-type-and-representation" class="nav-link" data-scroll-target="#choose-network-type-and-representation"><span class="header-section-number">9.3.3</span> 3. Choose Network Type and Representation</a></li>
+  <li><a href="#exploratory-network-analysis" id="toc-exploratory-network-analysis" class="nav-link" data-scroll-target="#exploratory-network-analysis"><span class="header-section-number">9.3.4</span> 4. Exploratory Network Analysis</a></li>
+  <li><a href="#assess-centrality-stability-and-sampling-issues" id="toc-assess-centrality-stability-and-sampling-issues" class="nav-link" data-scroll-target="#assess-centrality-stability-and-sampling-issues"><span class="header-section-number">9.3.5</span> 5. Assess Centrality Stability and Sampling Issues</a></li>
+  <li><a href="#contextual-interpretation" id="toc-contextual-interpretation" class="nav-link" data-scroll-target="#contextual-interpretation"><span class="header-section-number">9.3.6</span> 6. Contextual Interpretation</a></li>
+  </ul></li>
+  <li><a href="#case-study-centrality-and-sampling-in-huntergatherer-networks" id="toc-case-study-centrality-and-sampling-in-huntergatherer-networks" class="nav-link" data-scroll-target="#case-study-centrality-and-sampling-in-huntergatherer-networks"><span class="header-section-number">9.4</span> Case Study: Centrality and Sampling in Hunter‑Gatherer Networks</a></li>
+  <li><a href="#common-mistakes-and-caveats-in-archaeological-network-interpretation" id="toc-common-mistakes-and-caveats-in-archaeological-network-interpretation" class="nav-link" data-scroll-target="#common-mistakes-and-caveats-in-archaeological-network-interpretation"><span class="header-section-number">9.5</span> Common Mistakes and Caveats in Archaeological Network Interpretation</a></li>
+  <li><a href="#exercises" id="toc-exercises" class="nav-link" data-scroll-target="#exercises"><span class="header-section-number">9.6</span> Exercises</a></li>
+  <li><a href="#key-takeaways" id="toc-key-takeaways" class="nav-link" data-scroll-target="#key-takeaways"><span class="header-section-number">9.7</span> Key Takeaways</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">7. Network Science for Past Societies</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="network-science-for-past-societies" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> 7. Network Science for Past Societies</h1>
+<section id="learning-objectives" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="learning-objectives"><span class="header-section-number">9.1</span> Learning Objectives</h2>
+<p>By the end of this chapter, you should be able to:</p>
+<ul>
+<li>Describe what network data are and how they are represented in formats such as edge lists and adjacency matrices in archaeological research.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li>Distinguish common network types used in archaeology, including directed, weighted, similarity, and two‑mode networks.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li>Explain core centrality measures (degree, eigenvector, betweenness) and why their stability matters for archaeological interpretation.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>Recognize how network science is being applied to material culture, movement, spatial proximity, visibility, and publication networks in archaeology.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><br>
+</li>
+<li>Understand the idea of longitudinal (temporal) network data in archaeological contexts.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li>Identify key methodological challenges, including incomplete data, tentative network boundaries, and interpretation caveats when projecting from sampled to “real” past networks.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="core-ideas" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="core-ideas"><span class="header-section-number">9.2</span> Core Ideas</h2>
+<section id="networks-and-network-science-in-archaeology" class="level3" data-number="9.2.1">
+<h3 data-number="9.2.1" class="anchored" data-anchor-id="networks-and-network-science-in-archaeology"><span class="header-section-number">9.2.1</span> Networks and Network Science in Archaeology</h3>
+<p>Network science in archaeology draws on graph theory, social network analysis, and complexity science to study relationships among entities (sites, people, artifacts, places) and how these relationships structure past societies.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> Archaeological network research is methodologically and theoretically diverse and has expanded rapidly in recent years.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+<p>Network science is positioned within archaeology as a way to explore questions about how network structure and positions relate to attributes and outcomes at multiple social scales.<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span> Archaeologists use formal network analyses to investigate long‑term dynamics of social networks and their relationships to culture.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+</section>
+<section id="network-data-and-representations" class="level3" data-number="9.2.2">
+<h3 data-number="9.2.2" class="anchored" data-anchor-id="network-data-and-representations"><span class="header-section-number">9.2.2</span> Network Data and Representations</h3>
+<p>Network data describe relationships (edges) among entities (nodes).<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span> Archaeological network data can be stored and exchanged in multiple graph‑theoretic formats:<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+<ul>
+<li><strong>Edge list</strong>: a list of pairs (or tuples) of nodes indicating which nodes are connected.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Adjacency list</strong>: for each node, a list of nodes to which it is connected.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Adjacency matrix</strong>: a matrix where rows and columns correspond to nodes and entries encode whether (and possibly how strongly) they are connected.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Incidence matrix</strong>: a matrix linking nodes to edges, useful particularly for more complex or bipartite structures.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ul>
+<p>Additional node and edge attributes (e.g., site type, ceramic counts, tie strength) can be associated with these structures.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+</section>
+<section id="types-of-networks" class="level3" data-number="9.2.3">
+<h3 data-number="9.2.3" class="anchored" data-anchor-id="types-of-networks"><span class="header-section-number">9.2.3</span> Types of Networks</h3>
+<p>Archaeological research uses a variety of network types:<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+<ul>
+<li><strong>Simple networks</strong>: undirected, unweighted graphs where edges indicate the presence or absence of a relationship.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Directed networks</strong>: edges have direction, indicating asymmetric relationships (e.g., flow from one node to another).<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Signed and weighted networks</strong>: edges can be assigned weights (strengths) or signs (e.g., positive/negative relationships).<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Two‑mode (affiliation) networks</strong>: link two distinct classes of nodes, such as sites and artifact types or sites and ceramic styles.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Similarity networks</strong>: edges represent similarity in attributes (e.g., similarity of ceramic assemblages between sites).<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Ego‑networks</strong>: focus on one node (ego) and its immediate connections.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Multilayer networks</strong>: combine several types of relationships or interaction modes in a joint framework.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ul>
+<p>Archaeologists also distinguish <strong>longitudinal (temporal) network data</strong>, which track changes in network structure over time.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+</section>
+<section id="archaeological-network-domains" class="level3" data-number="9.2.4">
+<h3 data-number="9.2.4" class="anchored" data-anchor-id="archaeological-network-domains"><span class="header-section-number">9.2.4</span> Archaeological Network Domains</h3>
+<p>Network science has been applied across multiple archaeological domains:[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+<ul>
+<li><strong>Material culture networks</strong>: relationships defined by similarities or connections in artifact or ceramic assemblages.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Movement networks</strong>: models of routes or flows, such as travel or exchange paths.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Spatial proximity networks</strong>: connections based on geographic closeness between sites or features.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Visibility networks</strong>: networks created from lines of sight among locations.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li><strong>Archaeological publication networks</strong>: networks of publications, authors, or citations used to study trends in archaeological research.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ul>
+<p>This breadth reflects the “many and varied” applications of network science in archaeology.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+</section>
+<section id="centrality-and-its-stability" class="level3" data-number="9.2.5">
+<h3 data-number="9.2.5" class="anchored" data-anchor-id="centrality-and-its-stability"><span class="header-section-number">9.2.5</span> Centrality and Its Stability</h3>
+<p>Centrality measures quantify aspects of how “important” or “central” nodes are within a network.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Archaeological work has emphasized three commonly used measures:[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<ul>
+<li><strong>Degree centrality</strong>: based on the number of ties a node has.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li><strong>Eigenvector centrality</strong>: considers both the number and the centrality of a node’s neighbors.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li><strong>Betweenness centrality</strong>: measures how often a node lies on paths between other nodes.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></li>
+</ul>
+<p>A key methodological issue in archaeology is that many networks are constructed from incomplete or imperfect data: network boundaries are often tentative and nodes or sites can vary considerably in their attributes and assemblages.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> To address this, archaeological research has used bootstrap procedures to evaluate how sampling affects the stability of these centrality measures.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>The goal is to determine whether the observed archaeological network graph can be treated as a sample of a larger, inaccessible network that includes unknown or missing sites.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> If centrality values remain stable across many resampled networks, researchers argue that interpretations drawn from the observed network may be cautiously projected to a broader, “real” network.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+</section>
+<section id="temporal-networks" class="level3" data-number="9.2.6">
+<h3 data-number="9.2.6" class="anchored" data-anchor-id="temporal-networks"><span class="header-section-number">9.2.6</span> Temporal Networks</h3>
+<p>Longitudinal network data capture how networks evolve over time.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span> In archaeology, this often means reconstructing networks at successive temporal slices based on dated materials or stratigraphic contexts and then comparing structures across those slices.[<span class="citation" data-cites="McCloskey2018-ir">McCloskey (<a href="#ref-McCloskey2018-ir" role="doc-biblioref">2018</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span> The explicit discussion of longitudinal network data in archaeological network manuals highlights the importance of integrating time into network analyses.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="worked-workflow-from-archaeological-data-to-network-analysis" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="worked-workflow-from-archaeological-data-to-network-analysis"><span class="header-section-number">9.3</span> Worked Workflow: From Archaeological Data to Network Analysis</h2>
+<p>This section outlines a generic workflow using concepts and practices described in archaeological network research.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span>[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span><span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+<section id="define-research-questions-and-network-scope" class="level3" data-number="9.3.1">
+<h3 data-number="9.3.1" class="anchored" data-anchor-id="define-research-questions-and-network-scope"><span class="header-section-number">9.3.1</span> 1. Define Research Questions and Network Scope</h3>
+<p>Archaeologists begin by formulating questions about past relationships, such as those tying together sites via similarities in material culture, movement pathways, or spatial relationships.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span> The spatial and temporal scope of the network must be specified, even though boundaries are often tentative.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+</section>
+<section id="assemble-and-structure-network-data" class="level3" data-number="9.3.2">
+<h3 data-number="9.3.2" class="anchored" data-anchor-id="assemble-and-structure-network-data"><span class="header-section-number">9.3.2</span> 2. Assemble and Structure Network Data</h3>
+<p>Archaeological datasets can include site‑level provenience and assemblage composition (e.g., counts of ceramic types by structure or stratum), as seen in tabulations of structures, strata, and ceramic categories in regional studies.[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span> These data can be transformed into:</p>
+<ul>
+<li><strong>Nodes</strong>: sites, structures, or other entities (e.g., DANGER CAVE, HOGUP CAVE, individual structures in villages).[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><br>
+</li>
+<li><strong>Edges</strong>: relationships such as similarities in assemblage composition or co‑occurrence of artifact types.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span>[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span></li>
+</ul>
+<p>Data are encoded in network formats such as edge lists or adjacency matrices with associated node and edge attributes.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+</section>
+<section id="choose-network-type-and-representation" class="level3" data-number="9.3.3">
+<h3 data-number="9.3.3" class="anchored" data-anchor-id="choose-network-type-and-representation"><span class="header-section-number">9.3.3</span> 3. Choose Network Type and Representation</h3>
+<p>Based on the question and data structure, archaeologists select:<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></p>
+<ul>
+<li>A simple, directed, weighted, similarity, two‑mode, or multilayer representation.<br>
+</li>
+<li>Appropriate data formats (edge list, adjacency list, adjacency matrix, or incidence matrix) and attribute tables to preserve relevant information.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ul>
+</section>
+<section id="exploratory-network-analysis" class="level3" data-number="9.3.4">
+<h3 data-number="9.3.4" class="anchored" data-anchor-id="exploratory-network-analysis"><span class="header-section-number">9.3.4</span> 4. Exploratory Network Analysis</h3>
+<p>Exploratory network analysis involves using a suite of methods to characterize network structure and node positions.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span> Common steps include:</p>
+<ul>
+<li>Visualizing network graphs, sometimes placing nodes in geographic coordinates to compare abstract structure with spatial layout.<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>Calculating centrality measures (degree, eigenvector, betweenness) to identify structurally prominent nodes.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>Examining distributions of ties, clustering, and other global or local patterns as part of exploratory analysis.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ul>
+</section>
+<section id="assess-centrality-stability-and-sampling-issues" class="level3" data-number="9.3.5">
+<h3 data-number="9.3.5" class="anchored" data-anchor-id="assess-centrality-stability-and-sampling-issues"><span class="header-section-number">9.3.5</span> 5. Assess Centrality Stability and Sampling Issues</h3>
+<p>Given incomplete archaeological data, archaeologists employ resampling (bootstrap) procedures to evaluate how sampling uncertainty influences centrality measures.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> By repeatedly sampling subsets of nodes or edges and recalculating centralities, they assess whether node rankings remain stable under different sampled networks.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>If degree, eigenvector, and betweenness centralities are stable across a range of sampled networks, interpretations of the archaeological network can more plausibly be extended to an inferred larger network.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> If not, centrality‑based interpretations are treated with greater caution.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+</section>
+<section id="contextual-interpretation" class="level3" data-number="9.3.6">
+<h3 data-number="9.3.6" class="anchored" data-anchor-id="contextual-interpretation"><span class="header-section-number">9.3.6</span> 6. Contextual Interpretation</h3>
+<p>Network structures and metrics are then interpreted in light of archaeological theory and contextual evidence.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> Researchers consider:</p>
+<ul>
+<li>How positions and structures might reflect patterns of interaction, movement, or shared material culture.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span><br>
+</li>
+<li>How temporal information (e.g., stratified contexts, dated materials) informs changes in networks over time.[<span class="citation" data-cites="McCloskey2018-ir">McCloskey (<a href="#ref-McCloskey2018-ir" role="doc-biblioref">2018</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><br>
+</li>
+<li>To what extent formal network results address broader debates on network theory, culture, and long‑term social dynamics.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+<p>Throughout, archaeologists remain aware of limitations arising from data quality, sampling, and the abstraction of complex social phenomena into graph models.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+<hr>
+</section>
+</section>
+<section id="case-study-centrality-and-sampling-in-huntergatherer-networks" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="case-study-centrality-and-sampling-in-huntergatherer-networks"><span class="header-section-number">9.4</span> Case Study: Centrality and Sampling in Hunter‑Gatherer Networks</h2>
+<p>Research on hunter‑gatherer archaeological data has explored methodological problems and potential solutions in network analysis.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> In this work, networks were constructed for archaeological cultures (e.g., Epi‑Jomon and Okhotsk), with nodes representing sites and edges representing inferred relationships among them.<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>Visualizations show network graphs both in abstract layout and with nodes placed in geographic position.<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Node size is scaled in proportion to degree centrality, making more highly connected sites visually prominent.<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>A central aim of this case study is to understand how incomplete sampling and uncertain network boundaries affect centrality estimates.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Archaeological networks are considered imperfect because:</p>
+<ul>
+<li>Network boundaries are often tentative.<br>
+</li>
+<li>Sites vary considerably in their attributes and assemblages.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></li>
+</ul>
+<p>To address this, the study applies a <strong>bootstrap procedure</strong>: many resampled versions of the network are generated, and three centrality measures—degree, eigenvector, and betweenness—are recalculated for each sample.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> This method follows broader research on centrality stability and is used to evaluate how robust archaeological centrality measures are to missing data.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>If measurements for key nodes remain relatively stable across bootstrapped samples, then it becomes more reasonable to conceptualize the observed archaeological network as a <strong>sample of a larger, inaccessible network</strong> that includes unknown or missing sites.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Under these circumstances, interpretations drawn from the archaeological network can be tentatively projected to that larger real‑world network.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></p>
+<p>This case study illustrates:</p>
+<ul>
+<li>How centrality is operationalized and visualized in archaeological networks.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>Why sampling and boundary issues are especially critical in archaeology.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>How statistical resampling can partially address these concerns and provide a basis for evaluating the reliability of network interpretations.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span></li>
+</ul>
+<hr>
+</section>
+<section id="common-mistakes-and-caveats-in-archaeological-network-interpretation" class="level2" data-number="9.5">
+<h2 data-number="9.5" class="anchored" data-anchor-id="common-mistakes-and-caveats-in-archaeological-network-interpretation"><span class="header-section-number">9.5</span> Common Mistakes and Caveats in Archaeological Network Interpretation</h2>
+<p>Archaeological network science faces a set of recurring challenges and potential pitfalls:</p>
+<ol type="1">
+<li><p><strong>Over‑confidence in Incomplete Networks</strong><br>
+Archaeological networks are often based on imperfect samples with tentative boundaries and substantial variability among sites.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Treating such networks as complete can lead to over‑confident claims about central or peripheral nodes.</p></li>
+<li><p><strong>Ignoring Centrality Stability</strong><br>
+Without evaluating stability through procedures such as bootstrapping, centrality measures may be sensitive to which sites or ties happen to be preserved or sampled.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Failing to assess this can produce misleading interpretations of node importance.</p></li>
+<li><p><strong>Uncritical Projection to “Real” Networks</strong><br>
+Projecting results from a sampled archaeological network to an inferred larger “real” network is only justified when centrality and other measures show reasonable stability across alternative sampled graphs.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Ignoring this condition weakens inferential claims.</p></li>
+<li><p><strong>Neglecting Temporal Dimensions</strong><br>
+Network manuals emphasize longitudinal data as a distinct category, yet archaeological studies can sometimes treat networks as static when temporal information actually exists.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span> This can obscure changes in relationships over time.</p></li>
+<li><p><strong>Conflating Different Network Types and Meanings</strong><br>
+Archaeological practice distinguishes material culture, movement, spatial proximity, visibility, and publication networks, each encoding different kinds of relationships.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span> Interpreting these networks as if they all represent the same underlying social processes can be problematic.</p></li>
+<li><p><strong>Insufficient Integration with Theory and Context</strong><br>
+Although network science in archaeology engages with broader discussions on network theory, culture, and social dynamics, there remain “daunting challenges” in formal exploration.<span class="citation" data-cites="Peeples2019-ay">(<a href="#ref-Peeples2019-ay" role="doc-biblioref">Peeples 2019</a>)</span> Overly technical analyses without theoretical grounding can limit interpretive value.</p></li>
+</ol>
+<hr>
+</section>
+<section id="exercises" class="level2" data-number="9.6">
+<h2 data-number="9.6" class="anchored" data-anchor-id="exercises"><span class="header-section-number">9.6</span> Exercises</h2>
+<ol type="1">
+<li><p><strong>Network Data Formats</strong><br>
+Given a hypothetical set of sites and inferred connections among them, represent the same network as:</p>
+<ol type="a">
+<li>an edge list,<br>
+</li>
+<li>an adjacency list, and<br>
+</li>
+<li>an adjacency matrix.<br>
+Discuss how each format might facilitate different analytical operations, drawing on distinctions among formats described for archaeological network data.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span></li>
+</ol></li>
+<li><p><strong>Network Types in Archaeological Contexts</strong><br>
+For each of the following research focuses, identify which network type (simple, directed, weighted, similarity, two‑mode, multilayer) and which domain (material culture, movement, spatial proximity, visibility, publication) would be most appropriate, explaining your choice based on the typology provided in network science manuals:[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></p>
+<ul>
+<li>Similarity in ceramic technology across multiple village sites.<br>
+</li>
+<li>Potential travel routes among settlements in a region.<br>
+</li>
+<li>Lines of sight between hilltop structures.</li>
+</ul></li>
+<li><p><strong>Centrality Stability Thought Experiment</strong><br>
+Consider a small archaeological network where some peripheral sites may have been lost to erosion. Using the description of bootstrap procedures and centrality stability, outline a strategy to test whether degree and betweenness centrality rankings for major sites are robust.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Specify what data you would resample and how you would interpret stable vs.&nbsp;unstable results.</p></li>
+<li><p><strong>Longitudinal Network Design</strong><br>
+Using the idea of longitudinal network data and the existence of stratified or temporally differentiated assemblages in regional studies, design a conceptual plan for constructing at least two time‑sliced networks for a region.[<span class="citation" data-cites="McCloskey2018-ir">McCloskey (<a href="#ref-McCloskey2018-ir" role="doc-biblioref">2018</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span> Describe how you would compare these temporal networks to explore changes in interaction or similarity.</p></li>
+<li><p><strong>Critical Evaluation of Network Boundaries</strong><br>
+Drawing on the recognition that network boundaries are often tentative and that sites vary substantially in their assemblages, develop a short critique (1–2 paragraphs) of a hypothetical study that claims to have completely mapped all interaction in a region with a single static network.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span> Identify at least three specific concerns related to sampling, boundaries, and interpretation.</p></li>
+</ol>
+<hr>
+</section>
+<section id="key-takeaways" class="level2" data-number="9.7">
+<h2 data-number="9.7" class="anchored" data-anchor-id="key-takeaways"><span class="header-section-number">9.7</span> Key Takeaways</h2>
+<ul>
+<li>Network science in archaeology uses formal models from graph theory, social network analysis, and complexity science to study relationships and structures in past societies, contributing to debates on network theory, culture, and long‑term social dynamics.[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><br>
+</li>
+<li>Archaeological networks rely on structured data representations such as edge lists, adjacency lists, adjacency matrices, and incidence matrices, with rich node and edge attributes.<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span><br>
+</li>
+<li>Multiple network types—simple, directed, weighted, similarity, two‑mode, ego, multilayer, and longitudinal—are distinguished and applied across material culture, movement, spatial proximity, visibility, and publication domains.[<span class="citation" data-cites="Brughmans2023-uj">Brughmans and Peeples (<a href="#ref-Brughmans2023-uj" role="doc-biblioref">2023</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span><br>
+</li>
+<li>Centrality measures (degree, eigenvector, betweenness) are widely used but must be assessed for stability via resampling methods because archaeological networks are often incomplete, with tentative boundaries and heterogeneous sites.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>When centrality metrics remain stable across sampled networks, interpretations about the structure and key nodes of an archaeological network can be more plausibly extended to a larger, inaccessible “real” network that includes unknown sites.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span><br>
+</li>
+<li>Longitudinal (temporal) network data and explicit consideration of time are important for understanding how networks and social relationships change in the archaeological record.[<span class="citation" data-cites="McCloskey2018-ir">McCloskey (<a href="#ref-McCloskey2018-ir" role="doc-biblioref">2018</a>)</span>]<span class="citation" data-cites="Brughmans2023-uj">(<a href="#ref-Brughmans2023-uj" role="doc-biblioref">Brughmans and Peeples 2023</a>)</span>[<span class="citation" data-cites="McDonald1994-cg">McDonald (<a href="#ref-McDonald1994-cg" role="doc-biblioref">1994</a>)</span>]<span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><span class="citation" data-cites="McDonald1994-cg">(<a href="#ref-McDonald1994-cg" role="doc-biblioref">McDonald 1994</a>)</span><br>
+</li>
+<li>Successful archaeological network analysis requires attention to data limitations, explicit handling of sampling and boundaries, and integration with broader theoretical and contextual interpretations.[<span class="citation" data-cites="Gjesfjeld2015-hw">Gjesfjeld (<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">2015</a>)</span>]<span class="citation" data-cites="Gjesfjeld2015-hw">(<a href="#ref-Gjesfjeld2015-hw" role="doc-biblioref">Gjesfjeld 2015</a>)</span>[<span class="citation" data-cites="Peeples2019-ay">Peeples (<a href="#ref-Peeples2019-ay" role="doc-biblioref">2019</a>)</span>]<span class="citation" data-cites="Peeples2024-er">(<a href="#ref-Peeples2024-er" role="doc-biblioref">Peeples et al. 2024</a>)</span></li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-Brughmans2023-uj" class="csl-entry" role="listitem">
+Brughmans, Tom, and Matthew A Peeples. 2023. <em>Network Science in Archaeology</em>. Cambridge University Press.
+</div>
+<div id="ref-Gjesfjeld2015-hw" class="csl-entry" role="listitem">
+Gjesfjeld, Erik. 2015. <span>“Network Analysis of Archaeological Data from Hunter-Gatherers: Methodological Problems and Potential Solutions.”</span> <em>Journal of Archaeological Method and Theory</em> 22 (1): 182–205. <a href="https://doi.org/10.1007/s10816-014-9232-9">https://doi.org/10.1007/s10816-014-9232-9</a>.
+</div>
+<div id="ref-McCloskey2018-ir" class="csl-entry" role="listitem">
+McCloskey, G L. 2018. <span>“Tree-Ring Chronological Analysis of Ancestral Puebloan Transitions in the Flagstaff Area.”</span> PhD thesis, Northern Arizona University. <a href="https://search.proquest.com/openview/4ec0b6144b0a3181b45bef9e38851a99/1?pq-origsite=gscholar&amp;cbl=18750">https://search.proquest.com/openview/4ec0b6144b0a3181b45bef9e38851a99/1?pq-origsite=gscholar&amp;cbl=18750</a>.
+</div>
+<div id="ref-McDonald1994-cg" class="csl-entry" role="listitem">
+McDonald, Elizabeth Kae. 1994. <span>“A Spatial and Temporal Examination of Prehistoric Interaction in the Eastern Great Basin and on the Northern Colorado Plateau.”</span> PhD thesis.
+</div>
+<div id="ref-Peeples2019-ay" class="csl-entry" role="listitem">
+Peeples, Matthew A. 2019. <span>“Finding a Place for Networks in Archaeology.”</span> <em>J Archaeol Res</em>, 1–49. <a href="https://doi.org/10.1007/s10814-019-09127-8">https://doi.org/10.1007/s10814-019-09127-8</a>.
+</div>
+<div id="ref-Peeples2024-er" class="csl-entry" role="listitem">
+Peeples, Matthew A, Jessica Munson, Barbara Mills, and Tom Brughmans. 2024. <span>“Introduction.”</span> In, 1–14. Oxford University Press. <a href="https://books.google.com/books?hl=en&amp;lr=&amp;id=2Q3iEAAAQBAJ&amp;oi=fnd&amp;pg=PA103&amp;ots=ZpuHBWJxOc&amp;sig=BDb3npMKg--sZdgqDIgpKIngqpI">https://books.google.com/books?hl=en&amp;lr=&amp;id=2Q3iEAAAQBAJ&amp;oi=fnd&amp;pg=PA103&amp;ots=ZpuHBWJxOc&amp;sig=BDb3npMKg--sZdgqDIgpKIngqpI</a>.
+</div>
+</div>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+        const codeEl = trigger.previousElementSibling.cloneNode(true);
+        for (const childEl of codeEl.children) {
+          if (isCodeAnnotation(childEl)) {
+            childEl.remove();
+          }
+        }
+        return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="./6_spatial_gis.html" class="pagination-link" aria-label="6. Spatial Analysis and GIS">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">6. Spatial Analysis and GIS</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="./8_agent_based_modeling.html" class="pagination-link" aria-label="8. Agent-Based Modeling and Simulation">
+        <span class="nav-page-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">8. Agent-Based Modeling and Simulation</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+<script src="site_libs/quarto-html/zenscroll-min.js"></script>
+</body></html>
