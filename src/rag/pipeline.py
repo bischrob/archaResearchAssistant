@@ -5,6 +5,7 @@ from pathlib import Path
 
 from .config import Settings
 from .neo4j_store import GraphStore
+from .paperpile_metadata import load_paperpile_index
 from .pdf_processing import load_article
 
 
@@ -15,6 +16,7 @@ class IngestSummary:
     total_references: int
     selected_pdfs: list[str]
     skipped_existing_pdfs: list[str]
+    skipped_no_metadata_pdfs: list[str]
     failed_pdfs: list[dict]
 
 
@@ -77,6 +79,7 @@ def choose_pdfs(
     source_dir: str = "pdfs",
     explicit_pdfs: list[str] | None = None,
     skip_existing: bool = True,
+    require_metadata: bool = True,
     settings: Settings | None = None,
 ) -> list[Path]:
     mode = mode.lower().strip()
@@ -102,10 +105,15 @@ def choose_pdfs(
     missing = [p for p in selected if not p.exists()]
     if missing:
         raise FileNotFoundError(f"Missing PDFs: {', '.join(str(m) for m in missing)}")
+    cfg = settings or Settings()
+
     if skip_existing:
-        cfg = settings or Settings()
         existing_ids = _get_existing_article_ids(cfg)
         selected = [p for p in selected if p.stem not in existing_ids]
+
+    if require_metadata:
+        paperpile_index = load_paperpile_index(cfg.paperpile_json)
+        selected = [p for p in selected if p.name.lower() in paperpile_index]
 
     if mode == "test3":
         selected = selected[:3]
@@ -113,8 +121,8 @@ def choose_pdfs(
     if not selected:
         if skip_existing:
             raise ValueError(
-                "No PDFs found to ingest after skipping already ingested files. "
-                "Use override_existing to reprocess."
+                "No PDFs found to ingest after filtering (existing/no-metadata). "
+                "Use override_existing to reprocess existing files."
             )
         raise ValueError("No PDFs found to ingest.")
     return selected
@@ -129,9 +137,12 @@ def ingest_pdfs(
     progress_callback=None,
 ) -> IngestSummary:
     settings = settings or Settings()
+    paperpile_index = load_paperpile_index(settings.paperpile_json)
     existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
     skipped_existing = [str(p) for p in selected_pdfs if p.stem in existing_ids]
     selected_pdfs = [p for p in selected_pdfs if p.stem not in existing_ids]
+    skipped_no_metadata = [str(p) for p in selected_pdfs if p.name.lower() not in paperpile_index]
+    selected_pdfs = [p for p in selected_pdfs if p.name.lower() in paperpile_index]
 
     if not selected_pdfs:
         if progress_callback:
@@ -142,6 +153,7 @@ def ingest_pdfs(
             total_references=0,
             selected_pdfs=[],
             skipped_existing_pdfs=skipped_existing,
+            skipped_no_metadata_pdfs=skipped_no_metadata,
             failed_pdfs=[],
         )
 
@@ -160,6 +172,7 @@ def ingest_pdfs(
                     pdf_path=p,
                     chunk_size_words=settings.chunk_size_words,
                     chunk_overlap_words=settings.chunk_overlap_words,
+                    metadata=paperpile_index.get(p.name.lower()),
                 )
             )
         except Exception as exc:
@@ -207,5 +220,6 @@ def ingest_pdfs(
         total_references=sum(len(a.citations) for a in articles),
         selected_pdfs=[str(p) for p in selected_pdfs],
         skipped_existing_pdfs=skipped_existing,
+        skipped_no_metadata_pdfs=skipped_no_metadata,
         failed_pdfs=failures,
     )

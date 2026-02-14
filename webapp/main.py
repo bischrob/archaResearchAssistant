@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 
 from src.rag.config import Settings
 from src.rag.neo4j_store import GraphStore
+from src.rag.paperpile_metadata import load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
 
@@ -47,6 +48,13 @@ class IngestRequest(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     limit: int = Field(default=5, ge=1, le=20)
+
+
+class IngestPreviewRequest(BaseModel):
+    mode: str = Field(default="test3", pattern="^(test3|all|custom)$")
+    source_dir: str = "pdfs"
+    pdfs: list[str] = Field(default_factory=list)
+    override_existing: bool = False
 
 
 @dataclass
@@ -256,6 +264,7 @@ def ingest(req: IngestRequest) -> dict:
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,
+            require_metadata=True,
         )
         summary = ingest_pdfs(
             selected_pdfs=selected,
@@ -274,11 +283,78 @@ def ingest(req: IngestRequest) -> dict:
                 "total_references": summary.total_references,
                 "selected_pdfs": summary.selected_pdfs,
                 "skipped_existing_pdfs": summary.skipped_existing_pdfs,
+                "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
                 "failed_pdfs": summary.failed_pdfs,
             },
         }
 
     return jobs.start("ingest", run)
+
+
+@app.post("/api/ingest/preview")
+def ingest_preview(req: IngestPreviewRequest) -> dict:
+    try:
+        settings = Settings()
+        resolved = choose_pdfs(
+            mode=req.mode,
+            source_dir=req.source_dir,
+            explicit_pdfs=req.pdfs,
+            skip_existing=False,
+            require_metadata=False,
+            settings=settings,
+        )
+        try:
+            selected_for_ingest = choose_pdfs(
+                mode=req.mode,
+                source_dir=req.source_dir,
+                explicit_pdfs=req.pdfs,
+                skip_existing=not req.override_existing,
+                require_metadata=True,
+                settings=settings,
+            )
+        except Exception:
+            selected_for_ingest = []
+        selected_set = {str(p.resolve()) for p in selected_for_ingest}
+
+        store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+        try:
+            existing_ids = store.existing_article_ids()
+        finally:
+            store.close()
+        paperpile = load_paperpile_index(settings.paperpile_json)
+
+        max_rows = 300
+        rows = []
+        for p in resolved[:max_rows]:
+            meta = paperpile.get(p.name.lower()) or {}
+            rows.append(
+                {
+                    "path": str(p),
+                    "file": p.name,
+                    "article_id": p.stem,
+                    "exists_in_graph": p.stem in existing_ids,
+                    "will_ingest": str(p.resolve()) in selected_set,
+                    "metadata_found": bool(meta),
+                    "title": meta.get("title"),
+                    "year": meta.get("year"),
+                    "citekey": meta.get("citekey"),
+                    "authors": meta.get("authors") or [],
+                }
+            )
+        return {
+            "ok": True,
+            "summary": {
+                "total_resolved": len(resolved),
+                "total_previewed": len(rows),
+                "truncated": len(resolved) > max_rows,
+                "will_ingest_count": sum(1 for r in rows if r["will_ingest"]),
+                "existing_count": sum(1 for r in rows if r["exists_in_graph"]),
+                "metadata_found_count": sum(1 for r in rows if r["metadata_found"]),
+            },
+            "rows": rows,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/ingest/status")

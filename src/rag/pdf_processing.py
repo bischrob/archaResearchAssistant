@@ -45,6 +45,12 @@ class ArticleDoc:
     normalized_title: str
     year: int | None
     author: str
+    authors: list[str]
+    citekey: str | None
+    paperpile_id: str | None
+    doi: str | None
+    journal: str | None
+    publisher: str | None
     source_path: str
     chunks: list[Chunk]
     citations: list[Citation]
@@ -145,8 +151,18 @@ def _extract_citations(reference_lines: list[str], article_id: str) -> list[Cita
     return citations
 
 
-def load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int) -> ArticleDoc:
-    author, year, title = parse_filename_metadata(pdf_path)
+def load_article(
+    pdf_path: Path,
+    chunk_size_words: int,
+    chunk_overlap_words: int,
+    metadata: dict | None = None,
+) -> ArticleDoc:
+    fallback_author, fallback_year, fallback_title = parse_filename_metadata(pdf_path)
+    metadata = metadata or {}
+    title = metadata.get("title") or fallback_title
+    year = metadata.get("year") if metadata.get("year") is not None else fallback_year
+    authors = metadata.get("authors") or [fallback_author]
+    primary_author = authors[0] if authors else fallback_author
     article_id = pdf_path.stem
 
     page_text = _extract_page_text(pdf_path)
@@ -211,7 +227,13 @@ def load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int
         title=title,
         normalized_title=normalize_title(title),
         year=year,
-        author=author,
+        author=primary_author,
+        authors=authors,
+        citekey=metadata.get("citekey"),
+        paperpile_id=metadata.get("paperpile_id"),
+        doi=metadata.get("doi"),
+        journal=metadata.get("journal"),
+        publisher=metadata.get("publisher"),
         source_path=str(pdf_path),
         chunks=chunks,
         citations=citations,

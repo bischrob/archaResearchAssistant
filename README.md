@@ -6,6 +6,7 @@ This project provides:
 - Ingestion into Neo4j (`Article`, `Author`, `Chunk`, `Token`, `Reference`, `CITES`)
 - Contextual retrieval (token + vector signal + citation neighborhood)
 - A web GUI for sync, ingest, and search
+- Metadata enrichment from `Paperpile.json` (title, authors, year, citekey, DOI, journal, publisher)
 
 ## 1) Start Neo4j
 
@@ -18,6 +19,7 @@ Default DB env values:
 - `NEO4J_URI=bolt://localhost:7687`
 - `NEO4J_USER=neo4j`
 - `NEO4J_PASSWORD=archaResearchAssistant`
+- `PAPERPILE_JSON=Paperpile.json`
 
 ## 2) Sync PDFs from Google Drive
 
@@ -64,6 +66,8 @@ Notes:
 - unreadable/non-PDF-content files are skipped and returned in `failed_pdfs`.
 - ingest is non-destructive and does not erase existing Neo4j data.
 - default ingest behavior skips already-ingested PDFs; use override existing to reprocess.
+- ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
+- PDFs without matching `Paperpile.json` metadata are skipped automatically.
 
 ## 4) CLI usage (optional)
 

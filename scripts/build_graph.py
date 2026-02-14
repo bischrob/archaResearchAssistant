@@ -46,6 +46,7 @@ def main() -> None:
         source_dir=args.pdf_dir,
         explicit_pdfs=args.pdf,
         skip_existing=not args.override_existing,
+        require_metadata=True,
     )
 
     print("Selected PDFs:")
@@ -65,6 +66,8 @@ def main() -> None:
     print(f"Total extracted references: {summary.total_references}")
     if summary.skipped_existing_pdfs:
         print(f"Skipped existing PDFs: {len(summary.skipped_existing_pdfs)}")
+    if summary.skipped_no_metadata_pdfs:
+        print(f"Skipped no-metadata PDFs: {len(summary.skipped_no_metadata_pdfs)}")
     if summary.failed_pdfs:
         print(f"Failed PDFs: {len(summary.failed_pdfs)}")
         for item in summary.failed_pdfs[:20]:

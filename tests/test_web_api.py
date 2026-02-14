@@ -99,6 +99,7 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
             total_references=3,
             selected_pdfs=[str(p)],
             skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
             failed_pdfs=[],
         )
 
@@ -132,6 +133,7 @@ def test_ingest_endpoint_override_existing(monkeypatch, tmp_path: Path, client):
             total_references=3,
             selected_pdfs=[str(p)],
             skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
             failed_pdfs=[],
         )
 
@@ -153,6 +155,42 @@ def test_ingest_status_failed(monkeypatch, client):
     final = wait_for_status(client, "/api/ingest/status")
     assert final["status"] == "failed"
     assert "bad ingest" in final["error"]
+
+
+def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
+    p = tmp_path / "demo.pdf"
+    p.write_text("x")
+    monkeypatch.setattr(webmain, "choose_pdfs", lambda **kwargs: [p])
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def existing_article_ids(self):
+            return {p.stem}
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        webmain,
+        "load_paperpile_index",
+        lambda _path: {p.name.lower(): {"title": "Demo Title", "year": 2024, "authors": ["Author A"]}},
+    )
+
+    resp = client.post(
+        "/api/ingest/preview",
+        json={"mode": "custom", "source_dir": "pdfs", "pdfs": [str(p)], "override_existing": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["summary"]["total_resolved"] == 1
+    assert len(data["rows"]) == 1
+    assert data["rows"][0]["file"] == p.name
+    assert data["rows"][0]["metadata_found"] is True
+    assert data["rows"][0]["title"] == "Demo Title"
 
 
 def test_query_validation_and_success(monkeypatch, client):

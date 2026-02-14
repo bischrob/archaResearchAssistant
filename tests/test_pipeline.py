@@ -21,7 +21,7 @@ def test_choose_pdfs_test3_prefers_readable_headers(tmp_path: Path) -> None:
     _write_pdf_header(good2)
     _write_pdf_header(good3)
 
-    selected = pipeline.choose_pdfs(mode="test3", source_dir=str(tmp_path), skip_existing=False)
+    selected = pipeline.choose_pdfs(mode="test3", source_dir=str(tmp_path), skip_existing=False, require_metadata=False)
 
     assert selected == [good1, good2, good3]
 
@@ -34,14 +34,19 @@ def test_choose_pdfs_all_includes_all_pdf_files(tmp_path: Path) -> None:
     p1.write_bytes(b"x")
     p2.write_bytes(b"y")
 
-    selected = pipeline.choose_pdfs(mode="all", source_dir=str(tmp_path), skip_existing=False)
+    selected = pipeline.choose_pdfs(mode="all", source_dir=str(tmp_path), skip_existing=False, require_metadata=False)
 
     assert selected == [p2, p1]
 
 
 def test_choose_pdfs_custom_missing_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
-        pipeline.choose_pdfs(mode="custom", explicit_pdfs=[str(tmp_path / "missing.pdf")], skip_existing=False)
+        pipeline.choose_pdfs(
+            mode="custom",
+            explicit_pdfs=[str(tmp_path / "missing.pdf")],
+            skip_existing=False,
+            require_metadata=False,
+        )
 
 
 def test_choose_pdfs_custom_resolves_filename_against_source_dir(tmp_path: Path) -> None:
@@ -55,6 +60,7 @@ def test_choose_pdfs_custom_resolves_filename_against_source_dir(tmp_path: Path)
         source_dir=str(pdfs),
         explicit_pdfs=["dietler2005-Introduction-EmbodiedMaterialCulture.pdf"],
         skip_existing=False,
+        require_metadata=False,
     )
 
     assert selected == [target]
@@ -71,6 +77,7 @@ def test_choose_pdfs_custom_handles_brace_wrapped_placeholder_style(tmp_path: Pa
         source_dir=str(pdfs),
         explicit_pdfs=["{dietler1989-TichMatek-TechnologyOfLuoPotteryProductionDefinitionOfCeramicStyle.pdf}"],
         skip_existing=False,
+        require_metadata=False,
     )
 
     assert selected == [target]
@@ -83,7 +90,10 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
     for p in (p1, p2, p3):
         p.write_text("x")
 
-    def fake_load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int):
+    metadata_seen = {}
+
+    def fake_load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int, metadata=None):
+        metadata_seen[pdf_path.name] = metadata
         if pdf_path == p2:
             raise ValueError("broken")
         return ArticleDoc(
@@ -92,6 +102,12 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
             normalized_title=pdf_path.stem,
             year=2024,
             author="Author",
+            authors=["Author"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
             source_path=str(pdf_path),
             chunks=[
                 Chunk(
@@ -119,7 +135,7 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
             calls["setup"] += 1
             assert vector_dimensions == 384
 
-        def ingest_articles(self, articles, should_cancel=None):
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
             calls["ingest_articles"] += 1
             assert len(articles) == 2
 
@@ -128,6 +144,15 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
 
     monkeypatch.setattr(pipeline, "load_article", fake_load_article)
     monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        pipeline,
+        "load_paperpile_index",
+        lambda _path: {
+            "ok1.pdf": {"title": "From Paperpile", "authors": ["A One"]},
+            "ok2.pdf": {"title": "From Paperpile 2", "authors": ["A Two"]},
+            "bad.pdf": {"title": "Broken", "authors": ["Bad"]},
+        },
+    )
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1, p2, p3],
@@ -144,6 +169,8 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
     assert summary.failed_pdfs[0]["pdf"] == str(p2)
     assert "broken" in summary.failed_pdfs[0]["error"]
     assert calls == {"setup": 1, "ingest_articles": 1, "close": 1}
+    assert metadata_seen["ok1.pdf"]["title"] == "From Paperpile"
+    assert metadata_seen["bad.pdf"]["title"] == "Broken"
 
 
 def test_ingest_pdfs_raises_if_all_fail(monkeypatch, tmp_path: Path) -> None:
@@ -154,9 +181,20 @@ def test_ingest_pdfs_raises_if_all_fail(monkeypatch, tmp_path: Path) -> None:
         raise RuntimeError("nope")
 
     monkeypatch.setattr(pipeline, "load_article", always_fail)
+    monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {"bad.pdf": {"title": "bad"}})
 
     with pytest.raises(ValueError, match="No readable PDFs were ingested"):
         pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(), skip_existing=False)
+
+
+def test_ingest_pdfs_returns_zero_when_no_metadata_matches(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "bad.pdf"
+    p1.write_text("x")
+    monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {})
+
+    summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(), skip_existing=False)
+    assert summary.ingested_articles == 0
+    assert summary.skipped_no_metadata_pdfs == [str(p1)]
 
 
 def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, tmp_path: Path) -> None:
@@ -167,7 +205,13 @@ def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, t
         files.append(p)
 
     monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"f1", "f2"})
-    selected = pipeline.choose_pdfs(mode="test3", source_dir=str(tmp_path), skip_existing=True, settings=Settings())
+    selected = pipeline.choose_pdfs(
+        mode="test3",
+        source_dir=str(tmp_path),
+        skip_existing=True,
+        require_metadata=False,
+        settings=Settings(),
+    )
 
     assert selected == [files[2], files[3], files[4]]
 
@@ -179,6 +223,25 @@ def test_choose_pdfs_override_includes_existing(monkeypatch, tmp_path: Path) -> 
     p2.write_bytes(b"%PDF-1.7\nfake")
 
     monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"a", "b"})
-    selected = pipeline.choose_pdfs(mode="test3", source_dir=str(tmp_path), skip_existing=False, settings=Settings())
+    selected = pipeline.choose_pdfs(
+        mode="test3",
+        source_dir=str(tmp_path),
+        skip_existing=False,
+        require_metadata=False,
+        settings=Settings(),
+    )
 
     assert selected == [p1, p2]
+
+
+def test_choose_pdfs_skips_files_without_metadata_by_default(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "m1.pdf"
+    p2 = tmp_path / "m2.pdf"
+    p1.write_bytes(b"%PDF-1.7\nfake")
+    p2.write_bytes(b"%PDF-1.7\nfake")
+
+    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: set())
+    monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {"m1.pdf": {"title": "Only One"}})
+
+    selected = pipeline.choose_pdfs(mode="all", source_dir=str(tmp_path), skip_existing=False, settings=Settings())
+    assert selected == [p1]

@@ -35,6 +35,19 @@ function statusHeader(job, label) {
   `;
 }
 
+function progressBlock(job) {
+  const pct = Number(job?.progress_percent || 0);
+  const message = job?.progress_message || "";
+  return `
+    <div class="progress">
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${Math.max(0, Math.min(100, pct))}%"></div>
+      </div>
+      <div class="progress-label">${escapeHtml(pct.toFixed(1))}% ${message ? `- ${escapeHtml(message)}` : ""}</div>
+    </div>
+  `;
+}
+
 function renderSimpleMessage(el, title, status, message) {
   el.innerHTML = `
     <div class="status-line">
@@ -104,6 +117,7 @@ function renderSyncJob(job) {
   const stderr = result.stderr || "";
   out.innerHTML = `
     ${statusHeader(job, "PDF Sync")}
+    ${progressBlock(job)}
     <div class="kv">
       <strong>Return Code</strong><span>${escapeHtml(result.returncode ?? "-")}</span>
       <strong>Success</strong><span>${escapeHtml(result.ok ?? job.status === "completed")}</span>
@@ -124,21 +138,77 @@ function renderIngestJob(job) {
   const summary = job.result?.summary || {};
   const selected = summary.selected_pdfs || [];
   const skipped = summary.skipped_existing_pdfs || [];
+  const skippedMeta = summary.skipped_no_metadata_pdfs || [];
   const failed = summary.failed_pdfs || [];
   out.innerHTML = `
     ${statusHeader(job, "Ingest Job")}
+    ${progressBlock(job)}
     <div class="kv">
       <strong>Ingested Articles</strong><span>${escapeHtml(summary.ingested_articles ?? 0)}</span>
       <strong>Total Chunks</strong><span>${escapeHtml(summary.total_chunks ?? 0)}</span>
       <strong>Total References</strong><span>${escapeHtml(summary.total_references ?? 0)}</span>
       <strong>Skipped Existing</strong><span>${escapeHtml(skipped.length)}</span>
+      <strong>Skipped No Metadata</strong><span>${escapeHtml(skippedMeta.length)}</span>
       <strong>Failed Files</strong><span>${escapeHtml(failed.length)}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
     ${selected.length ? `<details><summary>Selected PDFs (${selected.length})</summary><ul class="list-box">${selected.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skipped.length ? `<details><summary>Skipped Existing PDFs (${skipped.length})</summary><ul class="list-box">${skipped.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
+    ${skippedMeta.length ? `<details><summary>Skipped No Metadata PDFs (${skippedMeta.length})</summary><ul class="list-box">${skippedMeta.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${failed.length ? `<details><summary>Failed PDFs (${failed.length})</summary><ul class="list-box">${failed.slice(0, 100).map((x) => `<li>${escapeHtml(x.pdf)}: ${escapeHtml(x.error)}</li>`).join("")}</ul></details>` : ""}
     ${job.status === "running" ? '<div class="empty">Ingest is running. Use Stop to cancel.</div>' : ""}
+  `;
+}
+
+function renderIngestPreview(payload) {
+  const out = document.getElementById("ingestPreviewOut");
+  const summary = payload?.summary || {};
+  const rows = payload?.rows || [];
+  if (!rows.length) {
+    renderSimpleMessage(out, "Ingest Preview", "completed", "No files to preview.");
+    return;
+  }
+  out.innerHTML = `
+    ${statusHeader({ status: "completed" }, "Ingest Preview")}
+    <div class="kv">
+      <strong>Total Resolved</strong><span>${escapeHtml(summary.total_resolved ?? rows.length)}</span>
+      <strong>Will Ingest</strong><span>${escapeHtml(summary.will_ingest_count ?? 0)}</span>
+      <strong>Already In Graph</strong><span>${escapeHtml(summary.existing_count ?? 0)}</span>
+      <strong>Metadata Found</strong><span>${escapeHtml(summary.metadata_found_count ?? 0)}</span>
+      <strong>Previewed Rows</strong><span>${escapeHtml(summary.total_previewed ?? rows.length)}</span>
+    </div>
+    ${summary.truncated ? '<div class="empty">Preview truncated to first 300 files.</div>' : ""}
+    <details open>
+      <summary>Preview Rows</summary>
+      <table class="preview-table">
+        <thead>
+          <tr>
+            <th>File</th>
+            <th>Will Ingest</th>
+            <th>In Graph</th>
+            <th>Metadata</th>
+            <th>Title / Year / Authors</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows
+            .map((r) => {
+              const titleYear = `${r.title || "(no title)"}${r.year ? ` (${r.year})` : ""}`;
+              const authors = (r.authors || []).slice(0, 4).join(", ");
+              return `
+                <tr>
+                  <td>${escapeHtml(r.file || r.path)}</td>
+                  <td>${escapeHtml(r.will_ingest ? "yes" : "no")}</td>
+                  <td>${escapeHtml(r.exists_in_graph ? "yes" : "no")}</td>
+                  <td>${escapeHtml(r.metadata_found ? "yes" : "no")}</td>
+                  <td>${escapeHtml(titleYear)}${authors ? `<br><span class="meta">${escapeHtml(authors)}</span>` : ""}</td>
+                </tr>
+              `;
+            })
+            .join("")}
+        </tbody>
+      </table>
+    </details>
   `;
 }
 
@@ -170,6 +240,7 @@ function renderQueryJob(job) {
 
   results.innerHTML = `
     ${statusHeader(job, "Query Results")}
+    ${progressBlock(job)}
     ${rows
       .map((r, i) => {
         const cites = (r.cites_out || []).join(", ");
@@ -248,6 +319,27 @@ document.getElementById("ingestBtn").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("ingestPreviewBtn").addEventListener("click", async () => {
+  const mode = document.getElementById("ingestMode").value;
+  const lines = document.getElementById("customPdfs").value
+    .split("\n")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const out = document.getElementById("ingestPreviewOut");
+  renderSimpleMessage(out, "Ingest Preview", "running", "Building preview...");
+  try {
+    const payload = await api("/api/ingest/preview", {
+      mode,
+      source_dir: document.getElementById("sourceDir").value.trim() || "pdfs",
+      pdfs: lines,
+      override_existing: document.getElementById("overrideExisting").checked,
+    });
+    renderIngestPreview(payload);
+  } catch (err) {
+    renderSimpleMessage(out, "Ingest Preview", "failed", err.message);
+  }
+});
+
 document.getElementById("ingestStopBtn").addEventListener("click", async () => {
   try {
     const payload = await api("/api/ingest/stop", {});
@@ -281,9 +373,9 @@ document.getElementById("queryStopBtn").addEventListener("click", async () => {
 });
 
 renderSyncJob({ status: "idle" });
+renderSimpleMessage(document.getElementById("ingestPreviewOut"), "Ingest Preview", "idle", "Click Preview Selection.");
 renderIngestJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
 });
-
