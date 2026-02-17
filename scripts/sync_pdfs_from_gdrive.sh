@@ -84,6 +84,11 @@ if [[ -n "${OAUTH_SECRET}" ]]; then
 fi
 
 mkdir -p "${LOCAL_DIR}"
+if [[ ! -w "${LOCAL_DIR}" ]]; then
+  echo "Error: LOCAL_DIR is not writable: ${LOCAL_DIR}" >&2
+  echo "Fix permissions (example): sudo chown -R \"$(id -u):$(id -g)\" \"${LOCAL_DIR}\"" >&2
+  exit 1
+fi
 
 echo "Syncing from: ${REMOTE_PATH}"
 echo "Syncing to:   ${LOCAL_DIR}"

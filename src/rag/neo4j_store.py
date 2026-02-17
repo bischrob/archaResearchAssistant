@@ -57,6 +57,14 @@ class GraphStore:
                 "OPTIONS {indexConfig: {`vector.dimensions`: $dims, `vector.similarity_function`: 'cosine'}}"
             ),
             "CREATE FULLTEXT INDEX chunk_text IF NOT EXISTS FOR (c:Chunk) ON EACH [c.text]",
+            "CREATE FULLTEXT INDEX author_search IF NOT EXISTS FOR (p:Author) ON EACH [p.name, p.name_norm]",
+            "CREATE FULLTEXT INDEX article_search IF NOT EXISTS FOR (a:Article) ON EACH [a.title, a.title_norm, a.citekey, a.doi]",
+            "CREATE TEXT INDEX author_name_norm_text IF NOT EXISTS FOR (p:Author) ON (p.name_norm)",
+            "CREATE TEXT INDEX article_title_norm_text IF NOT EXISTS FOR (a:Article) ON (a.title_norm)",
+            "CREATE TEXT INDEX article_citekey_text IF NOT EXISTS FOR (a:Article) ON (a.citekey)",
+            "CREATE TEXT INDEX article_doi_text IF NOT EXISTS FOR (a:Article) ON (a.doi)",
+            "CREATE INDEX article_year IF NOT EXISTS FOR (a:Article) ON (a.year)",
+            "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
         ]
         with self.driver.session() as session:
             for stmt in statements:
@@ -308,17 +316,21 @@ class GraphStore:
                 MATCH (t:Token)<-[m:MENTIONS]-(c:Chunk)-[:IN_ARTICLE]->(a:Article)
                 WHERE t.value IN $tokens
                 WITH c, a, sum(m.count) AS token_score
-                CALL {
-                    WITH a
+                ORDER BY token_score DESC
+                LIMIT $limit
+                CALL (a) {
                     MATCH (auth:Author)-[w:WROTE]->(a)
                     WITH auth, w ORDER BY w.position ASC
                     RETURN collect(auth.name) AS authors
                 }
-                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
-                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH c, a, authors, token_score,
-                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
-                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                CALL (a) {
+                    OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                    RETURN [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                    RETURN [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                }
                 RETURN c.id AS chunk_id,
                        c.text AS chunk_text,
                        c.index AS chunk_index,
@@ -336,7 +348,6 @@ class GraphStore:
                        cites_out,
                        cited_by
                 ORDER BY token_score DESC
-                LIMIT $limit
                 """,
                 tokens=query_tokens,
                 limit=limit,
@@ -351,17 +362,20 @@ class GraphStore:
                 CALL db.index.vector.queryNodes('chunk_embedding', $k, $embedding)
                 YIELD node, score
                 MATCH (node)-[:IN_ARTICLE]->(a:Article)
-                CALL {
-                    WITH a
+                WITH node, a, score
+                CALL (a) {
                     MATCH (auth:Author)-[w:WROTE]->(a)
                     WITH auth, w ORDER BY w.position ASC
                     RETURN collect(auth.name) AS authors
                 }
-                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
-                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH node, a, authors, score,
-                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
-                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                CALL (a) {
+                    OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                    RETURN [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                    RETURN [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                }
                 RETURN node.id AS chunk_id,
                        node.text AS chunk_text,
                        node.index AS chunk_index,
@@ -379,6 +393,7 @@ class GraphStore:
                        cites_out,
                        cited_by
                 ORDER BY vector_score DESC
+                LIMIT $k
                 """,
                 k=limit,
                 embedding=vector,
@@ -386,22 +401,33 @@ class GraphStore:
             return [dict(r) for r in result]
 
     def author_query(self, query_terms: list[str], limit: int) -> list[dict]:
-        terms = [t.strip().lower() for t in query_terms if t and t.strip()]
+        terms = list(dict.fromkeys(t.strip().lower() for t in query_terms if t and t.strip()))
         if not terms:
             return []
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (auth:Author)-[w:WROTE]->(a:Article)<-[:IN_ARTICLE]-(c:Chunk)
-                WHERE any(term IN $terms WHERE auth.name_norm CONTAINS term)
-                WITH c, a,
-                     collect(auth.name) AS authors,
-                     sum(CASE WHEN any(term IN $terms WHERE auth.name_norm CONTAINS term) THEN 1 ELSE 0 END) AS author_score
-                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
-                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH c, a, authors, author_score,
-                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
-                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                UNWIND $terms AS term
+                CALL db.index.fulltext.queryNodes('author_search', term)
+                YIELD node, score
+                WITH node AS auth, sum(score) AS author_match_score
+                MATCH (auth)-[:WROTE]->(a:Article)<-[:IN_ARTICLE]-(c:Chunk)
+                WITH c, a, toFloat(sum(author_match_score)) AS author_score
+                ORDER BY author_score DESC, a.year DESC
+                LIMIT $limit
+                CALL (a) {
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                    RETURN [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                    RETURN [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                }
                 RETURN c.id AS chunk_id,
                        c.text AS chunk_text,
                        c.index AS chunk_index,
@@ -415,11 +441,10 @@ class GraphStore:
                        a.source_path AS article_source_path,
                        coalesce(head(authors), 'Unknown Author') AS author,
                        authors[0..8] AS authors,
-                       toFloat(author_score) AS author_score,
+                       author_score,
                        cites_out,
                        cited_by
                 ORDER BY author_score DESC, article_year DESC
-                LIMIT $limit
                 """,
                 terms=terms,
                 limit=limit,
@@ -427,35 +452,33 @@ class GraphStore:
             return [dict(r) for r in result]
 
     def title_query(self, query_terms: list[str], limit: int) -> list[dict]:
-        terms = [t.strip().lower() for t in query_terms if t and t.strip()]
+        terms = list(dict.fromkeys(t.strip().lower() for t in query_terms if t and t.strip()))
         if not terms:
             return []
         with self.driver.session() as session:
             result = session.run(
                 """
-                MATCH (a:Article)<-[:IN_ARTICLE]-(c:Chunk)
-                WHERE any(term IN $terms WHERE
-                    toLower(coalesce(a.title, '')) CONTAINS term OR
-                    toLower(coalesce(a.citekey, '')) CONTAINS term OR
-                    toLower(coalesce(a.title_norm, '')) CONTAINS term
-                )
-                WITH c, a,
-                     sum(CASE WHEN any(term IN $terms WHERE
-                        toLower(coalesce(a.title, '')) CONTAINS term OR
-                        toLower(coalesce(a.citekey, '')) CONTAINS term OR
-                        toLower(coalesce(a.title_norm, '')) CONTAINS term
-                     ) THEN 1 ELSE 0 END) AS title_score
-                CALL {
-                    WITH a
+                UNWIND $terms AS term
+                CALL db.index.fulltext.queryNodes('article_search', term)
+                YIELD node, score
+                WITH node AS a, sum(score) AS article_score
+                MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                WITH c, a, toFloat(article_score) AS title_score
+                ORDER BY title_score DESC, a.year DESC
+                LIMIT $limit
+                CALL (a) {
                     MATCH (auth:Author)-[w:WROTE]->(a)
                     WITH auth, w ORDER BY w.position ASC
                     RETURN collect(auth.name) AS authors
                 }
-                OPTIONAL MATCH (a)-[:CITES]->(out:Article)
-                OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
-                WITH c, a, authors, title_score,
-                     [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out,
-                     [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                CALL (a) {
+                    OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                    RETURN [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..5] AS cites_out
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                    RETURN [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..5] AS cited_by
+                }
                 RETURN c.id AS chunk_id,
                        c.text AS chunk_text,
                        c.index AS chunk_index,
@@ -473,7 +496,6 @@ class GraphStore:
                        cites_out,
                        cited_by
                 ORDER BY title_score DESC, article_year DESC
-                LIMIT $limit
                 """,
                 terms=terms,
                 limit=limit,

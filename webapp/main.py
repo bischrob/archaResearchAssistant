@@ -238,15 +238,17 @@ def _count_remote_pdfs(remote_path: str) -> int | None:
                 "--include",
                 "*.pdf",
             ],
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
             check=False,
+            timeout=30,
         )
         if proc.returncode != 0:
             return None
         lines = [x for x in proc.stdout.splitlines() if x.strip()]
         return len(lines)
-    except Exception:
+    except (subprocess.TimeoutExpired, Exception):
         return None
 
 
@@ -367,7 +369,35 @@ def sync_pdfs(req: SyncRequest) -> dict:
         total_remote = _count_remote_pdfs(remote_path)
         jobs.set_progress("sync", 0.0, "Starting sync")
 
-        proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout_buf: list[str] = []
+        stderr_buf: list[str] = []
+        max_log_lines = 4000
+
+        def _drain_output(stream: Any, sink: list[str]) -> None:
+            for line in iter(stream.readline, ""):
+                sink.append(line)
+                if len(sink) > max_log_lines:
+                    del sink[: len(sink) - max_log_lines]
+            stream.close()
+
+        def _log_tail() -> tuple[str, str]:
+            return ("".join(stdout_buf)[-12000:], "".join(stderr_buf)[-12000:])
+
+        proc = subprocess.Popen(
+            cmd,
+            cwd=ROOT,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        if proc.stdout is None or proc.stderr is None:
+            raise RuntimeError("Failed to capture sync process output streams.")
+        out_thread = threading.Thread(target=_drain_output, args=(proc.stdout, stdout_buf), daemon=True)
+        err_thread = threading.Thread(target=_drain_output, args=(proc.stderr, stderr_buf), daemon=True)
+        out_thread.start()
+        err_thread.start()
         with jobs._lock:
             job.proc = proc
         while proc.poll() is None:
@@ -377,8 +407,11 @@ def sync_pdfs(req: SyncRequest) -> dict:
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+                out_thread.join(timeout=2)
+                err_thread.join(timeout=2)
+                out, err = _log_tail()
                 jobs.set_progress("sync", job.progress_percent, "Cancelled")
-                return {"ok": False, "cancelled": True}
+                return {"ok": False, "cancelled": True, "stdout": out, "stderr": err}
             if total_remote and total_remote > 0:
                 local_count = _count_local_pdfs(str(ROOT / local_dir))
                 pct = min(99.0, (local_count / total_remote) * 100.0)
@@ -386,7 +419,15 @@ def sync_pdfs(req: SyncRequest) -> dict:
             else:
                 jobs.set_progress("sync", 50.0, "Sync in progress")
             time.sleep(0.2)
-        out, err = proc.communicate()
+        out_thread.join(timeout=2)
+        err_thread.join(timeout=2)
+        out, err = _log_tail()
+        if proc.returncode != 0:
+            jobs.set_progress("sync", 100.0, f"Sync failed (exit {proc.returncode})")
+            error_detail = (err or out).strip()[-800:]
+            if error_detail:
+                raise RuntimeError(f"Sync failed (exit {proc.returncode}): {error_detail}")
+            raise RuntimeError(f"Sync failed (exit {proc.returncode}).")
         jobs.set_progress("sync", 100.0, "Sync complete")
         return {
             "ok": proc.returncode == 0,
