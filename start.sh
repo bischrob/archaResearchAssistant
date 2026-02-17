@@ -31,4 +31,11 @@ else
   echo "Neo4j container already running."
 fi
 
+if [[ "${INIT_NEO4J_SCHEMA:-1}" == "1" ]]; then
+  echo "Initializing Neo4j schema..."
+  python "${ROOT_DIR}/scripts/init_neo4j_indexes.py" \
+    --wait-seconds "${NEO4J_INIT_WAIT_SECONDS:-90}" \
+    --retry-interval "${NEO4J_INIT_RETRY_INTERVAL:-2}"
+fi
+
 exec "${ROOT_DIR}/scripts/run_web_gui.sh"

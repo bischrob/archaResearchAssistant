@@ -45,12 +45,18 @@ scripts/sync_pdfs_from_gdrive.sh --dry-run
 ## 3) Run the web GUI
 
 ```bash
-scripts/run_web_gui.sh
+./start.sh
 ```
 
 Open:
 
 - `http://localhost:8000`
+
+`start.sh` will:
+
+- ensure the Neo4j container is running
+- initialize Neo4j constraints/indexes (`scripts/init_neo4j_indexes.py`)
+- launch the web app
 
 The GUI includes in-app instructions and buttons for:
 
