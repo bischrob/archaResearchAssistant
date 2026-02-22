@@ -8,7 +8,7 @@
 ## Primary compose services (`docker-compose.yml`)
 - `neo4j`: main graph DB with APOC and host-mounted volumes.
 - `neo4j-admin`: utility container for admin commands.
-- `anystyle`: Ruby container for anystyle CLI workflows.
+- `anystyle`: Ruby container for Anystyle CLI workflows, now used by default ingest citation parsing (`CITATION_PARSER=anystyle`).
 
 ## Neo4j service details
 - Image: `neo4j:2025.02.0-community`.

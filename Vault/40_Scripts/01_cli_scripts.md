@@ -11,11 +11,12 @@
 - Purpose: choose + ingest PDFs from CLI.
 - Inputs: mode, pdf-dir, partial-count, explicit `--pdf`, `--override-existing`.
 - Uses `choose_pdfs` and `ingest_pdfs`.
+- Uses shared citation parser config (`CITATION_PARSER`; default `anystyle`) and reports Anystyle stats in output.
 
 ## `build_graph_anystyle_test.py`
-- Purpose: run test ingest that attempts citation extraction via Anystyle in Docker before ingest.
+- Purpose: run test ingest through the same shared ingest pipeline while forcing Anystyle mode.
 - Inputs: ingest mode args plus `--anystyle-service`, `--anystyle-timeout`, `--require-anystyle`.
-- Behavior: applies per-article citation overrides only when Anystyle returns references; otherwise falls back to built-in parser.
+- Behavior: relies on pipeline-native Anystyle extraction/caching/fallback behavior (no separate pre-pass override logic).
 - Re-ingest behavior is duplicate-safe for per-article references because existing reference/citation edges are refreshed before write.
 
 ## `query_graph.py`

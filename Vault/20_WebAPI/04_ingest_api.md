@@ -14,10 +14,12 @@
 - `test3` is normalized to `batch`.
 - `override_existing` toggles existing-article skip behavior.
 - `partial_count` controls first-N for `batch` and batch size for `all`.
+- Ingest uses shared pipeline citation extraction defaults (`CITATION_PARSER=anystyle` with fallback unless strict mode enabled).
 
 ## `all` mode specifics
 - Selected files are chunked into sequential batches of size `partial_count`.
 - Partial progress and partial summary written after each batch.
+- Batch and aggregate summaries include Anystyle counters (`anystyle_attempted_pdfs`, `anystyle_applied_pdfs`, `anystyle_empty_pdfs`, `anystyle_failed_pdfs`).
 
 ## Preview endpoint
 - Resolves candidate set with and without metadata filtering.

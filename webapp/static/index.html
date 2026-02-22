@@ -27,7 +27,7 @@
           <code>batch</code> for batch upload (first N using <code>Batch Size</code>), <code>all</code> for full corpus in automatic batches of <code>Batch Size</code>, or <code>custom</code> with explicit file paths.
         </li>
         <li>By default, already ingested PDFs are skipped. Enable <strong>Override Existing</strong> to reprocess them.</li>
-        <li>Run <strong>Ingest</strong> to add/update graph data. Existing Neo4j data is never erased. Unreadable files are skipped and shown in <code>failed_pdfs</code>.</li>
+        <li>Run <strong>Ingest</strong> to add/update graph data. Citation extraction uses Anystyle by default with automatic fallback to the built-in parser if needed. Existing Neo4j data is never erased. Unreadable files are skipped and shown in <code>failed_pdfs</code>.</li>
         <li>Use <strong>Stop</strong> on Sync/Ingest/Query to cancel a running action.</li>
         <li>Ask a retrieval query in <strong>Search</strong> to get chunks with author and citation context.</li>
       </ol>

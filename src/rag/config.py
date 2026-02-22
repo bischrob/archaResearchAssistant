@@ -15,3 +15,7 @@ class Settings:
     chunk_overlap_words: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "45"))
     citation_min_quality: float = float(os.getenv("CITATION_MIN_QUALITY", "0.35"))
     chunk_strip_page_noise: bool = os.getenv("CHUNK_STRIP_PAGE_NOISE", "1").strip().lower() not in {"0", "false", "no"}
+    citation_parser: str = os.getenv("CITATION_PARSER", "anystyle").strip().lower()
+    anystyle_service: str = os.getenv("ANYSTYLE_SERVICE", "anystyle").strip() or "anystyle"
+    anystyle_timeout_seconds: int = int(os.getenv("ANYSTYLE_TIMEOUT_SECONDS", "240"))
+    anystyle_require_success: bool = os.getenv("ANYSTYLE_REQUIRE_SUCCESS", "0").strip().lower() in {"1", "true", "yes"}
