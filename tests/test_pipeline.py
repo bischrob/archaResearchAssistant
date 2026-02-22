@@ -4,7 +4,7 @@ import pytest
 
 from src.rag import pipeline
 from src.rag.config import Settings
-from src.rag.pdf_processing import ArticleDoc, Chunk
+from src.rag.pdf_processing import ArticleDoc, Chunk, Citation
 
 
 def _write_pdf_header(path: Path) -> None:
@@ -92,7 +92,13 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
 
     metadata_seen = {}
 
-    def fake_load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int, metadata=None):
+    def fake_load_article(
+        pdf_path: Path,
+        chunk_size_words: int,
+        chunk_overlap_words: int,
+        metadata=None,
+        strip_page_noise: bool = True,
+    ):
         metadata_seen[pdf_path.name] = metadata
         if pdf_path == p2:
             raise ValueError("broken")
@@ -195,6 +201,103 @@ def test_ingest_pdfs_returns_zero_when_no_metadata_matches(monkeypatch, tmp_path
     summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(), skip_existing=False)
     assert summary.ingested_articles == 0
     assert summary.skipped_no_metadata_pdfs == [str(p1)]
+
+
+def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "ok.pdf"
+    p1.write_text("x")
+
+    def fake_load_article(
+        pdf_path: Path,
+        chunk_size_words: int,
+        chunk_overlap_words: int,
+        metadata=None,
+        strip_page_noise: bool = True,
+    ):
+        return ArticleDoc(
+            article_id=pdf_path.stem,
+            title=pdf_path.stem,
+            normalized_title=pdf_path.stem,
+            year=2024,
+            author="Author",
+            authors=["Author"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path=str(pdf_path),
+            chunks=[
+                Chunk(
+                    chunk_id=f"{pdf_path.stem}::0",
+                    index=0,
+                    text="text",
+                    tokens=["text"],
+                    token_counts={"text": 1},
+                    page_start=1,
+                    page_end=1,
+                )
+            ],
+            citations=[
+                Citation(
+                    citation_id=f"{pdf_path.stem}::ref::0",
+                    raw_text="heuristic",
+                    year=2020,
+                    title_guess="heuristic title",
+                    normalized_title="heuristic title",
+                )
+            ],
+        )
+
+    seen = {"citation_count": None, "raw_text": None}
+
+    class FakeStore:
+        embedding_dimension = 384
+
+        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
+            self.args = (uri, user, password, embedding_model)
+
+        def setup_schema(self, vector_dimensions: int):
+            assert vector_dimensions == 384
+
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
+            assert len(articles) == 1
+            seen["citation_count"] = len(articles[0].citations)
+            seen["raw_text"] = articles[0].citations[0].raw_text
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
+    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        pipeline,
+        "load_paperpile_index",
+        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
+    )
+
+    overrides = {
+        p1.stem: [
+            Citation(
+                citation_id=f"{p1.stem}::ref::0",
+                raw_text="anystyle",
+                year=1958,
+                title_guess="A Study",
+                normalized_title="a study",
+            )
+        ]
+    }
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[p1],
+        settings=Settings(),
+        skip_existing=False,
+        citation_overrides=overrides,
+    )
+
+    assert summary.ingested_articles == 1
+    assert summary.total_references == 1
+    assert seen["citation_count"] == 1
+    assert seen["raw_text"] == "anystyle"
 
 
 def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, tmp_path: Path) -> None:

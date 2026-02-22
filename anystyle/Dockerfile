@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     libxml2 \
     libxml2-dev \
     libxslt1-dev \
-    poppler-utils \ 
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Ensure gem binaries are in PATH

@@ -23,6 +23,8 @@ Default DB env values:
 - `PAPERPILE_JSON=Paperpile.json`
 - `OPENAI_API_KEY=...`
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
+- `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
+- `CHUNK_STRIP_PAGE_NOISE=1` (optional; strips repeated headers/footers/page numbers before chunking)
 
 ## 2) Sync PDFs from Google Drive
 
@@ -51,6 +53,19 @@ scripts/sync_pdfs_from_gdrive.sh --dry-run
 Open:
 
 - `http://localhost:8000`
+
+## 4) Enable auto-versioning on commit
+
+The repository includes hooks that:
+
+- update `webapp/main.py` `FastAPI(..., version="...")` to a UTC datetime version
+- create a matching git tag (`v<version>`) after each commit
+
+Enable them in your local clone:
+
+```bash
+git config core.hooksPath .githooks
+```
 
 `start.sh` will:
 
@@ -83,6 +98,9 @@ Notes:
 - in `all` mode, selected PDFs are processed as sequential batches and progress is updated after each batch.
 - ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
+- ingest drops low-quality references using the `CITATION_MIN_QUALITY` threshold.
+- re-ingesting a PDF refreshes its `Reference` nodes/edges to avoid stale duplicate reference data.
+- chunk extraction can strip repeated page headers/footers and page numbers (`CHUNK_STRIP_PAGE_NOISE`).
 - LLM answers are citation-grounded and include `[C#]` references mapped to source chunks.
 - LLM answers are rendered as Markdown in the UI.
 - Retrieval is two-pass: broader candidate recall (vector + token + author channels) followed by stricter reranking on chunk/title/author/year/phrase and citation-neighborhood signals.
@@ -112,7 +130,7 @@ Click **Run Diagnostics** to execute runtime checks:
 
 If a check fails, review the check details shown in the table and correct the corresponding file/config/runtime dependency.
 
-## 4) CLI usage (optional)
+## 6) CLI usage (optional)
 
 Build graph:
 
@@ -120,6 +138,13 @@ Build graph:
 python scripts/build_graph.py --mode batch --pdf-dir pdfs
 python scripts/build_graph.py --mode all --pdf-dir pdfs
 python scripts/build_graph.py --mode batch --pdf-dir pdfs --override-existing
+```
+
+Test ingest with Anystyle (Docker):
+
+```bash
+docker compose build anystyle
+python scripts/build_graph_anystyle_test.py --mode batch --pdf-dir pdfs --partial-count 1
 ```
 
 Custom files:

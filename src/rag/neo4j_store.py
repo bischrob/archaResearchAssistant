@@ -11,6 +11,23 @@ from neo4j import GraphDatabase
 from .pdf_processing import ArticleDoc
 
 
+def _normalize_doi(doi: str | None) -> str:
+    if not doi:
+        return ""
+    normalized = doi.strip().lower()
+    normalized = re.sub(r"^https?://(dx\.)?doi\.org/", "", normalized)
+    return normalized.strip().rstrip(".;,")
+
+
+def _author_token_set(names: list[str]) -> set[str]:
+    out: set[str] = set()
+    for name in names:
+        for tok in re.findall(r"[a-z][a-z'-]+", (name or "").lower()):
+            if len(tok) >= 3:
+                out.add(tok)
+    return out
+
+
 class HashingEmbedder:
     def __init__(self, dimension: int = 384) -> None:
         self.dimension = dimension
@@ -65,6 +82,8 @@ class GraphStore:
             "CREATE TEXT INDEX article_doi_text IF NOT EXISTS FOR (a:Article) ON (a.doi)",
             "CREATE INDEX article_year IF NOT EXISTS FOR (a:Article) ON (a.year)",
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
+            "CREATE TEXT INDEX reference_doi_text IF NOT EXISTS FOR (r:Reference) ON (r.doi)",
+            "CREATE TEXT INDEX reference_source_text IF NOT EXISTS FOR (r:Reference) ON (r.source)",
         ]
         with self.driver.session() as session:
             for stmt in statements:
@@ -175,6 +194,22 @@ class GraphStore:
                             chunk_id=chunk.chunk_id,
                         )
 
+                # Refresh reference-related graph edges for this source article to
+                # avoid stale/duplicate references during full re-ingest runs.
+                session.run(
+                    """
+                    MATCH (a:Article {id: $article_id})
+                    OPTIONAL MATCH (a)-[out:CITES]->(:Article)
+                    DELETE out
+                    WITH a
+                    OPTIONAL MATCH (a)-[:CITES_REFERENCE]->(r:Reference)
+                    WHERE r.id STARTS WITH $ref_prefix
+                    DETACH DELETE r
+                    """,
+                    article_id=article.article_id,
+                    ref_prefix=f"{article.article_id}::ref::",
+                )
+
                 for citation in article.citations:
                     if should_cancel and should_cancel():
                         raise RuntimeError("Ingest cancelled by user.")
@@ -184,7 +219,12 @@ class GraphStore:
                         SET r.raw_text = $raw_text,
                             r.year = $year,
                             r.title_guess = $title_guess,
-                            r.title_norm = $title_norm
+                            r.title_norm = $title_norm,
+                            r.author_tokens = $author_tokens,
+                            r.doi = $doi,
+                            r.source = $source,
+                            r.type_guess = $type_guess,
+                            r.quality_score = $quality_score
                         WITH r
                         MATCH (a:Article {id: $article_id})
                         MERGE (a)-[:CITES_REFERENCE]->(r)
@@ -194,6 +234,11 @@ class GraphStore:
                         year=citation.year,
                         title_guess=citation.title_guess,
                         title_norm=citation.normalized_title,
+                        author_tokens=citation.author_tokens or [],
+                        doi=citation.doi,
+                        source=citation.source,
+                        type_guess=citation.type_guess,
+                        quality_score=citation.quality_score,
                         article_id=article.article_id,
                     )
 
@@ -206,6 +251,15 @@ class GraphStore:
 
     def _link_article_citations(self, articles: Iterable[ArticleDoc]) -> None:
         by_title = {a.article_id: a for a in articles}
+        target_profiles = {
+            article_id: {
+                "doi": _normalize_doi(article.doi),
+                "author_tokens": _author_token_set(article.authors or ([article.author] if article.author else [])),
+                "year": article.year,
+                "title_norm": article.normalized_title,
+            }
+            for article_id, article in by_title.items()
+        }
         links: list[dict] = []
         seen_pairs: set[tuple[str, str]] = set()
         for source in articles:
@@ -214,15 +268,60 @@ class GraphStore:
                     continue
                 best_target = None
                 best_score = 0.0
+                best_title_score = 0.0
+                best_author_overlap = 0.0
+                best_year_match = False
+                best_method = "reference_title_match"
+                citation_doi = _normalize_doi(citation.doi)
+                citation_author_tokens = set(citation.author_tokens or [])
                 for target in by_title.values():
                     if target.article_id == source.article_id:
                         continue
-                    score = SequenceMatcher(None, citation.normalized_title, target.normalized_title).ratio()
-                    year_match = citation.year is None or target.year is None or abs(citation.year - target.year) <= 1
-                    if year_match and score > best_score:
+                    profile = target_profiles[target.article_id]
+
+                    if citation_doi and profile["doi"] and citation_doi == profile["doi"]:
+                        best_target = target.article_id
+                        best_score = 1.0
+                        best_title_score = 1.0
+                        best_author_overlap = 1.0
+                        best_year_match = True
+                        best_method = "reference_doi_match"
+                        break
+
+                    title_score = SequenceMatcher(None, citation.normalized_title, profile["title_norm"]).ratio()
+                    year_match = (
+                        citation.year is None
+                        or profile["year"] is None
+                        or abs(citation.year - profile["year"]) <= 1
+                    )
+                    if citation.year is not None and profile["year"] is not None and not year_match and title_score < 0.88:
+                        continue
+
+                    author_overlap = 0.0
+                    if citation_author_tokens and profile["author_tokens"]:
+                        author_overlap = len(citation_author_tokens & profile["author_tokens"]) / max(
+                            1, len(citation_author_tokens)
+                        )
+
+                    score = (0.80 * title_score) + (0.15 * author_overlap) + (0.05 if year_match else 0.0)
+                    if score > best_score:
                         best_score = score
                         best_target = target.article_id
-                if best_target and best_score >= 0.72:
+                        best_title_score = title_score
+                        best_author_overlap = author_overlap
+                        best_year_match = year_match
+                        best_method = "reference_structured_match" if author_overlap > 0 else "reference_title_match"
+
+                accepted = False
+                if best_target:
+                    if best_method == "reference_doi_match":
+                        accepted = True
+                    elif best_score >= 0.62 and best_title_score >= 0.55 and best_year_match:
+                        accepted = True
+                    elif best_title_score >= 0.80:
+                        accepted = True
+
+                if accepted and best_target:
                     pair = (source.article_id, best_target)
                     seen_pairs.add(pair)
                     links.append(
@@ -230,8 +329,8 @@ class GraphStore:
                             "source": source.article_id,
                             "target": best_target,
                             "reference_id": citation.citation_id,
-                            "score": round(best_score, 4),
-                            "method": "reference_title_match",
+                            "score": round(min(1.0, best_score), 4),
+                            "method": best_method,
                         }
                     )
 
@@ -521,3 +620,81 @@ class GraphStore:
         with self.driver.session() as session:
             rows = session.run("MATCH (a:Article) RETURN a.id AS id")
             return {r["id"] for r in rows if r.get("id")}
+
+    def article_by_citekey(self, citekey: str, chunk_limit: int = 3) -> dict | None:
+        key = (citekey or "").strip()
+        if not key:
+            return None
+        with self.driver.session() as session:
+            row = session.run(
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.citekey, '')) = toLower($citekey)
+                CALL (a) {
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                    RETURN count(c) AS chunk_count
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                    WITH c
+                    ORDER BY coalesce(c.index, 0) ASC
+                    LIMIT $chunk_limit
+                    RETURN collect(
+                        {
+                            id: c.id,
+                            index: c.index,
+                            page_start: c.page_start,
+                            page_end: c.page_end,
+                            text: substring(coalesce(c.text, ''), 0, 1200)
+                        }
+                    ) AS sample_chunks
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)-[:CITES]->(out:Article)
+                    RETURN [x IN collect(DISTINCT out.title) WHERE x IS NOT NULL][0..10] AS cites_out
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (inp:Article)-[:CITES]->(a)
+                    RETURN [x IN collect(DISTINCT inp.title) WHERE x IS NOT NULL][0..10] AS cited_by
+                }
+                RETURN a.id AS article_id,
+                       a.title AS article_title,
+                       a.year AS article_year,
+                       a.citekey AS article_citekey,
+                       a.doi AS article_doi,
+                       a.source_path AS article_source_path,
+                       a.journal AS article_journal,
+                       a.publisher AS article_publisher,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..15] AS authors,
+                       chunk_count,
+                       sample_chunks,
+                       cites_out,
+                       cited_by
+                LIMIT 1
+                """,
+                citekey=key,
+                chunk_limit=max(1, int(chunk_limit)),
+            ).single()
+            return dict(row) if row else None
+
+    def articles_by_citekeys(self, citekeys: list[str], chunk_limit: int = 3) -> list[dict]:
+        out: list[dict] = []
+        seen: set[str] = set()
+        for raw_key in citekeys:
+            key = (raw_key or "").strip()
+            if not key:
+                continue
+            normalized = key.lower()
+            if normalized in seen:
+                continue
+            seen.add(normalized)
+            row = self.article_by_citekey(key, chunk_limit=chunk_limit)
+            if row:
+                out.append(row)
+        return out

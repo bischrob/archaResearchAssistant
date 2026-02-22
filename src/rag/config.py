@@ -13,3 +13,5 @@ class Settings:
     paperpile_json: str = os.getenv("PAPERPILE_JSON", "Paperpile.json")
     chunk_size_words: int = int(os.getenv("CHUNK_SIZE_WORDS", "220"))
     chunk_overlap_words: int = int(os.getenv("CHUNK_OVERLAP_WORDS", "45"))
+    citation_min_quality: float = float(os.getenv("CITATION_MIN_QUALITY", "0.35"))
+    chunk_strip_page_noise: bool = os.getenv("CHUNK_STRIP_PAGE_NOISE", "1").strip().lower() not in {"0", "false", "no"}

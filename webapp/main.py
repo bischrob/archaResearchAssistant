@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import os
 import subprocess
@@ -56,7 +56,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="0.1.0")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.02.22.024725")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -81,6 +81,11 @@ class IngestRequest(BaseModel):
 class QueryRequest(BaseModel):
     query: str
     limit: int = Field(default=5, ge=1, le=20)
+
+
+class ArticleLookupRequest(BaseModel):
+    citekeys: list[str] = Field(default_factory=list, min_length=1, max_length=500)
+    chunk_limit: int = Field(default=3, ge=1, le=20)
 
 
 class AskRequest(BaseModel):
@@ -641,6 +646,56 @@ def ingest_stop() -> dict:
     return jobs.stop("ingest")
 
 
+@app.get("/api/article/{citekey}")
+def article_by_citekey(citekey: str, chunk_limit: int = 3) -> dict:
+    key = (citekey or "").strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Citekey cannot be empty.")
+    settings = Settings()
+    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    try:
+        article = store.article_by_citekey(key, chunk_limit=max(1, min(int(chunk_limit), 20)))
+    finally:
+        store.close()
+    if not article:
+        raise HTTPException(status_code=404, detail=f"Article not found for citekey: {key}")
+    return {"ok": True, "article": article}
+
+
+@app.post("/api/articles/by-citekeys")
+def articles_by_citekeys(req: ArticleLookupRequest) -> dict:
+    cleaned = []
+    seen = set()
+    for raw in req.citekeys:
+        key = (raw or "").strip()
+        if not key:
+            continue
+        lower = key.lower()
+        if lower in seen:
+            continue
+        seen.add(lower)
+        cleaned.append(key)
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="No valid citekeys provided.")
+
+    settings = Settings()
+    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    try:
+        rows = store.articles_by_citekeys(cleaned, chunk_limit=req.chunk_limit)
+    finally:
+        store.close()
+
+    found = {str(r.get("article_citekey", "")).lower() for r in rows}
+    missing = [k for k in cleaned if k.lower() not in found]
+    return {
+        "ok": True,
+        "requested_count": len(cleaned),
+        "found_count": len(rows),
+        "missing_citekeys": missing,
+        "articles": rows,
+    }
+
+
 @app.post("/api/query")
 def query(req: QueryRequest) -> dict:
     if not req.query.strip():
@@ -752,3 +807,4 @@ def query_status() -> dict:
 @app.post("/api/query/stop")
 def query_stop() -> dict:
     return jobs.stop("query")
+

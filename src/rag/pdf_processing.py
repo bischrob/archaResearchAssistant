@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -12,6 +12,18 @@ import fitz
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9'-]*")
 HEADING_RE = re.compile(r"^\s*(references|bibliography|works cited|literature cited)\s*$", re.IGNORECASE)
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
+PAGE_NUMBER_RE = re.compile(r"^(?:page\s*)?\d{1,4}$", re.IGNORECASE)
+ROMAN_PAGE_NUMBER_RE = re.compile(r"^(?:page\s*)?[ivxlcdm]{1,10}$", re.IGNORECASE)
+HEADER_FOOTER_SCAN_LINES = 3
+HEADER_FOOTER_MIN_PAGE_HITS = 2
+REFERENCE_JUNK_PHRASES = (
+    "downloaded from",
+    "terms and conditions",
+    "creative commons license",
+    "wiley online library",
+    "all rights reserved",
+    "for rules of use",
+)
 STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "been", "by", "for", "from", "has", "have",
     "in", "is", "it", "its", "of", "on", "or", "that", "the", "their", "this", "to", "was", "were", "with",
@@ -36,6 +48,11 @@ class Citation:
     year: int | None
     title_guess: str
     normalized_title: str
+    doi: str | None = None
+    source: str | None = None
+    type_guess: str | None = None
+    author_tokens: list[str] | None = None
+    quality_score: float | None = None
 
 
 @dataclass
@@ -87,6 +104,84 @@ def _extract_page_text(pdf_path: Path) -> list[tuple[int, str]]:
             if text and text.strip():
                 out.append((i + 1, text))
     return out
+
+
+def _normalize_line(line: str) -> str:
+    return re.sub(r"\s+", " ", line).strip().lower()
+
+
+def _is_page_number_line(line: str) -> bool:
+    candidate = _normalize_line(line)
+    if not candidate:
+        return False
+    if PAGE_NUMBER_RE.match(candidate):
+        return True
+    return ROMAN_PAGE_NUMBER_RE.match(candidate) is not None
+
+
+def _split_page_lines(page_text: list[tuple[int, str]]) -> list[tuple[int, list[str]]]:
+    out: list[tuple[int, list[str]]] = []
+    for page_num, text in page_text:
+        lines = [line.strip() for line in text.splitlines() if line and line.strip()]
+        out.append((page_num, lines))
+    return out
+
+
+def _flatten_page_lines(page_lines: list[tuple[int, list[str]]]) -> list[tuple[int, str]]:
+    out: list[tuple[int, str]] = []
+    for page_num, lines in page_lines:
+        for line in lines:
+            out.append((page_num, line))
+    return out
+
+
+def _remove_header_footer_noise(page_lines: list[tuple[int, list[str]]]) -> list[tuple[int, str]]:
+    edge_hits: dict[str, set[int]] = defaultdict(set)
+    for page_num, lines in page_lines:
+        line_count = len(lines)
+        if not line_count:
+            continue
+        for idx, line in enumerate(lines):
+            normalized = _normalize_line(line)
+            if not normalized or len(normalized) > 120:
+                continue
+            at_edge = idx < HEADER_FOOTER_SCAN_LINES or idx >= max(0, line_count - HEADER_FOOTER_SCAN_LINES)
+            if at_edge:
+                edge_hits[normalized].add(page_num)
+
+    repeated_edges = {
+        normalized
+        for normalized, pages in edge_hits.items()
+        if len(pages) >= HEADER_FOOTER_MIN_PAGE_HITS
+    }
+
+    filtered: list[tuple[int, str]] = []
+    for page_num, lines in page_lines:
+        line_count = len(lines)
+        for idx, line in enumerate(lines):
+            normalized = _normalize_line(line)
+            if not normalized:
+                continue
+            at_edge = idx < HEADER_FOOTER_SCAN_LINES or idx >= max(0, line_count - HEADER_FOOTER_SCAN_LINES)
+            if _is_page_number_line(normalized):
+                continue
+            if at_edge and normalized in repeated_edges:
+                continue
+            filtered.append((page_num, line))
+    return filtered
+
+
+def build_lines_with_page(page_text: list[tuple[int, str]], strip_page_noise: bool = True) -> list[tuple[int, str]]:
+    page_lines = _split_page_lines(page_text)
+    flattened = _flatten_page_lines(page_lines)
+    if not strip_page_noise or not flattened:
+        return flattened
+
+    cleaned = _remove_header_footer_noise(page_lines)
+    # Safety fallback: if cleaning removes too much content, keep original lines.
+    if cleaned and len(cleaned) >= int(len(flattened) * 0.35):
+        return cleaned
+    return flattened
 
 
 def _split_main_and_references(lines: list[str]) -> tuple[int | None, list[str], list[str]]:
@@ -146,9 +241,59 @@ def _extract_citations(reference_lines: list[str], article_id: str) -> list[Cita
                 year=year,
                 title_guess=title_guess,
                 normalized_title=normalize_title(title_guess),
+                source="heuristic",
             )
         )
     return citations
+
+
+def citation_quality_score(citation: Citation) -> float:
+    title = (citation.title_guess or "").strip()
+    raw = (citation.raw_text or "").strip()
+    title_lower = title.lower()
+    raw_lower = raw.lower()
+    has_junk = any(phrase in title_lower or phrase in raw_lower for phrase in REFERENCE_JUNK_PHRASES)
+
+    score = 0.0
+    if title:
+        if 8 <= len(title) <= 260:
+            score += 0.5
+        elif 6 <= len(title) <= 340:
+            score += 0.2
+    if citation.year is not None and 1600 <= citation.year <= 2100:
+        score += 0.25
+    if citation.author_tokens:
+        score += 0.15
+    if citation.doi:
+        score += 0.15
+    if has_junk:
+        score -= 0.5
+    if "http://" in raw_lower or "https://" in raw_lower:
+        if "doi.org/" not in raw_lower:
+            score -= 0.1
+    return max(0.0, min(1.0, score))
+
+
+def is_citation_quality_acceptable(citation: Citation, min_score: float = 0.35) -> bool:
+    title = (citation.title_guess or "").strip()
+    if not title:
+        return False
+    if len(title) < 6:
+        return False
+    title_lower = title.lower()
+    raw_lower = (citation.raw_text or "").lower()
+    if any(phrase in title_lower or phrase in raw_lower for phrase in REFERENCE_JUNK_PHRASES):
+        return False
+    return citation_quality_score(citation) >= max(0.0, min(1.0, float(min_score)))
+
+
+def filter_citations(citations: list[Citation], min_score: float = 0.35) -> list[Citation]:
+    out: list[Citation] = []
+    for citation in citations:
+        citation.quality_score = citation_quality_score(citation)
+        if is_citation_quality_acceptable(citation, min_score=min_score):
+            out.append(citation)
+    return out
 
 
 def load_article(
@@ -156,6 +301,7 @@ def load_article(
     chunk_size_words: int,
     chunk_overlap_words: int,
     metadata: dict | None = None,
+    strip_page_noise: bool = True,
 ) -> ArticleDoc:
     fallback_author, fallback_year, fallback_title = parse_filename_metadata(pdf_path)
     metadata = metadata or {}
@@ -166,12 +312,7 @@ def load_article(
     article_id = pdf_path.stem
 
     page_text = _extract_page_text(pdf_path)
-    lines_with_page: list[tuple[int, str]] = []
-    for page_num, text in page_text:
-        for line in text.splitlines():
-            line = line.strip()
-            if line:
-                lines_with_page.append((page_num, line))
+    lines_with_page = build_lines_with_page(page_text, strip_page_noise=strip_page_noise)
 
     lines = [line for _, line in lines_with_page]
     split_idx, main_lines, ref_lines = _split_main_and_references(lines)
