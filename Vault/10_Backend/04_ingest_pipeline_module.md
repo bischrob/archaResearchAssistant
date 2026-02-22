@@ -28,9 +28,14 @@ Select PDFs, parse/cache article docs, and ingest into Neo4j through `GraphStore
   - chunk size and overlap
   - chunk page-noise stripping toggle
   - metadata JSON
+- Citation extraction path is now centralized in `ingest_pdfs`:
+  - optional explicit `citation_overrides` win first
+  - otherwise uses Anystyle by default (`CITATION_PARSER=anystyle`)
+  - falls back to built-in heuristic references on Anystyle failure/empty output unless strict mode is enabled
+  - caches Anystyle results under `.cache/anystyle_refs` keyed by file path + mtime + size
 - Filters article citations by quality threshold (`CITATION_MIN_QUALITY`).
 - Uploads parsed articles with progress callbacks.
-- Supports optional `citation_overrides` by `article_id` to replace parsed references before upload (used by Anystyle test ingest).
+- Returns parser diagnostics in `IngestSummary` (`anystyle_*` counters, failure samples, optional disabled reason).
 - Returns `IngestSummary` including skipped/failed files.
 
 ## Cancellation model

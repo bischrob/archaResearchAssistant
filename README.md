@@ -25,6 +25,10 @@ Default DB env values:
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 - `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
 - `CHUNK_STRIP_PAGE_NOISE=1` (optional; strips repeated headers/footers/page numbers before chunking)
+- `CITATION_PARSER=anystyle` (default; uses Anystyle for references, falls back to built-in parser on failures/empty results)
+- `ANYSTYLE_SERVICE=anystyle` (optional; docker compose service name)
+- `ANYSTYLE_TIMEOUT_SECONDS=240` (optional; timeout per PDF)
+- `ANYSTYLE_REQUIRE_SUCCESS=0` (optional; if `1`, ingest fails when Anystyle extraction fails)
 
 ## 2) Sync PDFs from Google Drive
 
@@ -98,6 +102,7 @@ Notes:
 - in `all` mode, selected PDFs are processed as sequential batches and progress is updated after each batch.
 - ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
 - PDFs without matching `Paperpile.json` metadata are skipped automatically.
+- ingest uses Anystyle citation extraction by default and falls back to the built-in heuristic parser if Anystyle fails or returns no references.
 - ingest drops low-quality references using the `CITATION_MIN_QUALITY` threshold.
 - re-ingesting a PDF refreshes its `Reference` nodes/edges to avoid stale duplicate reference data.
 - chunk extraction can strip repeated page headers/footers and page numbers (`CHUNK_STRIP_PAGE_NOISE`).
@@ -140,10 +145,15 @@ python scripts/build_graph.py --mode all --pdf-dir pdfs
 python scripts/build_graph.py --mode batch --pdf-dir pdfs --override-existing
 ```
 
-Test ingest with Anystyle (Docker):
+Build Anystyle image (recommended for ingest quality):
 
 ```bash
 docker compose build anystyle
+```
+
+Test ingest with shared pipeline in forced-Anystyle mode:
+
+```bash
 python scripts/build_graph_anystyle_test.py --mode batch --pdf-dir pdfs --partial-count 1
 ```
 

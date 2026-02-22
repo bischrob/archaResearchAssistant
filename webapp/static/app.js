@@ -184,6 +184,12 @@ function renderIngestJob(job) {
   const skippedMeta = summary.skipped_no_metadata_pdfs || [];
   const failed = summary.failed_pdfs || [];
   const batchResults = summary.batch_results || [];
+  const anystyleAttempted = summary.anystyle_attempted_pdfs ?? 0;
+  const anystyleApplied = summary.anystyle_applied_pdfs ?? 0;
+  const anystyleEmpty = summary.anystyle_empty_pdfs ?? 0;
+  const anystyleFailed = summary.anystyle_failed_pdfs ?? 0;
+  const anystyleDisabledReason = summary.anystyle_disabled_reason || "";
+  const anystyleFailureSamples = summary.anystyle_failure_samples || [];
   out.innerHTML = `
     ${statusHeader(job, "Ingest Job")}
     ${progressBlock(job)}
@@ -197,15 +203,20 @@ function renderIngestJob(job) {
       <strong>Skipped Existing</strong><span>${escapeHtml(skipped.length)}</span>
       <strong>Skipped No Metadata</strong><span>${escapeHtml(skippedMeta.length)}</span>
       <strong>Failed Files</strong><span>${escapeHtml(failed.length)}</span>
+      <strong>Anystyle Attempted</strong><span>${escapeHtml(anystyleAttempted)}</span>
+      <strong>Anystyle Applied</strong><span>${escapeHtml(anystyleApplied)}</span>
+      <strong>Anystyle Empty</strong><span>${escapeHtml(anystyleEmpty)}</span>
+      <strong>Anystyle Failed</strong><span>${escapeHtml(anystyleFailed)}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
+    ${anystyleDisabledReason ? `<div class="empty">Anystyle disabled for remainder of ingest: ${escapeHtml(anystyleDisabledReason)}</div>` : ""}
     ${batchResults.length ? `
       <details open>
         <summary>Batch Results (${batchResults.length})</summary>
         <table class="preview-table">
           <thead>
             <tr>
-              <th>Batch</th><th>Input PDFs</th><th>Ingested</th><th>Chunks</th><th>References</th><th>Skipped Existing</th><th>Skipped No Metadata</th><th>Failed</th>
+              <th>Batch</th><th>Input PDFs</th><th>Ingested</th><th>Chunks</th><th>References</th><th>Anystyle Applied</th><th>Anystyle Failed</th><th>Skipped Existing</th><th>Skipped No Metadata</th><th>Failed</th>
             </tr>
           </thead>
           <tbody>
@@ -216,6 +227,8 @@ function renderIngestJob(job) {
                 <td>${escapeHtml(b.ingested_articles ?? 0)}</td>
                 <td>${escapeHtml(b.total_chunks ?? 0)}</td>
                 <td>${escapeHtml(b.total_references ?? 0)}</td>
+                <td>${escapeHtml(b.anystyle_applied_pdfs ?? 0)}</td>
+                <td>${escapeHtml(b.anystyle_failed_pdfs ?? 0)}</td>
                 <td>${escapeHtml(b.skipped_existing_count ?? 0)}</td>
                 <td>${escapeHtml(b.skipped_no_metadata_count ?? 0)}</td>
                 <td>${escapeHtml(b.failed_count ?? 0)}</td>
@@ -225,6 +238,7 @@ function renderIngestJob(job) {
         </table>
       </details>
     ` : ""}
+    ${anystyleFailureSamples.length ? `<details><summary>Anystyle Failures (${anystyleFailureSamples.length})</summary><ul class="list-box">${anystyleFailureSamples.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${selected.length ? `<details><summary>Selected PDFs (${selected.length})</summary><ul class="list-box">${selected.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skipped.length ? `<details><summary>Skipped Existing PDFs (${skipped.length})</summary><ul class="list-box">${skipped.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skippedMeta.length ? `<details><summary>Skipped No Metadata PDFs (${skippedMeta.length})</summary><ul class="list-box">${skippedMeta.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}

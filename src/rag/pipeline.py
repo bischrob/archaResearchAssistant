@@ -5,8 +5,10 @@ import json
 import pickle
 from dataclasses import asdict
 from dataclasses import dataclass
+from dataclasses import field
 from pathlib import Path
 
+from .anystyle_refs import extract_citations_with_anystyle_docker
 from .config import Settings
 from .neo4j_store import GraphStore
 from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
@@ -22,6 +24,13 @@ class IngestSummary:
     skipped_existing_pdfs: list[str]
     skipped_no_metadata_pdfs: list[str]
     failed_pdfs: list[dict]
+    citation_override_pdfs: int = 0
+    anystyle_attempted_pdfs: int = 0
+    anystyle_applied_pdfs: int = 0
+    anystyle_empty_pdfs: int = 0
+    anystyle_failed_pdfs: int = 0
+    anystyle_disabled_reason: str | None = None
+    anystyle_failure_samples: list[str] = field(default_factory=list)
 
 
 def _cache_dir() -> Path:
@@ -45,6 +54,66 @@ def _cache_key(pdf_path: Path, settings: Settings, metadata: dict | None) -> str
         ]
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _anystyle_cache_dir() -> Path:
+    p = Path(".cache") / "anystyle_refs"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
+    stat = pdf_path.stat()
+    raw = "|".join(
+        [
+            str(pdf_path.resolve()),
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            settings.anystyle_service,
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _deserialize_citations(items: list[dict]) -> list[Citation]:
+    return [Citation(**item) for item in items]
+
+
+def _load_anystyle_citations_cached(pdf_path: Path, settings: Settings) -> list[Citation]:
+    key = _anystyle_cache_key(pdf_path, settings)
+    cache_file = _anystyle_cache_dir() / f"{key}.json"
+    if cache_file.exists():
+        with cache_file.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, list):
+            return _deserialize_citations(payload)
+
+    citations = extract_citations_with_anystyle_docker(
+        pdf_path,
+        compose_service=settings.anystyle_service,
+        timeout_seconds=settings.anystyle_timeout_seconds,
+    )
+    with cache_file.open("w", encoding="utf-8") as f:
+        json.dump([asdict(c) for c in citations], f, ensure_ascii=False)
+    return citations
+
+
+def _use_anystyle(settings: Settings) -> bool:
+    mode = (settings.citation_parser or "").strip().lower()
+    return mode not in {"heuristic", "builtin", "built-in", "default"}
+
+
+def _is_global_anystyle_failure(msg: str) -> bool:
+    text = (msg or "").lower()
+    markers = (
+        "docker cli is not installed",
+        "cannot connect to the docker daemon",
+        "is the docker daemon running",
+        "permission denied while trying to connect to the docker daemon",
+        "no such service",
+        "no configuration file provided",
+    )
+    return any(marker in text for marker in markers)
 
 
 def _deserialize_article(obj: dict) -> ArticleDoc:
@@ -210,6 +279,7 @@ def ingest_pdfs(
     citation_overrides: dict[str, list[Citation]] | None = None,
 ) -> IngestSummary:
     settings = settings or Settings()
+    use_anystyle = _use_anystyle(settings)
     paperpile_index = load_paperpile_index(settings.paperpile_json)
     existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
     skipped_existing = [str(p) for p in selected_pdfs if p.stem in existing_ids]
@@ -232,6 +302,13 @@ def ingest_pdfs(
 
     articles = []
     failures: list[dict] = []
+    citation_override_pdfs = 0
+    anystyle_attempted = 0
+    anystyle_applied = 0
+    anystyle_empty = 0
+    anystyle_failed = 0
+    anystyle_failure_samples: list[str] = []
+    anystyle_disabled_reason: str | None = None
     total_steps = max(1, len(selected_pdfs) * 2)
     parse_done = 0
     for p in selected_pdfs:
@@ -247,6 +324,25 @@ def ingest_pdfs(
             )
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
+                citation_override_pdfs += 1
+            elif use_anystyle and not anystyle_disabled_reason:
+                anystyle_attempted += 1
+                try:
+                    extracted = _load_anystyle_citations_cached(p, settings)
+                    if extracted:
+                        article.citations = extracted
+                        anystyle_applied += 1
+                    else:
+                        anystyle_empty += 1
+                except Exception as exc:
+                    anystyle_failed += 1
+                    err = str(exc)
+                    if len(anystyle_failure_samples) < 10:
+                        anystyle_failure_samples.append(f"{p.name}: {err}")
+                    if settings.anystyle_require_success:
+                        raise
+                    if _is_global_anystyle_failure(err):
+                        anystyle_disabled_reason = err
             article.citations = filter_citations(
                 article.citations,
                 min_score=settings.citation_min_quality,
@@ -299,4 +395,11 @@ def ingest_pdfs(
         skipped_existing_pdfs=skipped_existing,
         skipped_no_metadata_pdfs=skipped_no_metadata,
         failed_pdfs=failures,
+        citation_override_pdfs=citation_override_pdfs,
+        anystyle_attempted_pdfs=anystyle_attempted,
+        anystyle_applied_pdfs=anystyle_applied,
+        anystyle_empty_pdfs=anystyle_empty,
+        anystyle_failed_pdfs=anystyle_failed,
+        anystyle_disabled_reason=anystyle_disabled_reason,
+        anystyle_failure_samples=anystyle_failure_samples,
     )

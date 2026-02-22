@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from pathlib import Path
 import sys
 
@@ -9,13 +10,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from src.rag.anystyle_refs import extract_citations_with_anystyle_docker
+from src.rag.config import Settings
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run a test ingest that attempts citation extraction with Anystyle in Docker."
+        description="Run a test ingest using the shared pipeline with Anystyle citation extraction."
     )
     parser.add_argument(
         "--pdf-dir",
@@ -85,58 +86,39 @@ def main() -> None:
     for p in pdfs:
         print(f" - {p}")
 
-    citation_overrides = {}
-    anystyle_failures: list[dict[str, str]] = []
-    anystyle_empty: list[str] = []
-
-    print("Extracting references with Anystyle (Docker)...")
-    for pdf in pdfs:
-        try:
-            citations = extract_citations_with_anystyle_docker(
-                pdf,
-                compose_service=args.anystyle_service,
-                timeout_seconds=args.anystyle_timeout,
-                project_root=ROOT,
-            )
-            if citations:
-                citation_overrides[pdf.stem] = citations
-                print(f" - {pdf.name}: {len(citations)} references via Anystyle")
-            else:
-                anystyle_empty.append(pdf.name)
-                print(f" - {pdf.name}: 0 references via Anystyle (fallback to built-in parser)")
-        except Exception as exc:
-            anystyle_failures.append({"pdf": str(pdf), "error": str(exc)})
-            print(f" - {pdf.name}: Anystyle failed, fallback to built-in parser ({exc})")
-
-    if args.require_anystyle and anystyle_failures:
-        print("Aborting because --require-anystyle was set and extraction failed.")
-        for item in anystyle_failures:
-            print(f" - {item['pdf']}: {item['error']}")
-        raise SystemExit(2)
-
+    settings = replace(
+        Settings(),
+        citation_parser="anystyle",
+        anystyle_service=args.anystyle_service,
+        anystyle_timeout_seconds=max(1, int(args.anystyle_timeout)),
+        anystyle_require_success=args.require_anystyle,
+    )
     print("Building graph...")
     summary = ingest_pdfs(
         selected_pdfs=pdfs,
         wipe=False,
+        settings=settings,
         skip_existing=not args.override_existing,
-        citation_overrides=citation_overrides,
     )
 
     print("Done.")
     print(f"Ingested articles: {summary.ingested_articles}")
     print(f"Total chunks: {summary.total_chunks}")
     print(f"Total extracted references: {summary.total_references}")
-    print(f"Anystyle overrides applied: {len(citation_overrides)}/{len(pdfs)}")
-    if anystyle_empty:
-        print(f"Anystyle empty extraction: {len(anystyle_empty)}")
+    print(f"Anystyle attempted PDFs: {summary.anystyle_attempted_pdfs}")
+    print(f"Anystyle applied PDFs: {summary.anystyle_applied_pdfs}")
+    print(f"Anystyle empty PDFs: {summary.anystyle_empty_pdfs}")
+    print(f"Anystyle failed PDFs: {summary.anystyle_failed_pdfs}")
+    if summary.anystyle_disabled_reason:
+        print(f"Anystyle disabled during run: {summary.anystyle_disabled_reason}")
     if summary.skipped_existing_pdfs:
         print(f"Skipped existing PDFs: {len(summary.skipped_existing_pdfs)}")
     if summary.skipped_no_metadata_pdfs:
         print(f"Skipped no-metadata PDFs: {len(summary.skipped_no_metadata_pdfs)}")
-    if anystyle_failures:
-        print(f"Anystyle failures (fallback used): {len(anystyle_failures)}")
-        for item in anystyle_failures[:20]:
-            print(f" - {item['pdf']}: {item['error']}")
+    if summary.anystyle_failure_samples:
+        print(f"Anystyle failure samples: {len(summary.anystyle_failure_samples)}")
+        for item in summary.anystyle_failure_samples[:20]:
+            print(f" - {item}")
     if summary.failed_pdfs:
         print(f"Failed PDFs during ingest: {len(summary.failed_pdfs)}")
         for item in summary.failed_pdfs[:20]:

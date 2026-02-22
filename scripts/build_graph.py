@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from src.rag.config import Settings
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 
 
@@ -47,12 +48,14 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    settings = Settings()
     pdfs = choose_pdfs(
         mode=args.mode,
         source_dir=args.pdf_dir,
         explicit_pdfs=args.pdf,
         skip_existing=not args.override_existing,
         require_metadata=True,
+        settings=settings,
         partial_count=args.partial_count,
     )
 
@@ -64,6 +67,7 @@ def main() -> None:
     summary = ingest_pdfs(
         selected_pdfs=pdfs,
         wipe=False,
+        settings=settings,
         skip_existing=not args.override_existing,
     )
 
@@ -71,6 +75,17 @@ def main() -> None:
     print(f"Ingested articles: {summary.ingested_articles}")
     print(f"Total chunks: {summary.total_chunks}")
     print(f"Total extracted references: {summary.total_references}")
+    print(f"Citation parser mode: {settings.citation_parser}")
+    print(f"Anystyle attempted PDFs: {summary.anystyle_attempted_pdfs}")
+    print(f"Anystyle applied PDFs: {summary.anystyle_applied_pdfs}")
+    print(f"Anystyle empty PDFs: {summary.anystyle_empty_pdfs}")
+    print(f"Anystyle failed PDFs: {summary.anystyle_failed_pdfs}")
+    if summary.anystyle_disabled_reason:
+        print(f"Anystyle disabled during run: {summary.anystyle_disabled_reason}")
+    if summary.anystyle_failure_samples:
+        print(f"Anystyle failure samples: {len(summary.anystyle_failure_samples)}")
+        for item in summary.anystyle_failure_samples[:20]:
+            print(f" - {item}")
     if summary.skipped_existing_pdfs:
         print(f"Skipped existing PDFs: {len(summary.skipped_existing_pdfs)}")
     if summary.skipped_no_metadata_pdfs:

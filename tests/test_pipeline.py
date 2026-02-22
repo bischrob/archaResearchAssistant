@@ -163,7 +163,7 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1, p2, p3],
         wipe=True,
-        settings=Settings(),
+        settings=Settings(citation_parser="heuristic"),
         skip_existing=False,
     )
 
@@ -190,7 +190,11 @@ def test_ingest_pdfs_raises_if_all_fail(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {"bad.pdf": {"title": "bad"}})
 
     with pytest.raises(ValueError, match="No readable PDFs were ingested"):
-        pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(), skip_existing=False)
+        pipeline.ingest_pdfs(
+            selected_pdfs=[p1],
+            settings=Settings(citation_parser="heuristic"),
+            skip_existing=False,
+        )
 
 
 def test_ingest_pdfs_returns_zero_when_no_metadata_matches(monkeypatch, tmp_path: Path) -> None:
@@ -198,7 +202,11 @@ def test_ingest_pdfs_returns_zero_when_no_metadata_matches(monkeypatch, tmp_path
     p1.write_text("x")
     monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {})
 
-    summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(), skip_existing=False)
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[p1],
+        settings=Settings(citation_parser="heuristic"),
+        skip_existing=False,
+    )
     assert summary.ingested_articles == 0
     assert summary.skipped_no_metadata_pdfs == [str(p1)]
 
@@ -289,7 +297,7 @@ def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> 
     }
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(),
+        settings=Settings(citation_parser="heuristic"),
         skip_existing=False,
         citation_overrides=overrides,
     )
@@ -298,6 +306,203 @@ def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> 
     assert summary.total_references == 1
     assert seen["citation_count"] == 1
     assert seen["raw_text"] == "anystyle"
+
+
+def test_ingest_pdfs_uses_anystyle_when_enabled(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "ok.pdf"
+    p1.write_text("x")
+
+    def fake_load_article(
+        pdf_path: Path,
+        chunk_size_words: int,
+        chunk_overlap_words: int,
+        metadata=None,
+        strip_page_noise: bool = True,
+    ):
+        return ArticleDoc(
+            article_id=pdf_path.stem,
+            title=pdf_path.stem,
+            normalized_title=pdf_path.stem,
+            year=2024,
+            author="Author",
+            authors=["Author"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path=str(pdf_path),
+            chunks=[
+                Chunk(
+                    chunk_id=f"{pdf_path.stem}::0",
+                    index=0,
+                    text="text",
+                    tokens=["text"],
+                    token_counts={"text": 1},
+                    page_start=1,
+                    page_end=1,
+                )
+            ],
+            citations=[
+                Citation(
+                    citation_id=f"{pdf_path.stem}::ref::0",
+                    raw_text="heuristic",
+                    year=2020,
+                    title_guess="heuristic title",
+                    normalized_title="heuristic title",
+                )
+            ],
+        )
+
+    seen = {"raw_text": None, "source": None}
+
+    class FakeStore:
+        embedding_dimension = 384
+
+        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
+            self.args = (uri, user, password, embedding_model)
+
+        def setup_schema(self, vector_dimensions: int):
+            assert vector_dimensions == 384
+
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
+            assert len(articles) == 1
+            seen["raw_text"] = articles[0].citations[0].raw_text
+            seen["source"] = articles[0].citations[0].source
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
+    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        pipeline,
+        "_load_anystyle_citations_cached",
+        lambda _pdf, _settings: [
+            Citation(
+                citation_id=f"{p1.stem}::ref::0",
+                raw_text="anystyle-json-row",
+                year=1958,
+                title_guess="A Valid Parsed Reference Title",
+                normalized_title="a valid parsed reference title",
+                source="anystyle",
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "load_paperpile_index",
+        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
+    )
+
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[p1],
+        settings=Settings(citation_parser="anystyle"),
+        skip_existing=False,
+    )
+
+    assert summary.ingested_articles == 1
+    assert summary.anystyle_attempted_pdfs == 1
+    assert summary.anystyle_applied_pdfs == 1
+    assert summary.anystyle_failed_pdfs == 0
+    assert seen["raw_text"] == "anystyle-json-row"
+    assert seen["source"] == "anystyle"
+
+
+def test_ingest_pdfs_falls_back_when_anystyle_fails(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "ok.pdf"
+    p1.write_text("x")
+
+    def fake_load_article(
+        pdf_path: Path,
+        chunk_size_words: int,
+        chunk_overlap_words: int,
+        metadata=None,
+        strip_page_noise: bool = True,
+    ):
+        return ArticleDoc(
+            article_id=pdf_path.stem,
+            title=pdf_path.stem,
+            normalized_title=pdf_path.stem,
+            year=2024,
+            author="Author",
+            authors=["Author"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path=str(pdf_path),
+            chunks=[
+                Chunk(
+                    chunk_id=f"{pdf_path.stem}::0",
+                    index=0,
+                    text="text",
+                    tokens=["text"],
+                    token_counts={"text": 1},
+                    page_start=1,
+                    page_end=1,
+                )
+            ],
+            citations=[
+                Citation(
+                    citation_id=f"{pdf_path.stem}::ref::0",
+                    raw_text="heuristic-row",
+                    year=2020,
+                    title_guess="Heuristic Title",
+                    normalized_title="heuristic title",
+                    source="heuristic",
+                )
+            ],
+        )
+
+    seen = {"raw_text": None, "source": None}
+
+    class FakeStore:
+        embedding_dimension = 384
+
+        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
+            self.args = (uri, user, password, embedding_model)
+
+        def setup_schema(self, vector_dimensions: int):
+            assert vector_dimensions == 384
+
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
+            assert len(articles) == 1
+            seen["raw_text"] = articles[0].citations[0].raw_text
+            seen["source"] = articles[0].citations[0].source
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
+    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        pipeline,
+        "_load_anystyle_citations_cached",
+        lambda _pdf, _settings: (_ for _ in ()).throw(
+            RuntimeError("Cannot connect to the Docker daemon")
+        ),
+    )
+    monkeypatch.setattr(
+        pipeline,
+        "load_paperpile_index",
+        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
+    )
+
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[p1],
+        settings=Settings(citation_parser="anystyle"),
+        skip_existing=False,
+    )
+
+    assert summary.ingested_articles == 1
+    assert summary.anystyle_attempted_pdfs == 1
+    assert summary.anystyle_applied_pdfs == 0
+    assert summary.anystyle_failed_pdfs == 1
+    assert summary.anystyle_disabled_reason is not None
+    assert seen["raw_text"] == "heuristic-row"
+    assert seen["source"] == "heuristic"
 
 
 def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, tmp_path: Path) -> None:

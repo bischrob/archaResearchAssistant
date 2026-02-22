@@ -11,6 +11,10 @@ Defined via `src/rag/config.py` and usage in `src/rag/llm_answer.py`/`webapp/mai
 - `CHUNK_OVERLAP_WORDS` (default `45`)
 - `CITATION_MIN_QUALITY` (default `0.35`; filters low-quality references before graph write)
 - `CHUNK_STRIP_PAGE_NOISE` (default enabled; strips repeated headers/footers/page numbers before chunking)
+- `CITATION_PARSER` (default `anystyle`; valid practical modes: `anystyle` or `heuristic`)
+- `ANYSTYLE_SERVICE` (default `anystyle`; docker compose service for citation extraction)
+- `ANYSTYLE_TIMEOUT_SECONDS` (default `240`; per-PDF Anystyle timeout)
+- `ANYSTYLE_REQUIRE_SUCCESS` (default disabled; if enabled, ingest fails instead of falling back when Anystyle errors)
 - `OPENAI_API_KEY` (required for `/api/ask`)
 - `OPENAI_MODEL` (default `gpt-5.1`)
 

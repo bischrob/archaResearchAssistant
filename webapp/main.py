@@ -56,7 +56,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.02.22.024725")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.02.22.033455")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -478,6 +478,13 @@ def ingest(req: IngestRequest) -> dict:
             "skipped_existing_pdfs": [],
             "skipped_no_metadata_pdfs": [],
             "failed_pdfs": [],
+            "citation_override_pdfs": 0,
+            "anystyle_attempted_pdfs": 0,
+            "anystyle_applied_pdfs": 0,
+            "anystyle_empty_pdfs": 0,
+            "anystyle_failed_pdfs": 0,
+            "anystyle_disabled_reason": None,
+            "anystyle_failure_samples": [],
         }
 
         if mode == "all":
@@ -513,6 +520,11 @@ def ingest(req: IngestRequest) -> dict:
                     "failed_count": len(summary.failed_pdfs),
                     "skipped_existing_count": len(summary.skipped_existing_pdfs),
                     "skipped_no_metadata_count": len(summary.skipped_no_metadata_pdfs),
+                    "citation_override_pdfs": summary.citation_override_pdfs,
+                    "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
+                    "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
+                    "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
+                    "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
                 }
             )
             agg["ingested_articles"] += summary.ingested_articles
@@ -522,6 +534,15 @@ def ingest(req: IngestRequest) -> dict:
             agg["skipped_existing_pdfs"].extend(summary.skipped_existing_pdfs)
             agg["skipped_no_metadata_pdfs"].extend(summary.skipped_no_metadata_pdfs)
             agg["failed_pdfs"].extend(summary.failed_pdfs)
+            agg["citation_override_pdfs"] += summary.citation_override_pdfs
+            agg["anystyle_attempted_pdfs"] += summary.anystyle_attempted_pdfs
+            agg["anystyle_applied_pdfs"] += summary.anystyle_applied_pdfs
+            agg["anystyle_empty_pdfs"] += summary.anystyle_empty_pdfs
+            agg["anystyle_failed_pdfs"] += summary.anystyle_failed_pdfs
+            if summary.anystyle_disabled_reason and not agg["anystyle_disabled_reason"]:
+                agg["anystyle_disabled_reason"] = summary.anystyle_disabled_reason
+            if summary.anystyle_failure_samples:
+                agg["anystyle_failure_samples"].extend(summary.anystyle_failure_samples)
             partial_summary = {
                 "mode": mode,
                 "batch_size": batch_size,
@@ -534,6 +555,13 @@ def ingest(req: IngestRequest) -> dict:
                 "skipped_existing_pdfs": list(agg["skipped_existing_pdfs"]),
                 "skipped_no_metadata_pdfs": list(agg["skipped_no_metadata_pdfs"]),
                 "failed_pdfs": list(agg["failed_pdfs"]),
+                "citation_override_pdfs": agg["citation_override_pdfs"],
+                "anystyle_attempted_pdfs": agg["anystyle_attempted_pdfs"],
+                "anystyle_applied_pdfs": agg["anystyle_applied_pdfs"],
+                "anystyle_empty_pdfs": agg["anystyle_empty_pdfs"],
+                "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
+                "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
+                "anystyle_failure_samples": list(agg["anystyle_failure_samples"])[:30],
             }
             with jobs._lock:
                 job.result = {"ok": True, "summary": partial_summary}
@@ -561,6 +589,13 @@ def ingest(req: IngestRequest) -> dict:
                 "skipped_existing_pdfs": agg["skipped_existing_pdfs"],
                 "skipped_no_metadata_pdfs": agg["skipped_no_metadata_pdfs"],
                 "failed_pdfs": agg["failed_pdfs"],
+                "citation_override_pdfs": agg["citation_override_pdfs"],
+                "anystyle_attempted_pdfs": agg["anystyle_attempted_pdfs"],
+                "anystyle_applied_pdfs": agg["anystyle_applied_pdfs"],
+                "anystyle_empty_pdfs": agg["anystyle_empty_pdfs"],
+                "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
+                "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
+                "anystyle_failure_samples": agg["anystyle_failure_samples"][:30],
             },
         }
 
@@ -807,4 +842,3 @@ def query_status() -> dict:
 @app.post("/api/query/stop")
 def query_stop() -> dict:
     return jobs.stop("query")
-
