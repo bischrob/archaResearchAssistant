@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+app_file="${repo_root}/webapp/main.py"
+
+version="$(
+  sed -nE 's/.*version="([^"]+)".*/\1/p' "${app_file}" | head -n 1
+)"
+
+if [[ -z "${version}" ]]; then
+  echo "post-commit: unable to read app version from ${app_file}; skipping tag" >&2
+  exit 0
+fi
+
+base_tag="v${version}"
+tag_name="${base_tag}"
+suffix=1
+
+while git rev-parse -q --verify "refs/tags/${tag_name}" >/dev/null 2>&1; do
+  tag_name="${base_tag}.${suffix}"
+  suffix=$((suffix + 1))
+done
+
+git tag "${tag_name}"
+echo "post-commit: created tag ${tag_name}"

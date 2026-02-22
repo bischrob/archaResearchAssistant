@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+python_bin="${PYTHON_BIN:-python3}"
+
+"${python_bin}" "${repo_root}/scripts/update_app_version.py"
+git add "${repo_root}/webapp/main.py"

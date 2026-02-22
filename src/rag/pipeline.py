@@ -10,7 +10,7 @@ from pathlib import Path
 from .config import Settings
 from .neo4j_store import GraphStore
 from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
-from .pdf_processing import ArticleDoc, Chunk, Citation, load_article
+from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
 
 
 @dataclass
@@ -40,6 +40,7 @@ def _cache_key(pdf_path: Path, settings: Settings, metadata: dict | None) -> str
             str(stat.st_size),
             str(settings.chunk_size_words),
             str(settings.chunk_overlap_words),
+            str(int(settings.chunk_strip_page_noise)),
             md,
         ]
     )
@@ -79,6 +80,7 @@ def _load_article_cached(pdf_path: Path, settings: Settings, metadata: dict | No
         chunk_size_words=settings.chunk_size_words,
         chunk_overlap_words=settings.chunk_overlap_words,
         metadata=metadata,
+        strip_page_noise=settings.chunk_strip_page_noise,
     )
     with cache_file.open("wb") as f:
         pickle.dump(asdict(article), f)
@@ -205,6 +207,7 @@ def ingest_pdfs(
     should_cancel=None,
     skip_existing: bool = True,
     progress_callback=None,
+    citation_overrides: dict[str, list[Citation]] | None = None,
 ) -> IngestSummary:
     settings = settings or Settings()
     paperpile_index = load_paperpile_index(settings.paperpile_json)
@@ -237,13 +240,18 @@ def ingest_pdfs(
         if progress_callback:
             progress_callback((parse_done / total_steps) * 100.0, f"Parsing {p.name}")
         try:
-            articles.append(
-                _load_article_cached(
-                    pdf_path=p,
-                    settings=settings,
-                    metadata=find_metadata_for_pdf(paperpile_index, p.name),
-                )
+            article = _load_article_cached(
+                pdf_path=p,
+                settings=settings,
+                metadata=find_metadata_for_pdf(paperpile_index, p.name),
             )
+            if citation_overrides and article.article_id in citation_overrides:
+                article.citations = citation_overrides[article.article_id]
+            article.citations = filter_citations(
+                article.citations,
+                min_score=settings.citation_min_quality,
+            )
+            articles.append(article)
         except Exception as exc:
             failures.append({"pdf": str(p), "error": str(exc)})
         parse_done += 1

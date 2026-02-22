@@ -1,0 +1,51 @@
+# Backend Module: Ingest Pipeline
+
+## Source file
+- `src/rag/pipeline.py`
+
+## Responsibility
+Select PDFs, parse/cache article docs, and ingest into Neo4j through `GraphStore`.
+
+## Main APIs
+- `choose_pdfs(...)`.
+- `ingest_pdfs(selected_pdfs, ...)`.
+
+## Selection logic (`choose_pdfs`)
+- Modes:
+  - `batch`: first `partial_count` readable PDFs.
+  - `all`: all PDFs.
+  - `custom`: explicit list (with path cleanup and source-dir fallback).
+  - `test3`: alias to `batch`.
+- Filters (optional):
+  - skip existing graph article IDs
+  - require matching metadata
+
+## Ingest logic (`ingest_pdfs`)
+- Loads metadata index.
+- Filters selected list by existing IDs and metadata again.
+- Parses articles with cache key on:
+  - absolute path, mtime, size
+  - chunk size and overlap
+  - chunk page-noise stripping toggle
+  - metadata JSON
+- Filters article citations by quality threshold (`CITATION_MIN_QUALITY`).
+- Uploads parsed articles with progress callbacks.
+- Supports optional `citation_overrides` by `article_id` to replace parsed references before upload (used by Anystyle test ingest).
+- Returns `IngestSummary` including skipped/failed files.
+
+## Cancellation model
+Caller can pass `should_cancel`; checked during parse and upload.
+
+## Failure modes
+- Empty final selection raises `ValueError` in several branches.
+- If all parses fail, raises readable `ValueError` with failed file preview.
+- DB connection failure in `_get_existing_article_ids` silently falls back to no-skip behavior.
+
+## Extension points
+- Add additional selection predicates (e.g., year ranges, author filters).
+- Add retry strategy for transient parse failures.
+- Add cache pruning command for stale `.cache/rag_articles` entries.
+
+## Related
+- [[20_WebAPI/04_ingest_api]]
+- [[10_Backend/05_graph_store_module]]
