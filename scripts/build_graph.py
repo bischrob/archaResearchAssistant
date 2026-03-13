@@ -86,6 +86,16 @@ def main() -> None:
         print(f"Anystyle failure samples: {len(summary.anystyle_failure_samples)}")
         for item in summary.anystyle_failure_samples[:20]:
             print(f" - {item}")
+    print(f"Qwen attempted PDFs: {summary.qwen_attempted_pdfs}")
+    print(f"Qwen applied PDFs: {summary.qwen_applied_pdfs}")
+    print(f"Qwen empty PDFs: {summary.qwen_empty_pdfs}")
+    print(f"Qwen failed PDFs: {summary.qwen_failed_pdfs}")
+    if summary.qwen_disabled_reason:
+        print(f"Qwen disabled during run: {summary.qwen_disabled_reason}")
+    if summary.qwen_failure_samples:
+        print(f"Qwen failure samples: {len(summary.qwen_failure_samples)}")
+        for item in summary.qwen_failure_samples[:20]:
+            print(f" - {item}")
     if summary.skipped_existing_pdfs:
         print(f"Skipped existing PDFs: {len(summary.skipped_existing_pdfs)}")
     if summary.skipped_no_metadata_pdfs:

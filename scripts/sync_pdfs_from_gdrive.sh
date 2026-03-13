@@ -69,15 +69,22 @@ if [[ -n "${OAUTH_VALUE}" ]]; then
     export "${TOKEN_VAR}=${OAUTH_VALUE}"
     echo "Using OAuth token from ${GOOGLE_CONFIG_FILE} for remote '${REMOTE_NAME}'."
   else
-    CLIENT_ID_VAR="RCLONE_CONFIG_${REMOTE_ENV_NAME}_CLIENT_ID"
-    export "${CLIENT_ID_VAR}=${OAUTH_VALUE}"
-    echo "Using OAuth client ID from ${GOOGLE_CONFIG_FILE} for remote '${REMOTE_NAME}'."
+    # A bare client ID without its companion client secret causes
+    # remote auth override failures ("invalid_client"). Skip override
+    # unless both values are present.
+    if [[ -n "${OAUTH_SECRET}" ]]; then
+      CLIENT_ID_VAR="RCLONE_CONFIG_${REMOTE_ENV_NAME}_CLIENT_ID"
+      export "${CLIENT_ID_VAR}=${OAUTH_VALUE}"
+      echo "Using OAuth client ID from ${GOOGLE_CONFIG_FILE} for remote '${REMOTE_NAME}'."
+    else
+      echo "OAuth in ${GOOGLE_CONFIG_FILE} looks like a client ID but OAuthSecret is missing; using existing rclone remote auth."
+    fi
   fi
 else
   echo "No OAuth value found in ${GOOGLE_CONFIG_FILE}; using existing rclone remote auth."
 fi
 
-if [[ -n "${OAUTH_SECRET}" ]]; then
+if [[ -n "${OAUTH_SECRET}" && "${OAUTH_VALUE}" != \{* ]]; then
   CLIENT_SECRET_VAR="RCLONE_CONFIG_${REMOTE_ENV_NAME}_CLIENT_SECRET"
   export "${CLIENT_SECRET_VAR}=${OAUTH_SECRET}"
   echo "Using OAuth client secret from ${GOOGLE_CONFIG_FILE} for remote '${REMOTE_NAME}'."

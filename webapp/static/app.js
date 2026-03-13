@@ -190,6 +190,12 @@ function renderIngestJob(job) {
   const anystyleFailed = summary.anystyle_failed_pdfs ?? 0;
   const anystyleDisabledReason = summary.anystyle_disabled_reason || "";
   const anystyleFailureSamples = summary.anystyle_failure_samples || [];
+  const qwenAttempted = summary.qwen_attempted_pdfs ?? 0;
+  const qwenApplied = summary.qwen_applied_pdfs ?? 0;
+  const qwenEmpty = summary.qwen_empty_pdfs ?? 0;
+  const qwenFailed = summary.qwen_failed_pdfs ?? 0;
+  const qwenDisabledReason = summary.qwen_disabled_reason || "";
+  const qwenFailureSamples = summary.qwen_failure_samples || [];
   out.innerHTML = `
     ${statusHeader(job, "Ingest Job")}
     ${progressBlock(job)}
@@ -207,16 +213,21 @@ function renderIngestJob(job) {
       <strong>Anystyle Applied</strong><span>${escapeHtml(anystyleApplied)}</span>
       <strong>Anystyle Empty</strong><span>${escapeHtml(anystyleEmpty)}</span>
       <strong>Anystyle Failed</strong><span>${escapeHtml(anystyleFailed)}</span>
+      <strong>Qwen Attempted</strong><span>${escapeHtml(qwenAttempted)}</span>
+      <strong>Qwen Applied</strong><span>${escapeHtml(qwenApplied)}</span>
+      <strong>Qwen Empty</strong><span>${escapeHtml(qwenEmpty)}</span>
+      <strong>Qwen Failed</strong><span>${escapeHtml(qwenFailed)}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
     ${anystyleDisabledReason ? `<div class="empty">Anystyle disabled for remainder of ingest: ${escapeHtml(anystyleDisabledReason)}</div>` : ""}
+    ${qwenDisabledReason ? `<div class="empty">Qwen disabled for remainder of ingest: ${escapeHtml(qwenDisabledReason)}</div>` : ""}
     ${batchResults.length ? `
       <details open>
         <summary>Batch Results (${batchResults.length})</summary>
         <table class="preview-table">
           <thead>
             <tr>
-              <th>Batch</th><th>Input PDFs</th><th>Ingested</th><th>Chunks</th><th>References</th><th>Anystyle Applied</th><th>Anystyle Failed</th><th>Skipped Existing</th><th>Skipped No Metadata</th><th>Failed</th>
+              <th>Batch</th><th>Input PDFs</th><th>Ingested</th><th>Chunks</th><th>References</th><th>Anystyle Applied</th><th>Anystyle Failed</th><th>Qwen Applied</th><th>Qwen Failed</th><th>Skipped Existing</th><th>Skipped No Metadata</th><th>Failed</th>
             </tr>
           </thead>
           <tbody>
@@ -229,6 +240,8 @@ function renderIngestJob(job) {
                 <td>${escapeHtml(b.total_references ?? 0)}</td>
                 <td>${escapeHtml(b.anystyle_applied_pdfs ?? 0)}</td>
                 <td>${escapeHtml(b.anystyle_failed_pdfs ?? 0)}</td>
+                <td>${escapeHtml(b.qwen_applied_pdfs ?? 0)}</td>
+                <td>${escapeHtml(b.qwen_failed_pdfs ?? 0)}</td>
                 <td>${escapeHtml(b.skipped_existing_count ?? 0)}</td>
                 <td>${escapeHtml(b.skipped_no_metadata_count ?? 0)}</td>
                 <td>${escapeHtml(b.failed_count ?? 0)}</td>
@@ -239,6 +252,7 @@ function renderIngestJob(job) {
       </details>
     ` : ""}
     ${anystyleFailureSamples.length ? `<details><summary>Anystyle Failures (${anystyleFailureSamples.length})</summary><ul class="list-box">${anystyleFailureSamples.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
+    ${qwenFailureSamples.length ? `<details><summary>Qwen Failures (${qwenFailureSamples.length})</summary><ul class="list-box">${qwenFailureSamples.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${selected.length ? `<details><summary>Selected PDFs (${selected.length})</summary><ul class="list-box">${selected.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skipped.length ? `<details><summary>Skipped Existing PDFs (${skipped.length})</summary><ul class="list-box">${skipped.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skippedMeta.length ? `<details><summary>Skipped No Metadata PDFs (${skippedMeta.length})</summary><ul class="list-box">${skippedMeta.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
@@ -320,6 +334,7 @@ function renderQueryJob(job) {
 
   const payload = job.result || {};
   const rows = payload.results || [];
+  const limitScope = payload.limit_scope || "chunks";
   if (!rows.length) {
     renderSimpleMessage(results, "Query", "completed", "No results.");
     return;
@@ -328,16 +343,32 @@ function renderQueryJob(job) {
   results.innerHTML = `
     ${statusHeader(job, "Query Results")}
     ${progressBlock(job)}
+    <div class="meta">Scope: ${escapeHtml(limitScope)} | Requested limit: ${escapeHtml(payload.limit ?? rows.length)}</div>
     ${rows
       .map((r, i) => {
+        const scope = r.result_scope || limitScope;
+        const score = Number(r.paper_score ?? r.rerank_score ?? r.combined_score ?? 0);
+        const highlights = Array.isArray(r.highlight_chunks) ? r.highlight_chunks : [];
+        const topChunk = highlights[0] || r;
+        const chunkId = topChunk.chunk_id || r.chunk_id || "";
+        const pageStart = topChunk.page_start || r.page_start || "";
+        const pageEnd = topChunk.page_end || r.page_end || "";
+        const chunkText = topChunk.chunk_text || r.chunk_text || "";
         const cites = (r.cites_out || []).join(", ");
         const citedBy = (r.cited_by || []).join(", ");
+        const matchedChunks = r.paper_chunk_count ?? highlights.length ?? 1;
+        const extraHighlights = highlights
+          .slice(1)
+          .map((h) => `#${h.chunk_index ?? "?"} p.${h.page_start ?? "?"}-${h.page_end ?? "?"}`)
+          .join("; ");
         return `
           <article class="result">
             <strong>[${i + 1}] ${escapeHtml(r.article_title || "Untitled")} (${escapeHtml(r.article_year || "")})</strong>
-            <div class="meta">Author: ${escapeHtml(r.author || "")} | Score: ${escapeHtml((r.combined_score || 0).toFixed(4))}</div>
-            <div class="meta">Chunk: ${escapeHtml(r.chunk_id || "")} | Pages: ${escapeHtml(r.page_start || "")}-${escapeHtml(r.page_end || "")}</div>
-            <p>${escapeHtml((r.chunk_text || "").slice(0, 650))}...</p>
+            <div class="meta">Author: ${escapeHtml(r.author || "")} | ${escapeHtml(scope === "paper" ? "Paper Score" : "Score")}: ${escapeHtml(score.toFixed(4))}</div>
+            <div class="meta">Chunk: ${escapeHtml(chunkId)} | Pages: ${escapeHtml(pageStart)}-${escapeHtml(pageEnd)}</div>
+            ${scope === "paper" ? `<div class="meta">Matched chunks in paper: ${escapeHtml(matchedChunks)}</div>` : ""}
+            ${extraHighlights ? `<div class="meta"><strong>Extra highlights:</strong> ${escapeHtml(extraHighlights)}</div>` : ""}
+            <p>${escapeHtml(chunkText.slice(0, 650))}...</p>
             ${cites ? `<div class="meta"><strong>Cites:</strong> ${escapeHtml(cites)}</div>` : ""}
             ${citedBy ? `<div class="meta"><strong>Cited by:</strong> ${escapeHtml(citedBy)}</div>` : ""}
           </article>
@@ -359,6 +390,7 @@ function renderAskResult(payload) {
     <div class="kv">
       <strong>Model</strong><span>${escapeHtml(payload?.model || "")}</span>
       <strong>Search Query Used</strong><span>${escapeHtml(payload?.search_query_used || payload?.question || "")}</span>
+      <strong>Preprocess Backend</strong><span>${escapeHtml(preprocess.backend || "openai")}</span>
       <strong>Preprocess Method</strong><span>${escapeHtml(preprocess.method || "identity")}</span>
       <strong>RAG Results Used</strong><span>${escapeHtml(payload?.rag_results_count ?? 0)}</span>
       <strong>Citations Referenced</strong><span>${escapeHtml(used.length)}</span>
@@ -567,9 +599,16 @@ document.getElementById("ingestStopBtn").addEventListener("click", async () => {
 
 document.getElementById("queryBtn").addEventListener("click", async () => {
   const query = document.getElementById("queryText").value.trim();
-  const limit = parseInt(document.getElementById("queryLimit").value || "5", 10);
+  const limit = parseInt(document.getElementById("queryLimit").value || "20", 10);
+  const limitScope = document.getElementById("queryLimitScope").value || "papers";
+  const chunksPerPaper = parseInt(document.getElementById("queryChunksPerPaper").value || "1", 10);
   try {
-    await api("/api/query", { query, limit });
+    await api("/api/query", {
+      query,
+      limit,
+      limit_scope: limitScope,
+      chunks_per_paper: Number.isNaN(chunksPerPaper) ? 1 : Math.max(1, chunksPerPaper),
+    });
     renderSimpleMessage(document.getElementById("queryResults"), "Query", "running", "Starting query...");
     startPolling("query", (job) => {
       renderQueryJob(job);

@@ -13,6 +13,8 @@ from .config import Settings
 from .neo4j_store import GraphStore
 from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
 from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
+from .qwen_local import extract_citations_with_qwen
+from .qwen_structured_refs import extract_structured_chunks_and_citations
 
 
 @dataclass
@@ -31,6 +33,12 @@ class IngestSummary:
     anystyle_failed_pdfs: int = 0
     anystyle_disabled_reason: str | None = None
     anystyle_failure_samples: list[str] = field(default_factory=list)
+    qwen_attempted_pdfs: int = 0
+    qwen_applied_pdfs: int = 0
+    qwen_empty_pdfs: int = 0
+    qwen_failed_pdfs: int = 0
+    qwen_disabled_reason: str | None = None
+    qwen_failure_samples: list[str] = field(default_factory=list)
 
 
 def _cache_dir() -> Path:
@@ -70,6 +78,65 @@ def _anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
             str(stat.st_mtime_ns),
             str(stat.st_size),
             settings.anystyle_service,
+            settings.anystyle_gpu_service,
+            str(settings.anystyle_timeout_seconds),
+            str(int(settings.anystyle_use_gpu)),
+            settings.anystyle_gpu_devices,
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _qwen_cache_dir() -> Path:
+    p = Path(".cache") / "qwen_refs"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _qwen_structured_cache_dir() -> Path:
+    p = Path(".cache") / "qwen_structured_refs"
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
+def _qwen_cache_key(pdf_path: Path, settings: Settings) -> str:
+    stat = pdf_path.stat()
+    raw = "|".join(
+        [
+            str(pdf_path.resolve()),
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            settings.qwen_model_path,
+            settings.qwen_citation_model_path,
+            settings.qwen_citation_adapter_path,
+            str(settings.qwen_citation_batch_size),
+            str(settings.qwen_citation_max_new_tokens),
+        ]
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _qwen_structured_cache_key(pdf_path: Path, settings: Settings) -> str:
+    stat = pdf_path.stat()
+    raw = "|".join(
+        [
+            str(pdf_path.resolve()),
+            str(stat.st_mtime_ns),
+            str(stat.st_size),
+            settings.qwen_model_path,
+            settings.qwen_citation_model_path,
+            settings.qwen_citation_adapter_path,
+            str(settings.qwen_citation_batch_size),
+            str(settings.qwen_citation_max_new_tokens),
+            str(settings.qwen_max_input_chars),
+            str(settings.chunk_size_words),
+            str(settings.chunk_overlap_words),
+            str(int(settings.chunk_strip_page_noise)),
+            settings.anystyle_service,
+            settings.anystyle_gpu_service,
+            str(settings.anystyle_timeout_seconds),
+            str(int(settings.anystyle_use_gpu)),
+            settings.anystyle_gpu_devices,
         ]
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -92,15 +159,91 @@ def _load_anystyle_citations_cached(pdf_path: Path, settings: Settings) -> list[
         pdf_path,
         compose_service=settings.anystyle_service,
         timeout_seconds=settings.anystyle_timeout_seconds,
+        use_gpu=settings.anystyle_use_gpu,
+        gpu_devices=settings.anystyle_gpu_devices,
+        gpu_service=settings.anystyle_gpu_service,
     )
     with cache_file.open("w", encoding="utf-8") as f:
         json.dump([asdict(c) for c in citations], f, ensure_ascii=False)
     return citations
 
 
-def _use_anystyle(settings: Settings) -> bool:
+def _load_qwen_citations_cached(
+    pdf_path: Path,
+    article_id: str,
+    candidates: list[Citation],
+    settings: Settings,
+) -> list[Citation]:
+    key = _qwen_cache_key(pdf_path, settings)
+    cache_file = _qwen_cache_dir() / f"{key}.json"
+    if cache_file.exists():
+        with cache_file.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, list):
+            return _deserialize_citations(payload)
+
+    citations = extract_citations_with_qwen(
+        article_id=article_id,
+        citation_candidates=candidates,
+        settings=settings,
+    )
+    with cache_file.open("w", encoding="utf-8") as f:
+        json.dump([asdict(c) for c in citations], f, ensure_ascii=False)
+    return citations
+
+
+def _load_qwen_structured_anystyle_cached(
+    pdf_path: Path,
+    article_id: str,
+    settings: Settings,
+) -> tuple[list[Chunk], list[Citation]]:
+    key = _qwen_structured_cache_key(pdf_path, settings)
+    cache_file = _qwen_structured_cache_dir() / f"{key}.json"
+    if cache_file.exists():
+        with cache_file.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+        if isinstance(payload, dict):
+            chunk_items = payload.get("chunks")
+            citation_items = payload.get("citations")
+            if isinstance(chunk_items, list) and isinstance(citation_items, list):
+                return [Chunk(**x) for x in chunk_items], _deserialize_citations(citation_items)
+
+    structured = extract_structured_chunks_and_citations(
+        pdf_path=pdf_path,
+        article_id=article_id,
+        settings=settings,
+        chunk_size_words=settings.chunk_size_words,
+        chunk_overlap_words=settings.chunk_overlap_words,
+        strip_page_noise=settings.chunk_strip_page_noise,
+    )
+    with cache_file.open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "chunks": [asdict(c) for c in structured.chunks],
+                "citations": [asdict(c) for c in structured.citations],
+                "reference_strings_count": len(structured.reference_strings),
+            },
+            f,
+            ensure_ascii=False,
+        )
+    return structured.chunks, structured.citations
+
+
+def _citation_parser_mode(settings: Settings) -> str:
     mode = (settings.citation_parser or "").strip().lower()
-    return mode not in {"heuristic", "builtin", "built-in", "default"}
+    if mode in {"heuristic", "builtin", "built-in", "default"}:
+        return "heuristic"
+    if mode in {"qwen", "qwen3", "qwen_lora", "qwen3_lora", "local_qwen"}:
+        return "qwen"
+    if mode in {
+        "qwen_anystyle",
+        "qwen_split_anystyle",
+        "qwen_refsplit_anystyle",
+        "qwen_section_anystyle",
+        "qwen_structured_anystyle",
+    }:
+        return "qwen_anystyle"
+    return "anystyle"
 
 
 def _is_global_anystyle_failure(msg: str) -> bool:
@@ -112,6 +255,19 @@ def _is_global_anystyle_failure(msg: str) -> bool:
         "permission denied while trying to connect to the docker daemon",
         "no such service",
         "no configuration file provided",
+    )
+    return any(marker in text for marker in markers)
+
+
+def _is_global_qwen_failure(msg: str) -> bool:
+    text = (msg or "").lower()
+    markers = (
+        "qwen model path is not configured",
+        "qwen3 model path is not configured",
+        "qwen path not found",
+        "peft is required",
+        "out of memory",
+        "cuda error",
     )
     return any(marker in text for marker in markers)
 
@@ -279,7 +435,7 @@ def ingest_pdfs(
     citation_overrides: dict[str, list[Citation]] | None = None,
 ) -> IngestSummary:
     settings = settings or Settings()
-    use_anystyle = _use_anystyle(settings)
+    parser_mode = _citation_parser_mode(settings)
     paperpile_index = load_paperpile_index(settings.paperpile_json)
     existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
     skipped_existing = [str(p) for p in selected_pdfs if p.stem in existing_ids]
@@ -309,6 +465,12 @@ def ingest_pdfs(
     anystyle_failed = 0
     anystyle_failure_samples: list[str] = []
     anystyle_disabled_reason: str | None = None
+    qwen_attempted = 0
+    qwen_applied = 0
+    qwen_empty = 0
+    qwen_failed = 0
+    qwen_failure_samples: list[str] = []
+    qwen_disabled_reason: str | None = None
     total_steps = max(1, len(selected_pdfs) * 2)
     parse_done = 0
     for p in selected_pdfs:
@@ -325,7 +487,7 @@ def ingest_pdfs(
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
                 citation_override_pdfs += 1
-            elif use_anystyle and not anystyle_disabled_reason:
+            elif parser_mode == "anystyle" and not anystyle_disabled_reason:
                 anystyle_attempted += 1
                 try:
                     extracted = _load_anystyle_citations_cached(p, settings)
@@ -341,6 +503,61 @@ def ingest_pdfs(
                         anystyle_failure_samples.append(f"{p.name}: {err}")
                     if settings.anystyle_require_success:
                         raise
+                    if _is_global_anystyle_failure(err):
+                        anystyle_disabled_reason = err
+            elif parser_mode == "qwen" and not qwen_disabled_reason:
+                qwen_attempted += 1
+                try:
+                    extracted = _load_qwen_citations_cached(
+                        pdf_path=p,
+                        article_id=article.article_id,
+                        candidates=article.citations,
+                        settings=settings,
+                    )
+                    if extracted:
+                        article.citations = extracted
+                        qwen_applied += 1
+                    else:
+                        qwen_empty += 1
+                except Exception as exc:
+                    qwen_failed += 1
+                    err = str(exc)
+                    if len(qwen_failure_samples) < 10:
+                        qwen_failure_samples.append(f"{p.name}: {err}")
+                    if settings.qwen_require_success:
+                        raise
+                    if _is_global_qwen_failure(err):
+                        qwen_disabled_reason = err
+            elif parser_mode == "qwen_anystyle" and not qwen_disabled_reason and not anystyle_disabled_reason:
+                qwen_attempted += 1
+                anystyle_attempted += 1
+                try:
+                    structured_chunks, structured_citations = _load_qwen_structured_anystyle_cached(
+                        pdf_path=p,
+                        article_id=article.article_id,
+                        settings=settings,
+                    )
+                    if structured_chunks:
+                        article.chunks = structured_chunks
+                    if structured_citations:
+                        article.citations = structured_citations
+                        qwen_applied += 1
+                        anystyle_applied += 1
+                    else:
+                        qwen_empty += 1
+                        anystyle_empty += 1
+                except Exception as exc:
+                    err = str(exc)
+                    qwen_failed += 1
+                    anystyle_failed += 1
+                    if len(qwen_failure_samples) < 10:
+                        qwen_failure_samples.append(f"{p.name}: {err}")
+                    if len(anystyle_failure_samples) < 10:
+                        anystyle_failure_samples.append(f"{p.name}: {err}")
+                    if settings.qwen_require_success or settings.anystyle_require_success:
+                        raise
+                    if _is_global_qwen_failure(err):
+                        qwen_disabled_reason = err
                     if _is_global_anystyle_failure(err):
                         anystyle_disabled_reason = err
             article.citations = filter_citations(
@@ -402,4 +619,10 @@ def ingest_pdfs(
         anystyle_failed_pdfs=anystyle_failed,
         anystyle_disabled_reason=anystyle_disabled_reason,
         anystyle_failure_samples=anystyle_failure_samples,
+        qwen_attempted_pdfs=qwen_attempted,
+        qwen_applied_pdfs=qwen_applied,
+        qwen_empty_pdfs=qwen_empty,
+        qwen_failed_pdfs=qwen_failed,
+        qwen_disabled_reason=qwen_disabled_reason,
+        qwen_failure_samples=qwen_failure_samples,
     )

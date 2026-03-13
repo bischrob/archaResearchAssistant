@@ -11,6 +11,7 @@
 - Ensures Docker + compose availability.
 - Starts `neo4j` container if needed.
 - Runs schema init script.
+- Auto-selects an open web port (starting from `PORT` or `8000`) and exports it.
 - Launches uvicorn script.
 
 ## `scripts/run_web_gui.sh`

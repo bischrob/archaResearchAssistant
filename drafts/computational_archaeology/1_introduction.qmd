@@ -1,34 +1,8 @@
 ---
-title: "1. Introduction"
+title: "Introduction"
 ---
 
-# 1. Introduction
-
-
-## Learning Objectives
-
-By the end of this chapter, you should be able to:
-
-- Explain what computational archaeology is, in terms that connect directly to computer science concepts. [@Kintigh2015-rs][@Brughmans2023-uj]
-- Describe why digital data management and modeling are central problems in contemporary archaeology. [@Kansa2014-pj][@Kansa2022-pw]
-- Outline a basic archaeological data lifecycle from creation through reuse, including preservation and curation. [@Kansa2014-pj][@Kintigh2015-rs][@Kansa2022-pw]
-- Explain what is meant by “network science” and “network models” in an archaeological context. [@Brughmans2023-uj][@Peeples2019-ay][@Brughmans2017-ry][@Collar2015-op][@Collar2015-op][@Peeples2024-er][@Brandes2013-vd]
-- Describe the role of agent-based modeling (ABM) as a simulation method for explaining past systems in archaeology. [@Lake2015-qd][@Brughmans2017-ry][@Peeples2024-er]
-- Recognize where machine learning–style data tasks naturally arise in archaeological data work, while staying grounded in data modeling and quality practices. [@Kansa2014-pj][@Kansa2022-pw][@Costello2009-jz][@Brandes2013-vd]
-
----
-
-## How the Book Is Structured
-
-This book progresses from foundations to advanced methods and then to applied design. Chapters 2-4 establish data, programming, and statistical reasoning; Chapters 5-8 cover core computational methods (machine learning, GIS, network science, and agent-based modeling); Chapters 9-10 address validation, uncertainty, and governance; Chapters 11-12 synthesize these skills in projects and future-facing research directions.
-
-Throughout the book, the same workflow logic is reused: define the archaeological question, model the data, implement and validate methods, interpret uncertainty, and document ethical and reproducible practice. [@Kansa2014-pj][@Kansa2022-pw][@Nicholson2023-oq][@Carroll2020-fy]
-
----
-
-## Core Ideas
-
-### 1.1 What Is Computational Archaeology?
+# Introduction
 
 Computational archaeology is an approach to archaeological research that relies on formal data management, quantitative analysis, and modeling techniques, drawing heavily on methods and collaborations from computer science. [@Kintigh2015-rs][@Brughmans2023-uj][@Peeples2019-ay][@Brughmans2017-ry]
 

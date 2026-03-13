@@ -18,7 +18,7 @@ Build citation-tagged context, call OpenAI chat completions, and enforce citatio
 5. If enforcement enabled and no citations found, replace answer with failure message.
 
 ## Query preprocess flow
-- Calls OpenAI to rewrite question into a structured directive line.
+- Calls configured backend (`QUERY_PREPROCESS_BACKEND=openai|qwen`) to rewrite question into a structured directive line.
 - Extracts `authors|years|title_terms|content_terms` fields.
 - Cleans boolean symbols/operators and composes a compact search query string.
 - Falls back to sanitized raw response or original question.
@@ -27,6 +27,7 @@ Build citation-tagged context, call OpenAI chat completions, and enforce citatio
 - Missing `OPENAI_API_KEY` raises runtime error.
 - API errors bubble as runtime errors with partial response body.
 - Model output format drift can degrade rewrite quality.
+- Missing/invalid Qwen model or adapter path raises runtime error when Qwen preprocess is enabled.
 
 ## Extension points
 - Move to OpenAI SDK and structured outputs for stronger parsing guarantees.

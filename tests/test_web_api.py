@@ -50,11 +50,20 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
     monkeypatch.setattr(webmain, "SYNC_SCRIPT", script)
     monkeypatch.setattr(webmain, "_count_remote_pdfs", lambda _remote: None)
 
+    class FakeStream:
+        def readline(self):
+            return ""
+
+        def close(self):
+            return None
+
     class FakePopen:
         def __init__(self, *args, **kwargs):
             self._done = False
             self._terminated = False
             self.returncode = None
+            self.stdout = FakeStream()
+            self.stderr = FakeStream()
 
         def poll(self):
             if self._terminated:
@@ -249,10 +258,19 @@ def test_query_validation_and_success(monkeypatch, client):
     bad = client.post("/api/query", json={"query": "   ", "limit": 5})
     assert bad.status_code == 400
 
+    captured = {}
+
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1):
+        captured["query"] = query
+        captured["limit"] = limit
+        captured["limit_scope"] = limit_scope
+        captured["chunks_per_paper"] = chunks_per_paper
+        return [{"chunk_id": "c1", "combined_score": 1.0, "article_title": "A"}]
+
     monkeypatch.setattr(
         webmain,
         "contextual_retrieve",
-        lambda store, query, limit: [{"chunk_id": "c1", "combined_score": 1.0, "article_title": "A"}],
+        fake_retrieve,
     )
 
     class FakeStore:
@@ -264,19 +282,25 @@ def test_query_validation_and_success(monkeypatch, client):
 
     monkeypatch.setattr(webmain, "GraphStore", FakeStore)
 
-    ok = client.post("/api/query", json={"query": "chronology", "limit": 5})
+    ok = client.post("/api/query", json={"query": "chronology"})
     assert ok.status_code == 200
     final = wait_for_status(client, "/api/query/status")
     assert final["status"] == "completed"
     assert len(final["result"]["results"]) == 1
+    assert captured["query"] == "chronology"
+    assert captured["limit"] == 20
+    assert captured["limit_scope"] == "papers"
+    assert captured["chunks_per_paper"] == 1
 
 
 def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     captured = {}
 
-    def fake_retrieve(store, query, limit):
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1):
         captured["query"] = query
         captured["limit"] = limit
+        captured["limit_scope"] = limit_scope
+        captured["chunks_per_paper"] = chunks_per_paper
         return [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020}]
 
     monkeypatch.setattr(
@@ -319,6 +343,8 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     assert data["search_query_used"] == "What is this? bischoff archaeology"
     assert data["query_preprocess"]["method"] == "llm_rewrite"
     assert captured["query"] == "What is this? bischoff archaeology"
+    assert captured["limit_scope"] == "chunks"
+    assert captured["chunks_per_paper"] == 1
 
 
 def test_ask_export_markdown_and_csv(client):

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 from typing import Any
 
 from .pdf_processing import Citation, normalize_title
@@ -11,10 +13,30 @@ from .pdf_processing import Citation, normalize_title
 
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 DOI_RE = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
+ANYSTYLE_BIN = "/usr/local/bundle/bin/anystyle"
 
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _resolve_compose_service(
+    compose_service: str,
+    *,
+    use_gpu: bool,
+    gpu_service: str,
+) -> str:
+    if use_gpu:
+        return (gpu_service or "").strip() or "anystyle-gpu"
+    return (compose_service or "").strip() or "anystyle"
+
+
+def _compose_run_env(*, use_gpu: bool, gpu_devices: str) -> dict[str, str] | None:
+    if not use_gpu:
+        return None
+    env = dict(os.environ)
+    env["ANYSTYLE_GPU_DEVICES"] = (gpu_devices or "all").strip() or "all"
+    return env
 
 
 def _string_values(value: Any) -> list[str]:
@@ -89,13 +111,21 @@ def _extract_author_tokens(entry: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(out))
 
 
-def parse_anystyle_json_payload(payload: list[Any], article_id: str) -> list[Citation]:
+def parse_anystyle_json_payload(
+    payload: list[Any],
+    article_id: str,
+    *,
+    raw_references: list[str] | None = None,
+) -> list[Citation]:
     citations: list[Citation] = []
     for idx, row in enumerate(payload):
         if not isinstance(row, dict):
             continue
         title_guess = _extract_title(row)
-        raw_text = json.dumps(row, ensure_ascii=False, sort_keys=True)
+        if raw_references is not None and idx < len(raw_references):
+            raw_text = str(raw_references[idx] or "").strip()
+        else:
+            raw_text = json.dumps(row, ensure_ascii=False, sort_keys=True)
         if not title_guess:
             title_guess = raw_text[:120]
         citations.append(
@@ -114,11 +144,110 @@ def parse_anystyle_json_payload(payload: list[Any], article_id: str) -> list[Cit
     return citations
 
 
+def parse_reference_strings_with_anystyle_docker(
+    references: list[str],
+    *,
+    article_id: str,
+    compose_service: str = "anystyle",
+    timeout_seconds: int = 240,
+    use_gpu: bool = False,
+    gpu_devices: str = "all",
+    gpu_service: str = "anystyle-gpu",
+    project_root: Path | None = None,
+) -> list[Citation]:
+    cleaned = [" ".join((x or "").split()).strip() for x in references]
+    cleaned = [x for x in cleaned if x]
+    if not cleaned:
+        return []
+
+    root = (project_root or _project_root()).resolve()
+    cache_dir = (root / ".cache" / "anystyle_refs")
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        encoding="utf-8",
+        suffix=".txt",
+        prefix="anystyle_refs_",
+        dir=cache_dir,
+        delete=False,
+    ) as f:
+        for row in cleaned:
+            f.write(row.replace("\n", " ").strip() + "\n")
+        input_path = Path(f.name).resolve()
+
+    try:
+        rel_input = input_path.relative_to(root)
+    except ValueError as exc:
+        try:
+            input_path.unlink(missing_ok=True)
+        finally:
+            raise ValueError(f"Temporary input path must be inside project root {root}: {input_path}") from exc
+
+    container_input = f"/workspace/{rel_input.as_posix()}"
+    service_name = _resolve_compose_service(
+        compose_service,
+        use_gpu=use_gpu,
+        gpu_service=gpu_service,
+    )
+    cmd = [
+        "docker",
+        "compose",
+        "run",
+        "--rm",
+        "--no-deps",
+        "-T",
+        "-v",
+        f"{root}:/workspace",
+        service_name,
+        ANYSTYLE_BIN,
+        "--stdout",
+        "-f",
+        "json",
+        "parse",
+        container_input,
+    ]
+    try:
+        proc = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            env=_compose_run_env(use_gpu=use_gpu, gpu_devices=gpu_devices),
+            timeout=max(1, int(timeout_seconds)),
+            check=False,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("Docker CLI is not installed or not available in PATH.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"Anystyle parse timed out after {timeout_seconds}s.") from exc
+    finally:
+        input_path.unlink(missing_ok=True)
+
+    if proc.returncode != 0:
+        stderr = (proc.stderr or "").strip()
+        raise RuntimeError(f"Anystyle parse failed with exit code {proc.returncode}: {stderr[-500:]}")
+
+    raw = (proc.stdout or "").strip()
+    if not raw:
+        return []
+    try:
+        payload = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("Anystyle parse returned non-JSON output.") from exc
+    if not isinstance(payload, list):
+        raise RuntimeError(f"Anystyle parse returned unexpected payload type: {type(payload)!r}")
+
+    return parse_anystyle_json_payload(payload, article_id=article_id, raw_references=cleaned)
+
+
 def extract_citations_with_anystyle_docker(
     pdf_path: Path,
     *,
     compose_service: str = "anystyle",
     timeout_seconds: int = 240,
+    use_gpu: bool = False,
+    gpu_devices: str = "all",
+    gpu_service: str = "anystyle-gpu",
     project_root: Path | None = None,
 ) -> list[Citation]:
     root = (project_root or _project_root()).resolve()
@@ -129,6 +258,11 @@ def extract_citations_with_anystyle_docker(
         raise ValueError(f"PDF path must be inside project root {root}: {resolved_pdf}") from exc
 
     container_pdf = f"/workspace/{rel_pdf.as_posix()}"
+    service_name = _resolve_compose_service(
+        compose_service,
+        use_gpu=use_gpu,
+        gpu_service=gpu_service,
+    )
     cmd = [
         "docker",
         "compose",
@@ -138,8 +272,8 @@ def extract_citations_with_anystyle_docker(
         "-T",
         "-v",
         f"{root}:/workspace",
-        compose_service,
-        "anystyle",
+        service_name,
+        ANYSTYLE_BIN,
         "--stdout",
         "-f",
         "json",
@@ -153,6 +287,7 @@ def extract_citations_with_anystyle_docker(
             cwd=root,
             capture_output=True,
             text=True,
+            env=_compose_run_env(use_gpu=use_gpu, gpu_devices=gpu_devices),
             timeout=max(1, int(timeout_seconds)),
             check=False,
         )

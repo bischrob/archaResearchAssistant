@@ -110,9 +110,79 @@ def rerank_hits(query: str, hits: list[dict[str, Any]], top_k: int, plan: dict[s
     return sorted(hits, key=lambda x: x.get("rerank_score", 0.0), reverse=True)[:top_k]
 
 
-def contextual_retrieve(store: GraphStore, query: str, limit: int = 8) -> list[dict[str, Any]]:
+def _row_score(row: dict[str, Any]) -> float:
+    return float(row.get("rerank_score", row.get("combined_score", 0.0)))
+
+
+def _article_key(row: dict[str, Any]) -> str:
+    for field in ("article_id", "article_citekey", "article_doi", "article_source_path", "article_title"):
+        value = str(row.get(field) or "").strip()
+        if value:
+            return f"{field}:{value.lower()}"
+    return f"chunk:{str(row.get('chunk_id') or '').strip().lower()}"
+
+
+def _paper_results(rows: list[dict[str, Any]], limit: int, chunks_per_paper: int) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(_article_key(row), []).append(row)
+
+    papers: list[dict[str, Any]] = []
+    for group_rows in grouped.values():
+        ranked_chunks = sorted(group_rows, key=_row_score, reverse=True)
+        top = ranked_chunks[0]
+        top_scores = [_row_score(r) for r in ranked_chunks[:2]]
+        mean_top = sum(top_scores) / max(1, len(top_scores))
+        source_diversity = len({src for r in ranked_chunks for src in (r.get("retrieval_sources") or [])})
+        paper_score = _row_score(top) + (0.2 * mean_top) + (0.06 * source_diversity)
+
+        highlights = []
+        for row in ranked_chunks[:chunks_per_paper]:
+            highlights.append(
+                {
+                    "chunk_id": row.get("chunk_id"),
+                    "chunk_index": row.get("chunk_index"),
+                    "page_start": row.get("page_start"),
+                    "page_end": row.get("page_end"),
+                    "chunk_text": row.get("chunk_text"),
+                    "score": round(_row_score(row), 6),
+                    "retrieval_sources": row.get("retrieval_sources") or [],
+                }
+            )
+
+        paper = dict(top)
+        paper["result_scope"] = "paper"
+        paper["paper_score"] = round(paper_score, 6)
+        paper["paper_chunk_count"] = len(ranked_chunks)
+        paper["paper_retrieval_sources"] = sorted(
+            {src for row in ranked_chunks for src in (row.get("retrieval_sources") or [])}
+        )
+        paper["highlight_chunks"] = highlights
+        # Keep compatibility with existing UI that reads `combined_score`.
+        paper["combined_score"] = paper["paper_score"]
+        paper["rerank_score"] = paper["paper_score"]
+        papers.append(paper)
+
+    papers.sort(key=lambda row: row.get("paper_score", 0.0), reverse=True)
+    return papers[:limit]
+
+
+def contextual_retrieve(
+    store: GraphStore,
+    query: str,
+    limit: int = 8,
+    limit_scope: str = "chunks",
+    chunks_per_paper: int = 1,
+) -> list[dict[str, Any]]:
+    scope = (limit_scope or "chunks").strip().lower()
+    if scope not in {"chunks", "papers"}:
+        scope = "chunks"
+    chunks_per_paper = max(1, int(chunks_per_paper))
+
     plan = parse_query_terms(query)
-    candidate_k = max(limit * 5, 25)
+    candidate_k = max(limit * (8 if scope == "papers" else 5), 80 if scope == "papers" else 25)
+    rerank_limit = max(limit * 8, 80) if scope == "papers" else limit
+
     vector_hits = store.vector_query(query, limit=candidate_k)
     token_hits = store.token_query(plan["tokens"], limit=candidate_k)
     author_hits = store.author_query(plan["author_terms"], limit=candidate_k)
@@ -179,7 +249,7 @@ def contextual_retrieve(store: GraphStore, query: str, limit: int = 8) -> list[d
         if strict:
             ranked = strict
 
-    primary = rerank_hits(query, ranked, top_k=limit, plan=plan)
+    primary = rerank_hits(query, ranked, top_k=min(rerank_limit, len(ranked)), plan=plan)
 
     # Low-confidence fallback: if no top row meaningfully matches title/author fields,
     # force-add author channel candidates and rerank.
@@ -193,8 +263,15 @@ def contextual_retrieve(store: GraphStore, query: str, limit: int = 8) -> list[d
     )
     if max_signal < 0.15 and author_hits:
         merged = dict(by_chunk)
-        for row in author_hits[: max(limit * 2, 10)]:
+        for row in author_hits[: max(limit * (4 if scope == "papers" else 2), 10)]:
             merged[row["chunk_id"]] = merged.get(row["chunk_id"], row)
-        primary = rerank_hits(query, list(merged.values()), top_k=limit, plan=plan)
+        primary = rerank_hits(
+            query,
+            list(merged.values()),
+            top_k=min(rerank_limit, len(merged)),
+            plan=plan,
+        )
 
-    return primary
+    if scope == "papers":
+        return _paper_results(primary, limit=limit, chunks_per_paper=chunks_per_paper)
+    return primary[:limit]

@@ -44,3 +44,18 @@ services:
     build:
       context: anystyle
     restart: unless-stopped
+
+  anystyle-gpu:
+    image: ruby:3.3
+    container_name: anystyle-gpu
+    command: [ "/bin/bash" ]
+    stdin_open: true
+    tty: true
+    volumes:
+      - /home/rjbischo/researchAssistant/tmp:/tmp
+    environment:
+      - LANG=C.UTF-8
+    build:
+      context: anystyle
+    gpus: ${ANYSTYLE_GPU_DEVICES:-all}
+    restart: unless-stopped
