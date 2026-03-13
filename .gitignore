@@ -9,6 +9,7 @@ Thumbs.db
 
 # Python
 __pycache__/
+.cache/
 *.py[cod]
 *.pyo
 *.pyd
@@ -34,11 +35,15 @@ researchenv/
 
 # Logs / temp
 *.log
+logs/
 tmp/
 temp/
 *.tmp
 
 # Local project data and generated outputs
+data/
+models/
+corrections/
 db/*
 pdfs/
 jsons/
@@ -59,6 +64,7 @@ pdfs.pkl
 *.tif
 *.tiff
 *.Identifier
+*:Zone.Identifier
 
 # files
 missing_metadata_pdfs.csv

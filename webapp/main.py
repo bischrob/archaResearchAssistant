@@ -56,7 +56,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.02.22.033455")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.13.044912")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -80,7 +80,9 @@ class IngestRequest(BaseModel):
 
 class QueryRequest(BaseModel):
     query: str
-    limit: int = Field(default=5, ge=1, le=20)
+    limit: int = Field(default=20, ge=1, le=20)
+    limit_scope: str = Field(default="papers", pattern="^(papers|chunks)$")
+    chunks_per_paper: int = Field(default=1, ge=1, le=5)
 
 
 class ArticleLookupRequest(BaseModel):
@@ -485,6 +487,12 @@ def ingest(req: IngestRequest) -> dict:
             "anystyle_failed_pdfs": 0,
             "anystyle_disabled_reason": None,
             "anystyle_failure_samples": [],
+            "qwen_attempted_pdfs": 0,
+            "qwen_applied_pdfs": 0,
+            "qwen_empty_pdfs": 0,
+            "qwen_failed_pdfs": 0,
+            "qwen_disabled_reason": None,
+            "qwen_failure_samples": [],
         }
 
         if mode == "all":
@@ -525,6 +533,10 @@ def ingest(req: IngestRequest) -> dict:
                     "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
                     "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
                     "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
+                    "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
+                    "qwen_applied_pdfs": summary.qwen_applied_pdfs,
+                    "qwen_empty_pdfs": summary.qwen_empty_pdfs,
+                    "qwen_failed_pdfs": summary.qwen_failed_pdfs,
                 }
             )
             agg["ingested_articles"] += summary.ingested_articles
@@ -543,6 +555,14 @@ def ingest(req: IngestRequest) -> dict:
                 agg["anystyle_disabled_reason"] = summary.anystyle_disabled_reason
             if summary.anystyle_failure_samples:
                 agg["anystyle_failure_samples"].extend(summary.anystyle_failure_samples)
+            agg["qwen_attempted_pdfs"] += summary.qwen_attempted_pdfs
+            agg["qwen_applied_pdfs"] += summary.qwen_applied_pdfs
+            agg["qwen_empty_pdfs"] += summary.qwen_empty_pdfs
+            agg["qwen_failed_pdfs"] += summary.qwen_failed_pdfs
+            if summary.qwen_disabled_reason and not agg["qwen_disabled_reason"]:
+                agg["qwen_disabled_reason"] = summary.qwen_disabled_reason
+            if summary.qwen_failure_samples:
+                agg["qwen_failure_samples"].extend(summary.qwen_failure_samples)
             partial_summary = {
                 "mode": mode,
                 "batch_size": batch_size,
@@ -562,6 +582,12 @@ def ingest(req: IngestRequest) -> dict:
                 "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
                 "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
                 "anystyle_failure_samples": list(agg["anystyle_failure_samples"])[:30],
+                "qwen_attempted_pdfs": agg["qwen_attempted_pdfs"],
+                "qwen_applied_pdfs": agg["qwen_applied_pdfs"],
+                "qwen_empty_pdfs": agg["qwen_empty_pdfs"],
+                "qwen_failed_pdfs": agg["qwen_failed_pdfs"],
+                "qwen_disabled_reason": agg["qwen_disabled_reason"],
+                "qwen_failure_samples": list(agg["qwen_failure_samples"])[:30],
             }
             with jobs._lock:
                 job.result = {"ok": True, "summary": partial_summary}
@@ -596,6 +622,12 @@ def ingest(req: IngestRequest) -> dict:
                 "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
                 "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
                 "anystyle_failure_samples": agg["anystyle_failure_samples"][:30],
+                "qwen_attempted_pdfs": agg["qwen_attempted_pdfs"],
+                "qwen_applied_pdfs": agg["qwen_applied_pdfs"],
+                "qwen_empty_pdfs": agg["qwen_empty_pdfs"],
+                "qwen_failed_pdfs": agg["qwen_failed_pdfs"],
+                "qwen_disabled_reason": agg["qwen_disabled_reason"],
+                "qwen_failure_samples": agg["qwen_failure_samples"][:30],
             },
         }
 
@@ -743,13 +775,26 @@ def query(req: QueryRequest) -> dict:
         settings = Settings()
         store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
         try:
-            rows = contextual_retrieve(store, req.query, req.limit)
+            rows = contextual_retrieve(
+                store,
+                req.query,
+                req.limit,
+                limit_scope=req.limit_scope,
+                chunks_per_paper=req.chunks_per_paper,
+            )
         finally:
             store.close()
         if job.cancel_event.is_set():
             raise RuntimeError("Query cancelled by user.")
         jobs.set_progress("query", 100.0, "Query complete")
-        return {"ok": True, "query": req.query, "results": rows}
+        return {
+            "ok": True,
+            "query": req.query,
+            "limit": req.limit,
+            "limit_scope": req.limit_scope,
+            "chunks_per_paper": req.chunks_per_paper,
+            "results": rows,
+        }
 
     return jobs.start("query", run)
 
@@ -760,10 +805,12 @@ def ask(req: AskRequest) -> dict:
     if not question:
         raise HTTPException(status_code=400, detail="Question cannot be empty.")
 
+    settings = Settings()
     search_query_used = question
     preprocess_meta: dict[str, Any] = {
         "enabled": req.preprocess_search,
         "method": "identity",
+        "backend": settings.query_preprocess_backend,
         "error": None,
     }
     if req.preprocess_search:
@@ -778,10 +825,16 @@ def ask(req: AskRequest) -> dict:
             preprocess_meta["method"] = "fallback_original"
             preprocess_meta["error"] = str(exc)
 
-    settings = Settings()
     store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
     try:
-        rag_rows = contextual_retrieve(store, search_query_used, limit=req.rag_results)
+        # Ask keeps chunk-mode retrieval for richer grounding context.
+        rag_rows = contextual_retrieve(
+            store,
+            search_query_used,
+            limit=req.rag_results,
+            limit_scope="chunks",
+            chunks_per_paper=1,
+        )
     finally:
         store.close()
 
