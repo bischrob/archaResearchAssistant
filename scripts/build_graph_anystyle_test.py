@@ -52,6 +52,11 @@ def parse_args() -> argparse.Namespace:
         help="Docker compose service name to run Anystyle from.",
     )
     parser.add_argument(
+        "--anystyle-gpu-service",
+        default="anystyle-gpu",
+        help="Docker compose service name to run Anystyle GPU parsing from.",
+    )
+    parser.add_argument(
         "--anystyle-timeout",
         type=int,
         default=240,
@@ -61,6 +66,16 @@ def parse_args() -> argparse.Namespace:
         "--require-anystyle",
         action="store_true",
         help="Fail instead of falling back to built-in citation extraction when Anystyle errors.",
+    )
+    parser.add_argument(
+        "--anystyle-use-gpu",
+        action="store_true",
+        help="Run Anystyle container with Docker GPU access (`--gpus`).",
+    )
+    parser.add_argument(
+        "--anystyle-gpu-devices",
+        default="all",
+        help="Docker `--gpus` value (e.g., all or device=0).",
     )
     return parser.parse_args()
 
@@ -90,8 +105,11 @@ def main() -> None:
         Settings(),
         citation_parser="anystyle",
         anystyle_service=args.anystyle_service,
+        anystyle_gpu_service=args.anystyle_gpu_service,
         anystyle_timeout_seconds=max(1, int(args.anystyle_timeout)),
         anystyle_require_success=args.require_anystyle,
+        anystyle_use_gpu=args.anystyle_use_gpu,
+        anystyle_gpu_devices=(args.anystyle_gpu_devices or "all").strip() or "all",
     )
     print("Building graph...")
     summary = ingest_pdfs(

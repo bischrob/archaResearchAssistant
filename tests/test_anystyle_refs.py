@@ -39,3 +39,16 @@ def test_parse_anystyle_json_payload_skips_non_dict_rows() -> None:
     assert len(citations) == 1
     assert citations[0].citation_id == "doc::ref::1"
     assert citations[0].title_guess == "Good Entry"
+
+
+def test_parse_anystyle_json_payload_uses_raw_reference_text_when_provided() -> None:
+    payload = [
+        {"title": ["Good Entry"], "date": ["1999"]},
+    ]
+    raw_refs = ["Abbott, D. R. 1999. Good Entry. Tucson."]
+
+    citations = parse_anystyle_json_payload(payload, article_id="doc", raw_references=raw_refs)
+
+    assert len(citations) == 1
+    assert citations[0].raw_text == raw_refs[0]
+    assert citations[0].title_guess == "Good Entry"

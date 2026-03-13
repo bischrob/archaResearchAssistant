@@ -6,6 +6,10 @@
 - `scripts/query_graph.py`
 - `scripts/init_neo4j_indexes.py`
 - `scripts/find_pdfs_missing_metadata.py`
+- `scripts/export_paperpile_json.py`
+- `scripts/apply_reference_corrections.py`
+- `scripts/train_qwen_reference_lora.py`
+- `scripts/generate_reference_lora_samples.py`
 
 ## `build_graph.py`
 - Purpose: choose + ingest PDFs from CLI.
@@ -32,6 +36,27 @@
 ## `find_pdfs_missing_metadata.py`
 - Purpose: detect PDFs without Paperpile attachment metadata match.
 - Outputs: CSV with filename and paths.
+
+## `export_paperpile_json.py`
+- Purpose: automate export of full Paperpile library metadata to JSON via browser automation.
+- Behavior: launches persistent Chromium profile by default, supports first-run manual Google sign-in, and can also attach to an already-open Chrome session over CDP (`--attach-cdp`).
+- Export path: `Settings > Data and files > Export data`.
+- Output: JSON file (default `Paperpile.json`).
+
+## `apply_reference_corrections.py`
+- Purpose: apply iterative Neo4j reference cleanup from `corrections/export.csv`.
+- Behavior: refreshes `Article` metadata from `Paperpile.json`, deletes invalid `Reference` nodes (`valid=F`), resolves corrected references to `Article` by `citekey`, auto-creates missing `Article` stubs from `Paperpile.json` for unresolved citekeys, then removes stale reference-derived `CITES` edges.
+- Supports `--dry-run` preview mode before writes.
+
+## `train_qwen_reference_lora.py`
+- Purpose: fine-tune a Qwen LoRA adapter for reference extraction from JSONL supervision data.
+- Inputs: base model path (`--model-path`), train/eval JSONL (`--train-jsonl`, `--eval-jsonl`), LoRA hyperparameters, output directory.
+- Output: adapter weights + tokenizer files for use via `QWEN3_CITATION_ADAPTER_PATH` (and optionally `QWEN3_QUERY_ADAPTER_PATH`).
+
+## `generate_reference_lora_samples.py`
+- Purpose: sample local PDFs, extract citation candidates, and generate additional JSONL supervision rows in chat-message format.
+- Inputs: `--pdf-dir`, sample size/seed, citation quality filters, optional existing JSONLs for dedup, optional merge targets for train/eval.
+- Output: standalone sample JSONL + summary JSON; can also rewrite merged train/eval splits.
 
 ## Shared behavior
 Each script prepends repo root to `sys.path` to allow `src.*` imports without package install.

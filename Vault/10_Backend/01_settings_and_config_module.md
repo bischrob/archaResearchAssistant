@@ -5,7 +5,7 @@
 - `webapp/main.py` (`_load_dotenv`, `_openai_api_key_set`)
 
 ## Responsibility
-Centralize runtime settings for DB, chunking, metadata path, and embedding identifier.
+Centralize runtime settings for DB, chunking, metadata path, embedding identifier, and model-routing controls (OpenAI vs local Qwen).
 
 ## Core behavior
 - `Settings` dataclass pulls env vars at instantiation.
@@ -15,13 +15,15 @@ Centralize runtime settings for DB, chunking, metadata path, and embedding ident
 ## Inputs
 - Process environment
 - `.env` in repository root
+- Local model/adapters for optional Qwen query rewrite and citation parsing (`QWEN3_*`)
 
 ## Outputs
 - `Settings` object used by ingest, query, and diagnostics paths.
 
 ## Failure modes
 - Wrong `NEO4J_*` values cause connection failures across API endpoints.
-- Missing `OPENAI_API_KEY` only impacts `/api/ask` and preprocess query rewrite.
+- Missing `OPENAI_API_KEY` impacts `/api/ask` answering and OpenAI-backed preprocess rewrite (not Qwen-backed preprocess).
+- Missing `QWEN3_MODEL_PATH` or invalid adapter paths break Qwen-backed preprocess/citation parsing when those backends are enabled.
 - Invalid numeric env vars (`CHUNK_*`) will raise at parse time.
 
 ## Extension points

@@ -6,6 +6,9 @@ from typing import Any
 
 import requests
 
+from .config import Settings
+from .qwen_local import generate_query_directive_with_qwen
+
 
 def extract_used_citation_ids(text: str) -> list[str]:
     seen = set()
@@ -128,7 +131,40 @@ def ask_openai_grounded(
     }
 
 
-def preprocess_search_query(question: str, model: str | None = None) -> str:
+def _directive_to_compact_query(text: str, question: str) -> str:
+    line = (text.splitlines()[0] if text else "").strip().strip('"').strip("'")
+    line = re.sub(r"\s+", " ", line)
+
+    def _extract(field: str) -> str:
+        m = re.search(rf"{field}\s*:\s*([^|]+)", line, flags=re.IGNORECASE)
+        return (m.group(1).strip() if m else "")
+
+    authors = _extract("authors")
+    years = _extract("years")
+    title_terms = _extract("title_terms")
+    content_terms = _extract("content_terms")
+
+    parts = []
+    for value in (authors, years, title_terms, content_terms):
+        if not value or value.lower() == "none":
+            continue
+        cleaned = re.sub(r"\b(and|or|not)\b", " ", value, flags=re.IGNORECASE)
+        cleaned = re.sub(r"[(){}\[\]]", " ", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+        if cleaned:
+            parts.append(cleaned)
+
+    if parts:
+        return " ".join(parts)
+
+    # Fallback if model did not follow format.
+    fallback = re.sub(r"\b(and|or|not)\b", " ", line, flags=re.IGNORECASE)
+    fallback = re.sub(r"[(){}\[\]|:]", " ", fallback)
+    fallback = re.sub(r"\s+", " ", fallback).strip()
+    return fallback or question
+
+
+def _openai_query_directive(question: str, model: str | None = None) -> str:
     api_key = os.getenv("OPENAI_API_KEY", "").strip() or os.getenv("OpenAPIKey", "").strip()
     if not api_key:
         raise RuntimeError("OPENAI_API_KEY is not set.")
@@ -167,35 +203,24 @@ def preprocess_search_query(question: str, model: str | None = None) -> str:
         .get("content", "")
         .strip()
     )
-    line = (text.splitlines()[0] if text else "").strip().strip('"').strip("'")
-    line = re.sub(r"\s+", " ", line)
+    return text
 
-    # Convert the directive into a clean retrieval query string optimized for our
-    # parser (tokens/years/phrases), while removing boolean syntax.
-    def _extract(field: str) -> str:
-        m = re.search(rf"{field}\s*:\s*([^|]+)", line, flags=re.IGNORECASE)
-        return (m.group(1).strip() if m else "")
 
-    authors = _extract("authors")
-    years = _extract("years")
-    title_terms = _extract("title_terms")
-    content_terms = _extract("content_terms")
-
-    parts = []
-    for value in (authors, years, title_terms, content_terms):
-        if not value or value.lower() == "none":
-            continue
-        cleaned = re.sub(r"\b(and|or|not)\b", " ", value, flags=re.IGNORECASE)
-        cleaned = re.sub(r"[(){}\[\]]", " ", cleaned)
-        cleaned = re.sub(r"\s+", " ", cleaned).strip()
-        if cleaned:
-            parts.append(cleaned)
-
-    if parts:
-        return " ".join(parts)
-
-    # Fallback if model did not follow format.
-    fallback = re.sub(r"\b(and|or|not)\b", " ", line, flags=re.IGNORECASE)
-    fallback = re.sub(r"[(){}\[\]|:]", " ", fallback)
-    fallback = re.sub(r"\s+", " ", fallback).strip()
-    return fallback or question
+def preprocess_search_query(
+    question: str,
+    model: str | None = None,
+    backend: str | None = None,
+    settings: Settings | None = None,
+) -> str:
+    cfg = settings or Settings()
+    selected_backend = (
+        backend
+        or os.getenv("QUERY_PREPROCESS_BACKEND", "").strip().lower()
+        or cfg.query_preprocess_backend
+        or "openai"
+    ).strip().lower()
+    if selected_backend in {"qwen", "qwen3", "qwen_lora", "qwen3_lora", "local"}:
+        text = generate_query_directive_with_qwen(question, settings=cfg)
+    else:
+        text = _openai_query_directive(question, model=model)
+    return _directive_to_compact_query(text, question)

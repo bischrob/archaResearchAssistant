@@ -10,8 +10,13 @@
 
 ### Query behavior
 - Validates non-empty query string.
-- Runs `contextual_retrieve` with requested limit.
+- Supports query controls:
+  - `limit` (default 20)
+  - `limit_scope` (`papers` default, or `chunks`)
+  - `chunks_per_paper` (used in paper scope)
+- Runs `contextual_retrieve` with requested scope.
 - Returns retrieved rows including scores and citation-neighborhood context.
+  - In paper scope, rows include `paper_score` and `highlight_chunks`.
 
 ## Ask endpoints
 - `POST /api/ask`
@@ -20,7 +25,8 @@
 ### Ask behavior
 1. Validate non-empty question.
 2. Optionally preprocess search query with LLM rewrite.
-3. Retrieve RAG rows using rewritten or original query.
+   - backend is controlled by `QUERY_PREPROCESS_BACKEND` (`openai` or local `qwen`).
+3. Retrieve RAG rows using rewritten or original query (chunk scope for grounding context).
 4. Call grounded answer function with optional citation enforcement.
 5. Audit answer support and return report object.
 

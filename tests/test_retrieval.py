@@ -6,6 +6,7 @@ class FakeStore:
         return [
             {
                 "chunk_id": "c1",
+                "article_id": "a1",
                 "chunk_text": "Chronology and excavation notes.",
                 "article_title": "Fremont Chronology",
                 "article_year": 2020,
@@ -20,6 +21,7 @@ class FakeStore:
         return [
             {
                 "chunk_id": "c2",
+                "article_id": "a2",
                 "chunk_text": "Field notes by Bischoff in northern Utah.",
                 "article_title": "Utah Survey",
                 "article_year": 2021,
@@ -34,6 +36,7 @@ class FakeStore:
         return [
             {
                 "chunk_id": "c3",
+                "article_id": "a3",
                 "chunk_text": "Settlement interpretation.",
                 "article_title": "Regional Synthesis",
                 "article_year": 2022,
@@ -48,6 +51,7 @@ class FakeStore:
         return [
             {
                 "chunk_id": "c4",
+                "article_id": "a4",
                 "chunk_text": "This work introduces ArchMatNet.",
                 "article_title": "ArchMatNet: Archaeological Materials Network",
                 "article_year": 2023,
@@ -81,3 +85,88 @@ def test_contextual_retrieve_prefers_must_term_acronym_hits():
     rows = contextual_retrieve(FakeStore(), "Summarize ArchMatNet in simple terms", limit=3)
     assert rows
     assert any("archmatnet" in (r.get("article_title", "") + " " + r.get("chunk_text", "")).lower() for r in rows)
+
+
+class PaperScopeStore:
+    def vector_query(self, query: str, limit: int):
+        return [
+            {
+                "chunk_id": "a1-c1",
+                "article_id": "a1",
+                "chunk_text": "Chronology and fieldwork context.",
+                "article_title": "Fremont Chronology",
+                "article_year": 2020,
+                "authors": ["Alice Smith"],
+                "vector_score": 0.65,
+                "cites_out": [],
+                "cited_by": [],
+            },
+            {
+                "chunk_id": "a1-c2",
+                "article_id": "a1",
+                "chunk_text": "Additional chronology details for Fremont sites.",
+                "article_title": "Fremont Chronology",
+                "article_year": 2020,
+                "authors": ["Alice Smith"],
+                "vector_score": 0.62,
+                "cites_out": [],
+                "cited_by": [],
+            },
+            {
+                "chunk_id": "a2-c1",
+                "article_id": "a2",
+                "chunk_text": "Utah basin chronology synthesis and discussion.",
+                "article_title": "Utah Basin Synthesis",
+                "article_year": 2021,
+                "authors": ["Bob Jones"],
+                "vector_score": 0.58,
+                "cites_out": [],
+                "cited_by": [],
+            },
+        ]
+
+    def token_query(self, tokens, limit: int):
+        return [
+            {
+                "chunk_id": "a1-c1",
+                "article_id": "a1",
+                "chunk_text": "Chronology and fieldwork context.",
+                "article_title": "Fremont Chronology",
+                "article_year": 2020,
+                "authors": ["Alice Smith"],
+                "token_score": 4.0,
+                "cites_out": [],
+                "cited_by": [],
+            },
+            {
+                "chunk_id": "a2-c1",
+                "article_id": "a2",
+                "chunk_text": "Utah basin chronology synthesis and discussion.",
+                "article_title": "Utah Basin Synthesis",
+                "article_year": 2021,
+                "authors": ["Bob Jones"],
+                "token_score": 3.5,
+                "cites_out": [],
+                "cited_by": [],
+            },
+        ]
+
+    def author_query(self, terms, limit: int):
+        return []
+
+    def title_query(self, terms, limit: int):
+        return []
+
+
+def test_contextual_retrieve_paper_scope_returns_unique_papers():
+    rows = contextual_retrieve(
+        PaperScopeStore(),
+        "fremont chronology",
+        limit=2,
+        limit_scope="papers",
+        chunks_per_paper=2,
+    )
+    assert len(rows) == 2
+    assert len({r.get("article_id") for r in rows}) == 2
+    assert all(r.get("result_scope") == "paper" for r in rows)
+    assert all(len(r.get("highlight_chunks") or []) <= 2 for r in rows)

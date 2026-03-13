@@ -27,3 +27,7 @@
 2. Add adaptive retrieval limits by query complexity.
 3. Add cache pruning and disk budget checks.
 4. Move long jobs to durable task queue if concurrency needs grow.
+
+## Recent experiments
+- [[60_Troubleshooting/04_pdf_oxide_evaluation_2026-02-27]]: A/B benchmark of `pdf_oxide` vs PyMuPDF extraction (speed gains with text-equivalence risks).
+- [[60_Troubleshooting/05_pdf_oxide_security_audit_2026-02-27]]: quick security review (OSV + supply-chain + code-path hardening checks).

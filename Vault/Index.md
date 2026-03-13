@@ -15,6 +15,9 @@ Last reviewed: 2026-02-21
 - [[00_Project/04_data_and_storage]]
 - [[00_Project/05_startup_runbook]]
 - [[00_Project/06_ancillary_content]]
+- [[00_Project/07_ingest_status]]
+- [[00_Project/08_reference_lora_gold_dataset]]
+- [[00_Project/09_qwen3_reference_curriculum_training_on_sol]]
 
 ## Backend Modules
 - [[10_Backend/01_settings_and_config_module]]
@@ -51,6 +54,8 @@ Last reviewed: 2026-02-21
 - [[60_Troubleshooting/01_symptom_to_cause_matrix]]
 - [[60_Troubleshooting/02_known_risks_and_debt]]
 - [[60_Troubleshooting/03_performance_notes]]
+- [[60_Troubleshooting/04_pdf_oxide_evaluation_2026-02-27]]
+- [[60_Troubleshooting/05_pdf_oxide_security_audit_2026-02-27]]
 
 ## Feature Playbooks
 - [[70_Feature_Playbooks/01_add_api_endpoint]]

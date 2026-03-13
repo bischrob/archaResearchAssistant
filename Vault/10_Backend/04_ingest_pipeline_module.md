@@ -30,12 +30,14 @@ Select PDFs, parse/cache article docs, and ingest into Neo4j through `GraphStore
   - metadata JSON
 - Citation extraction path is now centralized in `ingest_pdfs`:
   - optional explicit `citation_overrides` win first
-  - otherwise uses Anystyle by default (`CITATION_PARSER=anystyle`)
-  - falls back to built-in heuristic references on Anystyle failure/empty output unless strict mode is enabled
+  - parser mode is selected by `CITATION_PARSER` (`anystyle`, `heuristic`, `qwen`)
+  - Anystyle path falls back to built-in heuristic references on failure/empty output unless strict mode is enabled
+  - Qwen path uses local model + optional LoRA adapter and falls back to built-in heuristic references on failure/empty output unless strict mode is enabled
   - caches Anystyle results under `.cache/anystyle_refs` keyed by file path + mtime + size
+  - caches Qwen results under `.cache/qwen_refs` keyed by file path + mtime + size + model/adapter settings
 - Filters article citations by quality threshold (`CITATION_MIN_QUALITY`).
 - Uploads parsed articles with progress callbacks.
-- Returns parser diagnostics in `IngestSummary` (`anystyle_*` counters, failure samples, optional disabled reason).
+- Returns parser diagnostics in `IngestSummary` (`anystyle_*` and `qwen_*` counters, failure samples, optional disabled reason).
 - Returns `IngestSummary` including skipped/failed files.
 
 ## Cancellation model
