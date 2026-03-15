@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Sync Google Drive Paperpile PDFs to local ./pdfs directory.
+# Sync Google Drive Paperpile PDFs to local network directory.
 # - Copies remote -> local
 # - Never overwrites existing local files
 # - Never deletes local files
 
 REMOTE_PATH="${REMOTE_PATH:-gdrive:Library/Paperpile/allPapers}"
-LOCAL_DIR="${LOCAL_DIR:-pdfs}"
+LOCAL_DIR="${LOCAL_DIR:-\\\\192.168.0.37\\pooled\\media\\Books\\pdfs}"
 GOOGLE_CONFIG_FILE="${GOOGLE_CONFIG_FILE:-google.config}"
 RCLONE_TRANSFERS="${RCLONE_TRANSFERS:-16}"
 RCLONE_CHECKERS="${RCLONE_CHECKERS:-32}"
@@ -25,6 +25,55 @@ if ! command -v rclone >/dev/null 2>&1; then
   echo "Error: rclone is not installed or not in PATH." >&2
   exit 1
 fi
+
+is_wsl() {
+  [[ -n "${WSL_DISTRO_NAME:-}" ]] && return 0
+  grep -qi "microsoft" /proc/version 2>/dev/null
+}
+
+resolve_unc_to_wsl_path() {
+  local raw="$1"
+  if [[ "${raw}" != \\\\* ]]; then
+    printf '%s' "${raw}"
+    return 0
+  fi
+  if command -v wslpath >/dev/null 2>&1; then
+    local converted
+    converted="$(wslpath -u "${raw}" 2>/dev/null || true)"
+    if [[ -n "${converted}" ]]; then
+      printf '%s' "${converted}"
+      return 0
+    fi
+  fi
+  printf '%s' "${raw}"
+}
+
+try_mount_unc_share_drvfs() {
+  local raw="$1"
+  [[ "${raw}" == \\\\* ]] || return 0
+  is_wsl || return 0
+  if [[ ! "${raw}" =~ ^\\\\([^\\]+)\\([^\\]+)(\\.*)?$ ]]; then
+    return 0
+  fi
+  local host="${BASH_REMATCH[1]}"
+  local share="${BASH_REMATCH[2]}"
+  local rest="${BASH_REMATCH[3]:-}"
+  rest="${rest#\\}"
+  local mount_root="/mnt/${share,,}"
+  mkdir -p "${mount_root}"
+  if mountpoint -q "${mount_root}" 2>/dev/null; then
+    :
+  else
+    mount -t drvfs "\\\\${host}\\${share}" "${mount_root}" >/dev/null 2>&1 \
+      || sudo -n mount -t drvfs "\\\\${host}\\${share}" "${mount_root}" >/dev/null 2>&1 \
+      || true
+  fi
+  local candidate="${mount_root}"
+  if [[ -n "${rest}" ]]; then
+    candidate="${mount_root}/$(printf '%s' "${rest}" | tr '\\' '/')"
+  fi
+  printf '%s' "${candidate}"
+}
 
 read_config_value() {
   local key="$1"
@@ -88,6 +137,17 @@ if [[ -n "${OAUTH_SECRET}" && "${OAUTH_VALUE}" != \{* ]]; then
   CLIENT_SECRET_VAR="RCLONE_CONFIG_${REMOTE_ENV_NAME}_CLIENT_SECRET"
   export "${CLIENT_SECRET_VAR}=${OAUTH_SECRET}"
   echo "Using OAuth client secret from ${GOOGLE_CONFIG_FILE} for remote '${REMOTE_NAME}'."
+fi
+
+if is_wsl; then
+  UNC_LOCAL_DIR="${LOCAL_DIR}"
+  LOCAL_DIR="$(resolve_unc_to_wsl_path "${LOCAL_DIR}")"
+  if [[ "${LOCAL_DIR}" == \\\\* ]]; then
+    mounted_dir="$(try_mount_unc_share_drvfs "${UNC_LOCAL_DIR}")"
+    if [[ -n "${mounted_dir:-}" && "${mounted_dir}" != "${UNC_LOCAL_DIR}" ]]; then
+      LOCAL_DIR="${mounted_dir}"
+    fi
+  fi
 fi
 
 mkdir -p "${LOCAL_DIR}"

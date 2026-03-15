@@ -130,6 +130,17 @@ class GraphStore:
                     publisher=article.publisher,
                 )
 
+                # Refresh chunk material for this source article so re-ingest
+                # does not retain stale chunk nodes from previous parses.
+                session.run(
+                    """
+                    MATCH (a:Article {id: $article_id})
+                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                    DETACH DELETE c
+                    """,
+                    article_id=article.article_id,
+                )
+
                 for pos, author_name in enumerate(article.authors):
                     author_name = (author_name or "").strip()
                     if not author_name:

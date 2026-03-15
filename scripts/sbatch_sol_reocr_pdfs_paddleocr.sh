@@ -3,7 +3,7 @@
 #   sbatch --array=0-15%6 scripts/sbatch_sol_reocr_pdfs_paddleocr.sh
 #
 # Optional overrides:
-#   PDF_DIR=/scratch/$USER/researchAssistant/pdfs \
+#   PDF_DIR='\\192.168.0.37\pooled\media\Books\pdfs' \
 #   OUTPUT_DIR=/scratch/$USER/researchAssistant/data/ocr/paddleocr \
 #   BACKEND=paddleocr-vl \
 #   VL_MODEL_DIR=/scratch/$USER/researchAssistant/models/PaddleOCR-VL-1.5 \
@@ -49,7 +49,7 @@ else
 fi
 
 PY_SCRIPT="${PROJECT_ROOT}/scripts/reocr_pdfs_paddleocr.py"
-PDF_DIR="${PDF_DIR:-${PROJECT_ROOT}/pdfs}"
+PDF_DIR="${PDF_DIR:-${PDF_SOURCE_DIR:-\\\\192.168.0.37\\pooled\\media\\Books\\pdfs}}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/data/ocr/paddleocr}"
 SUMMARY_DIR="${SUMMARY_DIR:-${OUTPUT_DIR}/summaries}"
 OCR_LANG="${OCR_LANG:-en}"

@@ -6,12 +6,19 @@ import json
 import inspect
 import os
 import shutil
+import sys
 import tempfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from typing import Iterable
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.rag.path_utils import resolve_input_path
 
 
 @dataclass
@@ -28,10 +35,11 @@ def _utc_now_iso() -> str:
 
 
 def _parse_args() -> argparse.Namespace:
+    default_pdf_dir = os.getenv("PDF_SOURCE_DIR", r"\\192.168.0.37\pooled\media\Books\pdfs").strip()
     parser = argparse.ArgumentParser(
         description="Re-OCR PDFs with PaddleOCR (classic or VL) and persist per-PDF outputs."
     )
-    parser.add_argument("--pdf-dir", default="pdfs", help="Directory containing input PDFs.")
+    parser.add_argument("--pdf-dir", default=default_pdf_dir, help="Directory containing input PDFs.")
     parser.add_argument(
         "--output-dir",
         default="data/ocr/paddleocr",
@@ -323,7 +331,7 @@ def main() -> int:
     args = _parse_args()
     task_id, num_tasks = _resolve_tasking(args)
 
-    pdf_dir = Path(args.pdf_dir).resolve()
+    pdf_dir = resolve_input_path(args.pdf_dir).resolve()
     out_root = Path(args.output_dir).resolve()
     summary_dir = Path(args.summary_dir).resolve()
     text_root = out_root / "text"

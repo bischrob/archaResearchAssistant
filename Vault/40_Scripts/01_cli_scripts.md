@@ -10,12 +10,14 @@
 - `scripts/apply_reference_corrections.py`
 - `scripts/train_qwen_reference_lora.py`
 - `scripts/generate_reference_lora_samples.py`
+- `scripts/audit_qwen3_reference_split.py`
+- `scripts/build_qwen_reference_split_jsonl_from_ocr.py`
 
 ## `build_graph.py`
 - Purpose: choose + ingest PDFs from CLI.
 - Inputs: mode, pdf-dir, partial-count, explicit `--pdf`, `--override-existing`.
 - Uses `choose_pdfs` and `ingest_pdfs`.
-- Uses shared citation parser config (`CITATION_PARSER`; default `anystyle`) and reports Anystyle stats in output.
+- Uses shared citation parser config (`CITATION_PARSER`; default `qwen_refsplit_anystyle`) and reports parser stats in output.
 
 ## `build_graph_anystyle_test.py`
 - Purpose: run test ingest through the same shared ingest pipeline while forcing Anystyle mode.
@@ -57,6 +59,22 @@
 - Purpose: sample local PDFs, extract citation candidates, and generate additional JSONL supervision rows in chat-message format.
 - Inputs: `--pdf-dir`, sample size/seed, citation quality filters, optional existing JSONLs for dedup, optional merge targets for train/eval.
 - Output: standalone sample JSONL + summary JSON; can also rewrite merged train/eval splits.
+
+## `audit_qwen3_reference_split.py`
+- Purpose: audit Qwen3 section/reference detection and reference splitting with markdown artifacts.
+- Pipeline under test:
+  - Step 1: Qwen3 identifies section boundaries and reference chunk(s).
+  - Step 2: Qwen3 splits each reference chunk into individual references.
+- Inputs: one or more `--pdf` paths (UNC or WSL paths supported), optional `--pdf-dir`, optional output directory.
+- Output: per-PDF markdown report + raw reference chunk text files + summary markdown under `data/qwen3_reference_audit/`.
+
+## `build_qwen_reference_split_jsonl_from_ocr.py`
+- Purpose: generate split-reference training JSONL from OCR text using a local heuristic parser as pseudo-gold labels.
+- Inputs: OCR directory, anchor OCR file, sample count/seed, min/max parsed-reference thresholds.
+- Output:
+  - JSONL with `task=split_reference_chunk` rows (`messages` + `meta`) for Qwen3 training.
+  - Per-document markdown audits in `data/qwen3_reference_audit/local_split_dataset/`.
+  - Dataset summary markdown with selected docs and parsed-reference counts.
 
 ## Shared behavior
 Each script prepends repo root to `sys.path` to allow `src.*` imports without package install.

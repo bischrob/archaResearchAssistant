@@ -21,11 +21,12 @@ Default DB env values:
 - `NEO4J_USER=neo4j`
 - `NEO4J_PASSWORD=archaResearchAssistant`
 - `PAPERPILE_JSON=Paperpile.json`
+- `PDF_SOURCE_DIR=\\192.168.0.37\pooled\media\Books\pdfs` (optional; default PDF source directory)
 - `OPENAI_API_KEY=...`
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 - `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
 - `CHUNK_STRIP_PAGE_NOISE=1` (optional; strips repeated headers/footers/page numbers before chunking)
-- `CITATION_PARSER=anystyle` (default; supports `anystyle`, `heuristic`, `qwen`/`qwen_lora`, and `qwen_refsplit_anystyle`)
+- `CITATION_PARSER=qwen_refsplit_anystyle` (default; supports `anystyle`, `heuristic`, `qwen`/`qwen_lora`, and `qwen_refsplit_anystyle`)
 - `ANYSTYLE_SERVICE=anystyle` (optional; docker compose service name)
 - `ANYSTYLE_GPU_SERVICE=anystyle-gpu` (optional; docker compose service used when GPU mode is enabled)
 - `ANYSTYLE_TIMEOUT_SECONDS=240` (optional; timeout per PDF)
@@ -48,7 +49,7 @@ export QWEN3_MODEL_PATH='C:\Users\rjbischo\ASU Dropbox\Robert Bischoff\RA\CatMap
 
 The script uses:
 
-- `gdrive:Library/Paperpile/allPapers` -> local `pdfs/`
+- `gdrive:Library/Paperpile/allPapers` -> `\\192.168.0.37\pooled\media\Books\pdfs`
 
 Run:
 
@@ -154,7 +155,7 @@ The GUI includes in-app instructions and buttons for:
 - sync PDFs
 - ingest modes:
   - `batch` (batch upload; first N via `partial_count`, default 3)
-  - `all` (all PDFs in `pdfs/`, automatically processed in batches of `partial_count`)
+  - `all` (all PDFs in `\\192.168.0.37\pooled\media\Books\pdfs`, automatically processed in batches of `partial_count`)
   - `custom` (specific files)
 - contextual query
 - pre-LLM query parsing (tokens, years, phrases, author terms) with multi-channel retrieval
@@ -215,9 +216,9 @@ If a check fails, review the check details shown in the table and correct the co
 Build graph:
 
 ```bash
-python scripts/build_graph.py --mode batch --pdf-dir pdfs
-python scripts/build_graph.py --mode all --pdf-dir pdfs
-python scripts/build_graph.py --mode batch --pdf-dir pdfs --override-existing
+python scripts/build_graph.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs'
+python scripts/build_graph.py --mode all --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs'
+python scripts/build_graph.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs' --override-existing
 ```
 
 Build Anystyle image (recommended for ingest quality):
@@ -229,7 +230,7 @@ docker compose build anystyle
 Test ingest with shared pipeline in forced-Anystyle mode:
 
 ```bash
-python scripts/build_graph_anystyle_test.py --mode batch --pdf-dir pdfs --partial-count 1
+python scripts/build_graph_anystyle_test.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs' --partial-count 1
 ```
 
 Train a Qwen3 LoRA adapter for reference extraction:
@@ -309,7 +310,7 @@ Generate extra supervision examples from sampled PDFs:
 
 ```bash
 python scripts/generate_reference_lora_samples.py \
-  --pdf-dir pdfs \
+  --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs' \
   --paperpile-json Paperpile.json \
   --sample-pdfs 120 \
   --max-citations-per-pdf 18 \
@@ -326,7 +327,8 @@ Custom files:
 
 ```bash
 python scripts/build_graph.py --mode custom \
-  --pdf pdfs/file1.pdf --pdf pdfs/file2.pdf
+  --pdf '\\192.168.0.37\pooled\media\Books\pdfs\file1.pdf' \
+  --pdf '\\192.168.0.37\pooled\media\Books\pdfs\file2.pdf'
 ```
 
 Query:

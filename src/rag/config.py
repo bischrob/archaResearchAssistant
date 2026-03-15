@@ -33,6 +33,9 @@ def _env_not_false(name: str, default: bool = True) -> bool:
 
 @dataclass(frozen=True)
 class Settings:
+    pdf_source_dir: str = field(
+        default_factory=lambda: _env_str("PDF_SOURCE_DIR", r"\\192.168.0.37\pooled\media\Books\pdfs").strip()
+    )
     neo4j_uri: str = field(default_factory=lambda: _env_str("NEO4J_URI", "bolt://localhost:7687"))
     neo4j_user: str = field(default_factory=lambda: _env_str("NEO4J_USER", "neo4j"))
     neo4j_password: str = field(default_factory=lambda: _env_str("NEO4J_PASSWORD", "archaResearchAssistant"))
@@ -44,7 +47,22 @@ class Settings:
     chunk_overlap_words: int = field(default_factory=lambda: _env_int("CHUNK_OVERLAP_WORDS", 45))
     citation_min_quality: float = field(default_factory=lambda: _env_float("CITATION_MIN_QUALITY", 0.35))
     chunk_strip_page_noise: bool = field(default_factory=lambda: _env_not_false("CHUNK_STRIP_PAGE_NOISE", True))
-    citation_parser: str = field(default_factory=lambda: _env_str("CITATION_PARSER", "anystyle").strip().lower())
+    citation_parser: str = field(
+        default_factory=lambda: _env_str("CITATION_PARSER", "qwen_refsplit_anystyle").strip().lower()
+    )
+    paddleocr_text_dir: str = field(default_factory=lambda: _env_str("PADDLEOCR_TEXT_DIR", "ocr/paddleocr/text").strip())
+    paddleocr_text_fallback_dir: str = field(
+        default_factory=lambda: _env_str("PADDLEOCR_TEXT_FALLBACK_DIR", "data/ocr/paddleocr/text").strip()
+    )
+    paddleocr_prefer_text: bool = field(default_factory=lambda: _env_not_false("PADDLEOCR_PREFER_TEXT", True))
+    paddleocr_auto_generate_missing_text: bool = field(
+        default_factory=lambda: _env_not_false("PADDLEOCR_AUTO_GENERATE_MISSING_TEXT", True)
+    )
+    paddleocr_auto_lang: str = field(default_factory=lambda: _env_str("PADDLEOCR_AUTO_LANG", "en").strip() or "en")
+    paddleocr_auto_device: str = field(
+        default_factory=lambda: _env_str("PADDLEOCR_AUTO_DEVICE", "cpu").strip().lower() or "cpu"
+    )
+    paddleocr_auto_render_dpi: int = field(default_factory=lambda: _env_int("PADDLEOCR_AUTO_RENDER_DPI", 180))
     anystyle_service: str = field(default_factory=lambda: _env_str("ANYSTYLE_SERVICE", "anystyle").strip() or "anystyle")
     anystyle_gpu_service: str = field(
         default_factory=lambda: _env_str("ANYSTYLE_GPU_SERVICE", "anystyle-gpu").strip() or "anystyle-gpu"
@@ -71,4 +89,7 @@ class Settings:
         default_factory=lambda: _env_int("QWEN3_CITATION_MAX_NEW_TOKENS", 768)
     )
     qwen_citation_batch_size: int = field(default_factory=lambda: _env_int("QWEN3_CITATION_BATCH_SIZE", 24))
+    qwen_reference_split_window_chars: int = field(
+        default_factory=lambda: _env_int("QWEN3_REFERENCE_SPLIT_WINDOW_CHARS", 2600)
+    )
     qwen_require_success: bool = field(default_factory=lambda: _env_bool("QWEN3_REQUIRE_SUCCESS", False))

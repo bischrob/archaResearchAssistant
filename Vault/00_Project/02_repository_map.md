@@ -7,7 +7,7 @@
 - `tests/`: pytest test suite.
 
 ## Data-heavy directories
-- `pdfs/` (~25G, ~4223 PDFs): local corpus.
+- `\\192.168.0.37\pooled\media\Books\pdfs` (~25G, ~4223 PDFs): local corpus.
 - `db/` (~6.2G): Neo4j volume mounts.
 - `embeddings/` (~4.1G): local artifacts.
 - `.cache/` (~1.3G): parse caches under `.cache/rag_articles/`.

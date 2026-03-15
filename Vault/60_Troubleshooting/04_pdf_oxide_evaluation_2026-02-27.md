@@ -36,7 +36,7 @@ Check whether replacing current PyMuPDF (`fitz`) text extraction with `pdf_oxide
     - docs with Jaccard `< 0.8`: `25/100`
 
 ## Notable quality risk observed
-- One sample (`pdfs/-(pdf)SpeciousArtOfSingle-cellGenomics.pdf`) produced visibly garbled `pdf_oxide` text (character substitutions/merged text), with very low token recall against current output (`0.164`).
+- One sample (`\\192.168.0.37\pooled\media\Books\pdfs\-(pdf)SpeciousArtOfSingle-cellGenomics.pdf`) produced visibly garbled `pdf_oxide` text (character substitutions/merged text), with very low token recall against current output (`0.164`).
 - This indicates a non-trivial risk of retrieval quality regression on a subset of PDFs if switched globally.
 
 ## Conclusion

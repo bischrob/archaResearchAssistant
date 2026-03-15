@@ -166,4 +166,4 @@ Background log: `logs/resync_reingest_anystyle_20260223_140150.log`
 - 2026-02-23 19:54:55 UTC | Batch 710/847 complete. Processed 3550/4235. Remaining 685. Ingested 5/5. Anystyle applied 4, empty 1, failed 0.
 
 ## Failed PDFs
-- pdfs/b/brughmansAndPeeples2023-NetworkScienceChapter1.pdf: Cannot open empty file: filename='pdfs/b/brughmansAndPeeples2023-NetworkScienceChapter1.pdf'.
+- \\192.168.0.37\pooled\media\Books\pdfs\b\brughmansAndPeeples2023-NetworkScienceChapter1.pdf: Cannot open empty file: filename='\\192.168.0.37\pooled\media\Books\pdfs\b\brughmansAndPeeples2023-NetworkScienceChapter1.pdf'.

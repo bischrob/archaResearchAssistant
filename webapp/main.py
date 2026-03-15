@@ -51,12 +51,29 @@ def _load_dotenv(path: Path) -> None:
 _load_dotenv(DOTENV_PATH)
 
 
+def _default_pdf_source_dir() -> str:
+    try:
+        return Settings().pdf_source_dir
+    except Exception:
+        return r"\\192.168.0.37\pooled\media\Books\pdfs"
+
+
+def _diagnostics_pdf_root() -> Path:
+    configured = Path(_default_pdf_source_dir())
+    if configured.exists():
+        return configured
+    legacy = Path("pdfs")
+    if legacy.exists():
+        return legacy
+    return configured
+
+
 def _openai_api_key_set() -> bool:
     primary = os.getenv("OPENAI_API_KEY", "").strip()
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.13.045132")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.15.022006")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -72,7 +89,7 @@ class SyncRequest(BaseModel):
 
 class IngestRequest(BaseModel):
     mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
-    source_dir: str = "pdfs"
+    source_dir: str = Field(default_factory=_default_pdf_source_dir)
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
     partial_count: int = Field(default=3, ge=1, le=5000)
@@ -105,7 +122,7 @@ class AskExportRequest(BaseModel):
 
 class IngestPreviewRequest(BaseModel):
     mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
-    source_dir: str = "pdfs"
+    source_dir: str = Field(default_factory=_default_pdf_source_dir)
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
     partial_count: int = Field(default=3, ge=1, le=5000)
@@ -307,7 +324,7 @@ def diagnostics() -> dict:
 
     # Metadata coverage checks
     metadata_index = load_paperpile_index(settings.paperpile_json)
-    pdf_root = Path("pdfs")
+    pdf_root = _diagnostics_pdf_root()
     pdf_files = iter_pdf_files(pdf_root) if pdf_root.exists() else []
     unmatched = find_unmatched_pdfs(pdf_root, metadata_index) if pdf_root.exists() else []
     total_local_pdfs = len(pdf_files)
@@ -372,7 +389,7 @@ def sync_pdfs(req: SyncRequest) -> dict:
             cmd.append("--dry-run")
 
         remote_path = "gdrive:Library/Paperpile/allPapers"
-        local_dir = "pdfs"
+        local_dir = _default_pdf_source_dir()
         total_remote = _count_remote_pdfs(remote_path)
         jobs.set_progress("sync", 0.0, "Starting sync")
 

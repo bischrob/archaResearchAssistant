@@ -1,7 +1,7 @@
 # Data and Storage
 
 ## Data categories
-- Source corpus: PDFs in `pdfs/`.
+- Source corpus: PDFs in `\\192.168.0.37\pooled\media\Books\pdfs`.
 - Metadata: `Paperpile.json`.
 - Graph database: `db/data` (Neo4j).
 - Parse cache: `.cache/rag_articles/*.pkl` keyed by file stat + metadata + chunk settings.
