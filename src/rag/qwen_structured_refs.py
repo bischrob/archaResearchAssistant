@@ -4,7 +4,9 @@ import json
 import re
 from collections import Counter
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
+import tempfile
 
 import fitz
 
@@ -33,6 +35,11 @@ SECTION_SYSTEM_PROMPT = (
 REFERENCE_SPLIT_SYSTEM_PROMPT = (
     "You split bibliography text into individual references. "
     'Return JSON only with this schema: {"references":["<one reference>", "<one reference>"]}. '
+    "Page breaks, page numbers, and running headers do NOT end the references section. "
+    "A reference may continue across page boundaries and line wraps; keep it as one item. "
+    "Do not return numeric labels like [1], 1., or citation keys alone; return full reference strings only. "
+    "Keep original order and preserve full content for each reference as a single line item. "
+    "Do not omit trailing references after page breaks. "
     "Do not add commentary and do not invent text."
 )
 
@@ -52,6 +59,171 @@ def _extract_page_text(pdf_path: Path) -> list[tuple[int, str]]:
             if text and text.strip():
                 out.append((idx + 1, text))
     return out
+
+
+def _normalize_lookup_key(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", (text or "").lower())
+
+
+@lru_cache(maxsize=16)
+def _ocr_text_index(root: str) -> dict[str, list[str]]:
+    path = Path(root).resolve()
+    if not path.exists() or not path.is_dir():
+        return {}
+    out: dict[str, list[str]] = {}
+    for item in path.rglob("*.txt"):
+        key = _normalize_lookup_key(item.stem)
+        if not key:
+            continue
+        out.setdefault(key, []).append(str(item.resolve()))
+    return out
+
+
+def _candidate_ocr_dirs(settings: Settings) -> list[Path]:
+    dirs: list[Path] = []
+    for raw in [settings.paddleocr_text_dir, settings.paddleocr_text_fallback_dir]:
+        if not raw:
+            continue
+        p = Path(raw).resolve()
+        if p not in dirs:
+            dirs.append(p)
+    return dirs
+
+
+def _locate_ocr_text(pdf_path: Path, settings: Settings) -> Path | None:
+    pdf_key = _normalize_lookup_key(pdf_path.stem)
+    if not pdf_key:
+        return None
+
+    for root in _candidate_ocr_dirs(settings):
+        direct = root / f"{pdf_path.stem}.txt"
+        if direct.exists() and direct.is_file():
+            return direct
+
+        index = _ocr_text_index(str(root))
+        hits = index.get(pdf_key) or []
+        if hits:
+            return Path(hits[0])
+    return None
+
+
+def _extract_lines_with_page_from_ocr_text(ocr_text_path: Path) -> list[tuple[int, str]]:
+    raw = ocr_text_path.read_text(encoding="utf-8", errors="ignore")
+    lines = [line.strip() for line in raw.splitlines() if line and line.strip()]
+    return [(1, line) for line in lines]
+
+
+def _paddleocr_use_gpu(device: str) -> bool:
+    d = (device or "").strip().lower()
+    if d == "gpu":
+        return True
+    if d == "cpu":
+        return False
+    # auto: best effort
+    try:
+        import paddle  # type: ignore
+
+        return bool(paddle.device.is_compiled_with_cuda())
+    except Exception:
+        return False
+
+
+@lru_cache(maxsize=2)
+def _build_paddleocr_pipeline(lang: str, device: str) -> object:
+    try:
+        from paddleocr import PaddleOCR  # type: ignore
+    except Exception as exc:
+        raise RuntimeError("PaddleOCR is not installed in this environment.") from exc
+
+    use_gpu = _paddleocr_use_gpu(device)
+    try:
+        return PaddleOCR(
+            lang=lang,
+            device="gpu:0" if use_gpu else "cpu",
+            use_doc_orientation_classify=False,
+            use_doc_unwarping=False,
+            use_textline_orientation=False,
+        )
+    except TypeError:
+        return PaddleOCR(use_angle_cls=True, lang=lang, use_gpu=use_gpu)
+
+
+def _extract_lines_from_paddle_page_payload(payload: object) -> list[str]:
+    if not isinstance(payload, list):
+        return []
+    lines: list[str] = []
+    for item in payload:
+        if not isinstance(item, list) or len(item) < 2:
+            continue
+        line_payload = item[1]
+        if isinstance(line_payload, list) and line_payload:
+            text = str(line_payload[0]).strip()
+            if text:
+                lines.append(text)
+    return lines
+
+
+def _generate_ocr_text_with_paddle(pdf_path: Path, settings: Settings) -> str:
+    pipeline = _build_paddleocr_pipeline(settings.paddleocr_auto_lang, settings.paddleocr_auto_device)
+    dpi = max(96, int(settings.paddleocr_auto_render_dpi))
+    scale = dpi / 72.0
+    collected: list[str] = []
+
+    with fitz.open(pdf_path) as doc:
+        with tempfile.TemporaryDirectory(prefix="paddleocr_pages_") as temp_dir:
+            tmp = Path(temp_dir)
+            for page_idx, page in enumerate(doc):
+                image_path = tmp / f"page_{page_idx:05d}.png"
+                pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
+                pix.save(str(image_path))
+                payload = pipeline.ocr(str(image_path), cls=True)
+                page_rows = payload if isinstance(payload, list) else []
+                for line in _extract_lines_from_paddle_page_payload(page_rows):
+                    if line:
+                        collected.append(line)
+
+    return "\n".join(collected).strip()
+
+
+def _preferred_ocr_output_path(pdf_path: Path, settings: Settings) -> Path:
+    roots = _candidate_ocr_dirs(settings)
+    target_root = roots[0] if roots else Path("ocr/paddleocr/text").resolve()
+    target_root.mkdir(parents=True, exist_ok=True)
+    return target_root / f"{pdf_path.stem}.txt"
+
+
+def _generate_ocr_text_sidecar_if_missing(pdf_path: Path, settings: Settings) -> Path | None:
+    if not settings.paddleocr_auto_generate_missing_text:
+        return None
+    try:
+        body = _generate_ocr_text_with_paddle(pdf_path, settings)
+    except Exception:
+        return None
+    if not body:
+        return None
+    out_path = _preferred_ocr_output_path(pdf_path, settings)
+    out_path.write_text(body + "\n", encoding="utf-8")
+    _ocr_text_index.cache_clear()
+    return out_path
+
+
+def _extract_lines_with_page(
+    pdf_path: Path,
+    *,
+    settings: Settings,
+    strip_page_noise: bool,
+) -> list[tuple[int, str]]:
+    if settings.paddleocr_prefer_text:
+        ocr_path = _locate_ocr_text(pdf_path, settings)
+        if ocr_path is None:
+            ocr_path = _generate_ocr_text_sidecar_if_missing(pdf_path, settings)
+        if ocr_path is not None:
+            ocr_lines = _extract_lines_with_page_from_ocr_text(ocr_path)
+            if ocr_lines:
+                return ocr_lines
+
+    page_text = _extract_page_text(pdf_path)
+    return build_lines_with_page(page_text, strip_page_noise=strip_page_noise)
 
 
 def _titlecase_ratio(text: str) -> float:
@@ -329,7 +501,7 @@ def _parse_reference_rows(payload: object) -> list[str]:
 
 def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings | None = None) -> list[str]:
     cfg = settings or Settings()
-    max_input_chars = max(1200, int(cfg.qwen_max_input_chars * 0.78))
+    max_input_chars = max(1200, min(int(cfg.qwen_max_input_chars * 0.78), int(cfg.qwen_reference_split_window_chars)))
     windows = _reference_windows(reference_text, max_chars=max_input_chars)
     if not windows:
         return []
@@ -338,6 +510,7 @@ def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings
     for block in windows:
         user = (
             "Split the bibliography text below into one item per full reference.\n"
+            "Important: page breaks do not end references; continue references across page boundaries.\n"
             "Return JSON only in the required schema.\n\n"
             f"Bibliography text:\n{block}"
         )
@@ -385,8 +558,11 @@ def extract_structured_chunks_and_citations(
     chunk_overlap_words: int,
     strip_page_noise: bool,
 ) -> StructuredExtraction:
-    page_text = _extract_page_text(pdf_path)
-    lines_with_page = build_lines_with_page(page_text, strip_page_noise=strip_page_noise)
+    lines_with_page = _extract_lines_with_page(
+        pdf_path,
+        settings=settings,
+        strip_page_noise=strip_page_noise,
+    )
     if not lines_with_page:
         return StructuredExtraction(chunks=[], citations=[], reference_strings=[])
 

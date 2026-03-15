@@ -14,7 +14,7 @@
 - Launches web server via `scripts/run_web_gui.sh` (uvicorn with reload).
 
 ## Manual CLI path
-- Ingest: `python scripts/build_graph.py --mode batch --pdf-dir pdfs`
+- Ingest: `python scripts/build_graph.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs'`
 - Query: `python scripts/query_graph.py "<query>" --limit 5`
 
 ## Startup prerequisites

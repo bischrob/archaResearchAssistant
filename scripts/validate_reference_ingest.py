@@ -239,7 +239,7 @@ def parse_args() -> argparse.Namespace:
         "--pdf",
         action="append",
         required=True,
-        help="Relative path to PDF (repeatable). Example: --pdf pdfs/file.pdf",
+        help=r"Relative path to PDF (repeatable). Example: --pdf \\192.168.0.37\pooled\media\Books\pdfs\file.pdf",
     )
     parser.add_argument(
         "--qwen-model-path",

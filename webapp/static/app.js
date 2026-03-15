@@ -548,7 +548,7 @@ document.getElementById("ingestBtn").addEventListener("click", async () => {
   try {
     await api("/api/ingest", {
       mode,
-      source_dir: document.getElementById("sourceDir").value.trim() || "pdfs",
+      source_dir: document.getElementById("sourceDir").value.trim() || "\\\\192.168.0.37\\pooled\\media\\Books\\pdfs",
       pdfs: lines,
       override_existing: document.getElementById("overrideExisting").checked,
       partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),
@@ -577,7 +577,7 @@ document.getElementById("ingestPreviewBtn").addEventListener("click", async () =
   try {
     const payload = await api("/api/ingest/preview", {
       mode,
-      source_dir: document.getElementById("sourceDir").value.trim() || "pdfs",
+      source_dir: document.getElementById("sourceDir").value.trim() || "\\\\192.168.0.37\\pooled\\media\\Books\\pdfs",
       pdfs: lines,
       override_existing: document.getElementById("overrideExisting").checked,
       partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),

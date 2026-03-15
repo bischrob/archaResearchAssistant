@@ -18,7 +18,7 @@
 - Starts FastAPI via `python -m uvicorn webapp.main:app --reload`.
 
 ## `scripts/sync_pdfs_from_gdrive.sh`
-- Uses `rclone copy` from remote to local `pdfs/`.
+- Uses `rclone copy` from remote to local `\\192.168.0.37\pooled\media\Books\pdfs`.
 - Non-destructive flags (`--ignore-existing`).
 - Supports `--dry-run`.
 - Reads optional OAuth fields from `google.config`.

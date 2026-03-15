@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Delete invalid PDF files under a directory (default: ./pdfs).
+# Delete invalid PDF files under a directory.
+# Default root: \\192.168.0.37\pooled\media\Books\pdfs
 # A PDF is treated as invalid if:
 # 1) it does not start with %PDF
 # 2) PyMuPDF cannot open it
@@ -9,9 +10,9 @@ set -euo pipefail
 # Usage:
 #   scripts/delete_invalid_pdfs.sh
 #   scripts/delete_invalid_pdfs.sh --dry-run
-#   scripts/delete_invalid_pdfs.sh --root pdfs
+#   scripts/delete_invalid_pdfs.sh --root '\\192.168.0.37\pooled\media\Books\pdfs'
 
-ROOT_DIR="pdfs"
+ROOT_DIR="\\\\192.168.0.37\\pooled\\media\\Books\\pdfs"
 DRY_RUN=0
 
 while [[ $# -gt 0 ]]; do
@@ -35,6 +36,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ "${ROOT_DIR}" == \\\\* && -n "${WSL_DISTRO_NAME:-}" ]] && command -v wslpath >/dev/null 2>&1; then
+  converted="$(wslpath -u "${ROOT_DIR}" 2>/dev/null || true)"
+  if [[ -n "${converted}" ]]; then
+    ROOT_DIR="${converted}"
+  fi
+fi
 
 if [[ ! -d "${ROOT_DIR}" ]]; then
   echo "Error: directory not found: ${ROOT_DIR}" >&2
@@ -102,4 +110,3 @@ if dry_run:
 else:
     print(f"Deleted PDFs: {deleted}")
 PY
-

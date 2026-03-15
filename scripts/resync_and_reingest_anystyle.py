@@ -144,10 +144,11 @@ def run_sync() -> int:
 
 
 def parse_args() -> argparse.Namespace:
+    default_pdf_dir = Settings().pdf_source_dir
     parser = argparse.ArgumentParser(
         description="Resync PDFs then re-ingest all with Anystyle in 100-PDF batches and Vault progress updates."
     )
-    parser.add_argument("--pdf-dir", default="pdfs", help="PDF source directory.")
+    parser.add_argument("--pdf-dir", default=default_pdf_dir, help="PDF source directory.")
     parser.add_argument(
         "--report-every",
         type=int,

@@ -1,7 +1,7 @@
 # Performance and Scale Notes
 
 ## Heavy local data
-- `pdfs/` contains ~4223 PDFs and ~25G.
+- `\\192.168.0.37\pooled\media\Books\pdfs` contains ~4223 PDFs and ~25G.
 - `db/` ~6.2G and `.cache/` ~1.3G.
 
 ## Ingest performance characteristics

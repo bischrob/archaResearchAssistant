@@ -14,10 +14,11 @@ from src.rag.pipeline import choose_pdfs, ingest_pdfs
 
 
 def parse_args() -> argparse.Namespace:
+    default_pdf_dir = Settings().pdf_source_dir
     parser = argparse.ArgumentParser(description="Build Neo4j graph for PDF-based RAG testing.")
     parser.add_argument(
         "--pdf-dir",
-        default="pdfs",
+        default=default_pdf_dir,
         help="Directory containing candidate PDFs.",
     )
     parser.add_argument(

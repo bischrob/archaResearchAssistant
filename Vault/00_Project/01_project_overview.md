@@ -18,7 +18,7 @@ Neo4j-backed PDF research assistant with ingest, hybrid retrieval, and grounded 
 - Heavy local data footprint from PDFs and caches.
 
 ## Core workflows
-1. Sync remote PDFs into local `pdfs/`.
+1. Sync remote PDFs into `\\192.168.0.37\pooled\media\Books\pdfs`.
 2. Select PDFs based on mode + metadata + existing graph state.
 3. Parse and chunk PDFs, then ingest into Neo4j.
 4. Retrieve context for a query.

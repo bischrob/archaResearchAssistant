@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from src.rag.paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
+from src.rag.config import Settings
 from src.rag.pdf_processing import Citation, filter_citations, load_article, normalize_title
 
 
@@ -26,8 +27,9 @@ AUTHOR_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z'-]+")
 
 
 def parse_args() -> argparse.Namespace:
+    default_pdf_dir = Settings().pdf_source_dir
     p = argparse.ArgumentParser(description="Generate additional LoRA supervision examples from sampled PDFs.")
-    p.add_argument("--pdf-dir", default="pdfs", help="Directory containing PDFs.")
+    p.add_argument("--pdf-dir", default=default_pdf_dir, help="Directory containing PDFs.")
     p.add_argument("--paperpile-json", default="Paperpile.json", help="Paperpile metadata JSON path.")
     p.add_argument("--sample-pdfs", type=int, default=80, help="How many PDFs to sample.")
     p.add_argument("--seed", type=int, default=42, help="Random seed.")
@@ -383,4 +385,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

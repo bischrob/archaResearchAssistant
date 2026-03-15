@@ -12,6 +12,7 @@ from .anystyle_refs import extract_citations_with_anystyle_docker
 from .config import Settings
 from .neo4j_store import GraphStore
 from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
+from .path_utils import resolve_input_path
 from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
 from .qwen_local import extract_citations_with_qwen
 from .qwen_structured_refs import extract_structured_chunks_and_citations
@@ -323,10 +324,10 @@ def _has_pdf_header(path: Path) -> bool:
 def _resolve_custom_pdf_path(path_str: str, source_dir: str) -> Path:
     raw = path_str.strip().strip('"').strip("'")
     cleaned = raw.replace("{", "").replace("}", "")
-    source_root = Path(source_dir)
+    source_root = resolve_input_path(source_dir)
 
-    primary = Path(raw)
-    fallback = Path(cleaned)
+    primary = resolve_input_path(raw)
+    fallback = resolve_input_path(cleaned)
 
     candidates: list[Path] = [primary]
     if fallback != primary:
@@ -368,7 +369,7 @@ def _get_existing_article_ids(settings: Settings) -> set[str]:
 
 def choose_pdfs(
     mode: str = "batch",
-    source_dir: str = "pdfs",
+    source_dir: str | None = None,
     explicit_pdfs: list[str] | None = None,
     skip_existing: bool = True,
     require_metadata: bool = True,
@@ -380,7 +381,9 @@ def choose_pdfs(
         mode = "batch"
     explicit_pdfs = explicit_pdfs or []
 
-    source_root = Path(source_dir)
+    cfg = settings or Settings()
+    resolved_source_dir = source_dir or cfg.pdf_source_dir
+    source_root = resolve_input_path(resolved_source_dir)
     all_pdfs = sorted(
         [p for p in source_root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf"],
         key=lambda p: str(p).lower(),
@@ -389,7 +392,7 @@ def choose_pdfs(
     partial_n = max(1, int(partial_count))
 
     if mode == "custom":
-        selected = [_resolve_custom_pdf_path(p, source_dir) for p in explicit_pdfs]
+        selected = [_resolve_custom_pdf_path(p, resolved_source_dir) for p in explicit_pdfs]
     else:
         if mode == "all":
             selected = all_pdfs
@@ -402,8 +405,6 @@ def choose_pdfs(
     missing = [p for p in selected if not p.exists()]
     if missing:
         raise FileNotFoundError(f"Missing PDFs: {', '.join(str(m) for m in missing)}")
-    cfg = settings or Settings()
-
     if skip_existing:
         existing_ids = _get_existing_article_ids(cfg)
         selected = [p for p in selected if p.stem not in existing_ids]
