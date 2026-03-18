@@ -4,11 +4,12 @@ import os
 import subprocess
 import threading
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -94,7 +95,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.18.195240")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.18.220802")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -153,6 +154,7 @@ class IngestPreviewRequest(BaseModel):
 class JobState:
     name: str
     status: str = "idle"
+    request_id: str | None = None
     started_at: float | None = None
     finished_at: float | None = None
     error: str | None = None
@@ -180,6 +182,7 @@ class JobManager:
             if job.status == "running":
                 raise HTTPException(status_code=409, detail=f"{name} job is already running.")
             job.status = "running"
+            job.request_id = str(uuid.uuid4())
             job.started_at = time.time()
             job.finished_at = None
             job.error = None
@@ -229,6 +232,7 @@ class JobManager:
             return {
                 "name": job.name,
                 "status": job.status,
+                "request_id": job.request_id,
                 "started_at": job.started_at,
                 "finished_at": job.finished_at,
                 "error": job.error,
@@ -245,6 +249,18 @@ class JobManager:
 
 
 jobs = JobManager()
+
+
+def _require_api_token(authorization: str | None) -> None:
+    expected = os.getenv("API_BEARER_TOKEN", "").strip()
+    if not expected:
+        return
+    header = (authorization or "").strip()
+    if not header.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token.")
+    token = header.split(" ", 1)[1].strip()
+    if token != expected:
+        raise HTTPException(status_code=403, detail="Invalid bearer token.")
 
 
 def _count_local_pdfs(root_dir: str) -> int:
@@ -403,7 +419,9 @@ def diagnostics() -> dict:
 
 
 @app.post("/api/sync")
-def sync_pdfs(req: SyncRequest) -> dict:
+def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
+
     def run(job: JobState) -> dict:
         jobs.set_progress("sync", 0.0, "Checking local source")
         settings = Settings()
@@ -443,17 +461,21 @@ def sync_pdfs(req: SyncRequest) -> dict:
 
 
 @app.get("/api/sync/status")
-def sync_status() -> dict:
+def sync_status(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.status("sync")
 
 
 @app.post("/api/sync/stop")
-def sync_stop() -> dict:
+def sync_stop(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.stop("sync")
 
 
 @app.post("/api/ingest")
-def ingest(req: IngestRequest) -> dict:
+def ingest(req: IngestRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
+
     def run(job: JobState) -> dict:
         mode = "batch" if req.mode == "test3" else req.mode
         jobs.set_progress("ingest", 0.0, "Selecting files")
@@ -700,12 +722,14 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
 
 
 @app.get("/api/ingest/status")
-def ingest_status() -> dict:
+def ingest_status(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.status("ingest")
 
 
 @app.post("/api/ingest/stop")
-def ingest_stop() -> dict:
+def ingest_stop(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.stop("ingest")
 
 

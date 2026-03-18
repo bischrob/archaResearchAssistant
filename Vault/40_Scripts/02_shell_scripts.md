@@ -5,6 +5,8 @@
 - `scripts/run_web_gui.sh`
 - `scripts/sync_pdfs_from_gdrive.sh`
 - `scripts/delete_invalid_pdfs.sh`
+- `scripts/build_zotero_plugin_xpi.sh`
+- `scripts/install_zotero_plugin_windows.sh`
 - `backup_neo4j.sh`
 
 ## `start.sh`
@@ -26,6 +28,20 @@
 ## `scripts/delete_invalid_pdfs.sh`
 - Scans PDFs and marks invalid if missing `%PDF` header or unreadable by `fitz`.
 - Supports `--dry-run` and `--root`.
+
+## `scripts/build_zotero_plugin_xpi.sh`
+- Builds `plugins/zotero-rag-sync` into `/tmp/rag-sync@rjbischo.local.xpi`.
+- Enforces an allowlisted file set and checks `manifest.json` plus JS syntax with `node --check`.
+- Verifies the archive contents after creation.
+- By default also replaces the active Zotero profile extension XPI via `scripts/install_zotero_plugin_windows.sh` (`INSTALL_AFTER_BUILD=1`).
+- Set `INSTALL_AFTER_BUILD=0` to build only.
+
+## `scripts/install_zotero_plugin_windows.sh`
+- Locates the active Zotero profile on Windows from `profiles.ini` or explicit overrides.
+- Supports WSL installs by scanning `/mnt/<drive>/Users/*/AppData/Roaming/Zotero/Zotero` when env-based paths are unavailable.
+- Supports explicit overrides via `ZOTERO_PROFILE_DIR` or `ZOTERO_PROFILE_BASE`.
+- Backs up an existing `extensions/rag-sync@rjbischo.local.xpi` before replacing it.
+- Removes the obsolete `extensions/rag-sync@local.xpi` file if it exists.
 
 ## `backup_neo4j.sh`
 - Stops Neo4j, runs `neo4j-admin database dump`, then restarts.
