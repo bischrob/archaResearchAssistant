@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+import torch.nn.functional as F
 from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
 from torch.utils.data import Dataset
 from transformers import (
@@ -100,6 +101,18 @@ def parse_args() -> argparse.Namespace:
         help="Optional existing LoRA adapter path to continue training from.",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--split-sample-loss-weight",
+        type=float,
+        default=1.6,
+        help="Multiplier for full-example loss on split_reference_chunk samples.",
+    )
+    parser.add_argument(
+        "--split-boundary-loss-weight",
+        type=float,
+        default=2.2,
+        help="Extra multiplier for boundary tokens in split_reference_chunk targets.",
+    )
     return parser.parse_args()
 
 
@@ -184,7 +197,15 @@ def _encode_supervised_example(
 
 
 class JsonlSupervisedDataset(Dataset):
-    def __init__(self, path: Path, tokenizer: Any, max_length: int) -> None:
+    def __init__(
+        self,
+        path: Path,
+        tokenizer: Any,
+        max_length: int,
+        *,
+        split_sample_loss_weight: float,
+        split_boundary_loss_weight: float,
+    ) -> None:
         rows = []
         with path.open("r", encoding="utf-8") as f:
             for raw in f:
@@ -195,11 +216,26 @@ class JsonlSupervisedDataset(Dataset):
                 if isinstance(row, dict):
                     rows.append(row)
 
+        split_boundary_token_ids = _split_boundary_token_ids(tokenizer)
         samples = []
         for row in rows:
             messages = _normalize_messages(row)
             encoded = _encode_supervised_example(tokenizer, messages, max_length=max_length)
             if encoded:
+                task = _task_from_row(row, messages)
+                labels = encoded["labels"]
+                loss_weights = [0.0 if x == -100 else 1.0 for x in labels]
+                if task == "split_reference_chunk":
+                    sample_weight = max(1.0, float(split_sample_loss_weight))
+                    boundary_weight = max(sample_weight, float(split_boundary_loss_weight))
+                    for idx, token_id in enumerate(labels):
+                        if token_id == -100:
+                            continue
+                        if token_id in split_boundary_token_ids:
+                            loss_weights[idx] = boundary_weight
+                        else:
+                            loss_weights[idx] = sample_weight
+                encoded["loss_weights"] = loss_weights
                 samples.append(encoded)
 
         if not samples:
@@ -222,17 +258,47 @@ class SupervisedCollator:
         input_ids = []
         attention_mask = []
         labels = []
+        loss_weights = []
         for row in features:
             length = len(row["input_ids"])
             pad = max_len - length
             input_ids.append(row["input_ids"] + ([self.pad_token_id] * pad))
             attention_mask.append(row["attention_mask"] + ([0] * pad))
             labels.append(row["labels"] + ([-100] * pad))
+            loss_weights.append(row.get("loss_weights", [1.0] * length) + ([0.0] * pad))
         return {
             "input_ids": torch.tensor(input_ids, dtype=torch.long),
             "attention_mask": torch.tensor(attention_mask, dtype=torch.long),
             "labels": torch.tensor(labels, dtype=torch.long),
+            "loss_weights": torch.tensor(loss_weights, dtype=torch.float32),
         }
+
+
+class WeightedLossTrainer(Trainer):
+    def compute_loss(self, model: Any, inputs: dict[str, Any], return_outputs: bool = False, **kwargs: Any) -> Any:
+        labels = inputs.get("labels")
+        loss_weights = inputs.pop("loss_weights", None)
+        outputs = model(**inputs)
+        logits = outputs.get("logits") if isinstance(outputs, dict) else outputs.logits
+        if labels is None:
+            loss = outputs["loss"] if isinstance(outputs, dict) else outputs.loss
+            return (loss, outputs) if return_outputs else loss
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        if loss_weights is not None:
+            shift_weights = loss_weights[..., 1:].contiguous().to(shift_logits.device)
+        else:
+            shift_weights = (shift_labels != -100).to(shift_logits.dtype)
+        flat_loss = F.cross_entropy(
+            shift_logits.view(-1, shift_logits.size(-1)),
+            shift_labels.view(-1),
+            ignore_index=-100,
+            reduction="none",
+        )
+        flat_weights = shift_weights.view(-1) * (shift_labels.view(-1) != -100).to(shift_weights.dtype)
+        denom = flat_weights.sum().clamp(min=1.0)
+        loss = (flat_loss * flat_weights).sum() / denom
+        return (loss, outputs) if return_outputs else loss
 
 
 def _enable_input_require_grads(model: Any) -> None:
@@ -258,6 +324,42 @@ def _seed_all(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def _task_from_row(row: dict[str, Any], messages: list[dict[str, str]]) -> str:
+    meta = row.get("meta")
+    if isinstance(meta, dict):
+        task = str(meta.get("task") or "").strip().lower()
+        if task:
+            return task
+    if len(messages) >= 2:
+        user_text = str(messages[1].get("content") or "")
+        if "Bibliography text:" in user_text:
+            return "split_reference_chunk"
+    if len(messages) >= 3 and '"references"' in str(messages[2].get("content") or ""):
+        return "split_reference_chunk"
+    return "parse_reference_json"
+
+
+def _split_boundary_token_ids(tokenizer: Any) -> set[int]:
+    markers = [
+        '{"references":[',
+        '","',
+        '"]',
+        '"references"',
+        "[",
+        "]",
+        "{",
+        "}",
+        ",",
+    ]
+    out: set[int] = set()
+    for marker in markers:
+        token_ids = tokenizer(marker, add_special_tokens=False).get("input_ids", [])
+        for token_id in token_ids:
+            if isinstance(token_id, int):
+                out.add(token_id)
+    return out
 
 
 def _json_safe(value: Any) -> Any:
@@ -344,10 +446,22 @@ def main() -> None:
 
     model.print_trainable_parameters()
 
-    train_dataset = JsonlSupervisedDataset(train_path, tokenizer=tokenizer, max_length=max(128, int(args.max_length)))
+    train_dataset = JsonlSupervisedDataset(
+        train_path,
+        tokenizer=tokenizer,
+        max_length=max(128, int(args.max_length)),
+        split_sample_loss_weight=float(args.split_sample_loss_weight),
+        split_boundary_loss_weight=float(args.split_boundary_loss_weight),
+    )
     eval_dataset = None
     if eval_path:
-        eval_dataset = JsonlSupervisedDataset(eval_path, tokenizer=tokenizer, max_length=max(128, int(args.max_length)))
+        eval_dataset = JsonlSupervisedDataset(
+            eval_path,
+            tokenizer=tokenizer,
+            max_length=max(128, int(args.max_length)),
+            split_sample_loss_weight=float(args.split_sample_loss_weight),
+            split_boundary_loss_weight=float(args.split_boundary_loss_weight),
+        )
 
     kwargs: dict[str, Any] = {
         "output_dir": str(output_dir),
@@ -382,7 +496,7 @@ def main() -> None:
         raise RuntimeError("Unsupported transformers TrainingArguments: missing evaluation strategy argument.")
     training_args = TrainingArguments(**kwargs)
 
-    trainer = Trainer(
+    trainer = WeightedLossTrainer(
         model=model,
         args=training_args,
         train_dataset=train_dataset,

@@ -49,3 +49,23 @@
 ## Notes
 - The SOL script follows the same style as the CatMapper Vault SOL job pattern.
 - `stage2` uses `--init-adapter-path <stage1>` to continue LoRA training rather than restarting from scratch.
+
+## 2026-03-16 Split500 Run
+- Objective: train Qwen3 on the expanded split-reference dataset after growing to 500 examples.
+- Dataset build artifacts:
+- `data/qwen3_reference_audit/reference_split_local_plus119_from_ocr_20260316.jsonl`
+- `data/qwen3_reference_audit/reference_split_local_plus2_from_ocr_20260317.jsonl`
+- `data/qwen3_reference_audit/reference_split_local_500_20260317.jsonl` (final, 500 rows)
+- `data/qwen3_reference_audit/reference_split_local_500_20260317_train_eval/train.jsonl` (450 rows)
+- `data/qwen3_reference_audit/reference_split_local_500_20260317_train_eval/eval.jsonl` (50 rows)
+- SOL launcher used: `scripts/sbatch_sol_qwen3_reference_split_dataset.sh`
+- Submission command:
+- `ssh sol`
+- `cd /scratch/$USER/researchAssistant`
+- `sbatch scripts/sbatch_sol_qwen3_reference_split_dataset.sh`
+- Submitted job: `49004815`
+- Initial queue state at submit check: `PD (Priority)`
+- CPU fallback run (minimal resources):
+- Launcher: `scripts/sbatch_sol_qwen3_reference_split_dataset_cpu.sh`
+- Resource profile: `cpu=4`, `mem=24G`, `gpu=0`, `time=1-00:00:00`, `partition=public`
+- CPU job submitted: `49006992`
