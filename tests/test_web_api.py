@@ -45,43 +45,18 @@ def test_health_endpoint_returns_stats(monkeypatch, client):
 
 
 def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
-    script = tmp_path / "sync.sh"
-    script.write_text("#!/usr/bin/env bash\nsleep 1\n")
-    monkeypatch.setattr(webmain, "SYNC_SCRIPT", script)
-    monkeypatch.setattr(webmain, "_count_remote_pdfs", lambda _remote: None)
+    pdf_root = tmp_path / "pdfs"
+    pdf_root.mkdir()
+    (pdf_root / "a.pdf").write_bytes(b"%PDF-1.7\n")
 
-    class FakeStream:
-        def readline(self):
-            return ""
+    class FakeSettings:
+        pdf_source_dir = str(pdf_root)
+        metadata_backend = "paperpile"
+        paperpile_json = "Paperpile.json"
+        zotero_db_path = ""
 
-        def close(self):
-            return None
-
-    class FakePopen:
-        def __init__(self, *args, **kwargs):
-            self._done = False
-            self._terminated = False
-            self.returncode = None
-            self.stdout = FakeStream()
-            self.stderr = FakeStream()
-
-        def poll(self):
-            if self._terminated:
-                return 143
-            return None if not self._done else 0
-
-        def terminate(self):
-            self._terminated = True
-            self.returncode = 143
-
-        def wait(self, timeout=None):
-            self.returncode = 143
-            return 143
-
-        def communicate(self):
-            return ("sync out", "")
-
-    monkeypatch.setattr(webmain.subprocess, "Popen", lambda *a, **k: FakePopen())
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "load_paperpile_index", lambda _path: {"a.pdf": {"title": "A"}})
 
     start = client.post("/api/sync", json={"dry_run": True})
     assert start.status_code == 200
@@ -412,7 +387,9 @@ def test_diagnostics_endpoint_reports_pass(monkeypatch, tmp_path: Path, client):
         neo4j_user = "neo4j"
         neo4j_password = "pass"
         embedding_model = "model"
+        metadata_backend = "paperpile"
         paperpile_json = str(paperpile_path)
+        zotero_db_path = ""
 
     class FakeStore:
         def __init__(self, *args, **kwargs):
@@ -460,7 +437,9 @@ def test_diagnostics_endpoint_reports_neo4j_failure(monkeypatch, tmp_path: Path,
         neo4j_user = "neo4j"
         neo4j_password = "pass"
         embedding_model = "model"
+        metadata_backend = "paperpile"
         paperpile_json = str(paperpile_path)
+        zotero_db_path = ""
 
     class FailingStore:
         def __init__(self, *args, **kwargs):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from difflib import SequenceMatcher
 import hashlib
+from pathlib import Path
 import re
 from typing import Iterable
 
@@ -80,6 +81,10 @@ class GraphStore:
             "CREATE TEXT INDEX article_title_norm_text IF NOT EXISTS FOR (a:Article) ON (a.title_norm)",
             "CREATE TEXT INDEX article_citekey_text IF NOT EXISTS FOR (a:Article) ON (a.citekey)",
             "CREATE TEXT INDEX article_doi_text IF NOT EXISTS FOR (a:Article) ON (a.doi)",
+            "CREATE TEXT INDEX article_zotero_item_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_item_key)",
+            "CREATE TEXT INDEX article_zotero_attachment_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_attachment_key)",
+            "CREATE TEXT INDEX article_title_year_key_text IF NOT EXISTS FOR (a:Article) ON (a.title_year_key)",
+            "CREATE TEXT INDEX article_metadata_source_text IF NOT EXISTS FOR (a:Article) ON (a.metadata_source)",
             "CREATE INDEX article_year IF NOT EXISTS FOR (a:Article) ON (a.year)",
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
             "CREATE TEXT INDEX reference_doi_text IF NOT EXISTS FOR (r:Reference) ON (r.doi)",
@@ -114,9 +119,13 @@ class GraphStore:
                         a.source_path = $source_path,
                         a.citekey = $citekey,
                         a.paperpile_id = $paperpile_id,
+                        a.zotero_item_key = $zotero_item_key,
+                        a.zotero_attachment_key = $zotero_attachment_key,
                         a.doi = $doi,
                         a.journal = $journal,
-                        a.publisher = $publisher
+                        a.publisher = $publisher,
+                        a.title_year_key = $title_year_key,
+                        a.metadata_source = $metadata_source
                     """,
                     id=article.article_id,
                     title=article.title,
@@ -125,9 +134,13 @@ class GraphStore:
                     source_path=article.source_path,
                     citekey=article.citekey,
                     paperpile_id=article.paperpile_id,
+                    zotero_item_key=article.zotero_item_key,
+                    zotero_attachment_key=article.zotero_attachment_key,
                     doi=article.doi,
                     journal=article.journal,
                     publisher=article.publisher,
+                    title_year_key=article.title_year_key,
+                    metadata_source=article.metadata_source,
                 )
 
                 # Refresh chunk material for this source article so re-ingest
@@ -631,6 +644,56 @@ class GraphStore:
         with self.driver.session() as session:
             rows = session.run("MATCH (a:Article) RETURN a.id AS id")
             return {r["id"] for r in rows if r.get("id")}
+
+    def existing_article_identity_sets(self) -> dict[str, set[str]]:
+        with self.driver.session() as session:
+            rows = session.run(
+                """
+                MATCH (a:Article)
+                RETURN a.id AS id,
+                       a.doi AS doi,
+                       a.zotero_item_key AS zotero_item_key,
+                       a.zotero_attachment_key AS zotero_attachment_key,
+                       a.title_year_key AS title_year_key,
+                       a.source_path AS source_path
+                """
+            )
+            out = {
+                "article_ids": set(),
+                "doi": set(),
+                "zotero_item_key": set(),
+                "zotero_attachment_key": set(),
+                "title_year_key": set(),
+                "file_stem": set(),
+            }
+            for row in rows:
+                article_id = (row.get("id") or "").strip()
+                if article_id:
+                    out["article_ids"].add(article_id)
+                    out["file_stem"].add(article_id.lower())
+
+                doi = _normalize_doi(row.get("doi"))
+                if doi:
+                    out["doi"].add(doi)
+
+                item_key = (row.get("zotero_item_key") or "").strip()
+                if item_key:
+                    out["zotero_item_key"].add(item_key.lower())
+
+                attachment_key = (row.get("zotero_attachment_key") or "").strip()
+                if attachment_key:
+                    out["zotero_attachment_key"].add(attachment_key.lower())
+
+                title_year_key = (row.get("title_year_key") or "").strip()
+                if title_year_key:
+                    out["title_year_key"].add(title_year_key.lower())
+
+                source_path = (row.get("source_path") or "").strip()
+                if source_path:
+                    stem = Path(source_path).stem.strip().lower()
+                    if stem:
+                        out["file_stem"].add(stem)
+            return out
 
     def article_by_citekey(self, citekey: str, chunk_limit: int = 3) -> dict | None:
         key = (citekey or "").strip()

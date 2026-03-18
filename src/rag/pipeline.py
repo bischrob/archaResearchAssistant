@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pickle
+import re
 from dataclasses import asdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -10,12 +11,33 @@ from pathlib import Path
 
 from .anystyle_refs import extract_citations_with_anystyle_docker
 from .config import Settings
+from .metadata_provider import MetadataIndex, find_metadata_for_pdf, load_metadata_index, metadata_title_year_key
 from .neo4j_store import GraphStore
-from .paperpile_metadata import find_metadata_for_pdf, load_paperpile_index
+from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from .path_utils import resolve_input_path
 from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
 from .qwen_local import extract_citations_with_qwen
 from .qwen_structured_refs import extract_structured_chunks_and_citations
+
+DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
+
+
+def load_paperpile_index(path: str) -> dict:
+    # Backward-compatible import point for tests and legacy tooling.
+    return _legacy_load_paperpile_index(path)
+
+
+def _load_metadata_index_for_settings(settings: Settings) -> MetadataIndex:
+    backend = (settings.metadata_backend or "").strip().lower()
+    if backend == "paperpile" or not (settings.zotero_db_path or "").strip():
+        legacy = load_paperpile_index(settings.paperpile_json)
+        return MetadataIndex(
+            backend="paperpile",
+            by_basename=legacy,
+            by_normalized={},
+            by_path_normalized={},
+        )
+    return load_metadata_index(settings)
 
 
 @dataclass
@@ -285,9 +307,13 @@ def _deserialize_article(obj: dict) -> ArticleDoc:
         authors=obj.get("authors", []),
         citekey=obj.get("citekey"),
         paperpile_id=obj.get("paperpile_id"),
+        zotero_item_key=obj.get("zotero_item_key"),
+        zotero_attachment_key=obj.get("zotero_attachment_key"),
         doi=obj.get("doi"),
         journal=obj.get("journal"),
         publisher=obj.get("publisher"),
+        title_year_key=obj.get("title_year_key"),
+        metadata_source=obj.get("metadata_source"),
         source_path=obj["source_path"],
         chunks=chunks,
         citations=citations,
@@ -350,7 +376,25 @@ def _resolve_custom_pdf_path(path_str: str, source_dir: str) -> Path:
     return fallback
 
 
-def _get_existing_article_ids(settings: Settings) -> set[str]:
+def _normalize_doi(doi: str | None) -> str:
+    if not doi:
+        return ""
+    cleaned = DOI_PREFIX_RE.sub("", doi.strip().lower())
+    return cleaned.rstrip(".;, ")
+
+
+def _title_year_key_from_metadata(meta: dict | None) -> str:
+    return (metadata_title_year_key(meta) or "").strip().lower()
+
+
+def _prepare_metadata_for_ingest(meta: dict | None) -> dict:
+    out = dict(meta or {})
+    out["doi"] = _normalize_doi(out.get("doi"))
+    out["title_year_key"] = metadata_title_year_key(out)
+    return out
+
+
+def _get_existing_identities(settings: Settings) -> dict[str, set[str]]:
     try:
         store = GraphStore(
             uri=settings.neo4j_uri,
@@ -359,12 +403,40 @@ def _get_existing_article_ids(settings: Settings) -> set[str]:
             embedding_model=settings.embedding_model,
         )
         try:
-            return store.existing_article_ids()
+            return store.existing_article_identity_sets()
         finally:
             store.close()
     except Exception:
         # If DB isn't reachable, fall back to no-skip behavior.
-        return set()
+        return {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "file_stem": set(),
+        }
+
+
+def _is_existing_pdf(pdf_path: Path, meta: dict | None, existing: dict[str, set[str]]) -> bool:
+    doi = _normalize_doi((meta or {}).get("doi"))
+    if doi and doi in existing["doi"]:
+        return True
+
+    item_key = ((meta or {}).get("zotero_item_key") or "").strip().lower()
+    if item_key and item_key in existing["zotero_item_key"]:
+        return True
+
+    attachment_key = ((meta or {}).get("zotero_attachment_key") or "").strip().lower()
+    if attachment_key and attachment_key in existing["zotero_attachment_key"]:
+        return True
+
+    title_year_key = _title_year_key_from_metadata(meta)
+    if title_year_key and title_year_key in existing["title_year_key"]:
+        return True
+
+    stem = pdf_path.stem.lower()
+    return stem in existing["file_stem"]
 
 
 def choose_pdfs(
@@ -405,13 +477,18 @@ def choose_pdfs(
     missing = [p for p in selected if not p.exists()]
     if missing:
         raise FileNotFoundError(f"Missing PDFs: {', '.join(str(m) for m in missing)}")
+    metadata_index = _load_metadata_index_for_settings(cfg) if (skip_existing or require_metadata) else None
+    metadata_by_pdf: dict[Path, dict | None] = {}
+    if metadata_index is not None:
+        for p in selected:
+            metadata_by_pdf[p] = find_metadata_for_pdf(metadata_index, p.name, str(p))
+
     if skip_existing:
-        existing_ids = _get_existing_article_ids(cfg)
-        selected = [p for p in selected if p.stem not in existing_ids]
+        existing = _get_existing_identities(cfg)
+        selected = [p for p in selected if not _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
 
     if require_metadata:
-        paperpile_index = load_paperpile_index(cfg.paperpile_json)
-        selected = [p for p in selected if find_metadata_for_pdf(paperpile_index, p.name)]
+        selected = [p for p in selected if metadata_by_pdf.get(p)]
 
     if mode == "batch":
         selected = selected[:partial_n]
@@ -437,12 +514,24 @@ def ingest_pdfs(
 ) -> IngestSummary:
     settings = settings or Settings()
     parser_mode = _citation_parser_mode(settings)
-    paperpile_index = load_paperpile_index(settings.paperpile_json)
-    existing_ids = _get_existing_article_ids(settings) if skip_existing else set()
-    skipped_existing = [str(p) for p in selected_pdfs if p.stem in existing_ids]
-    selected_pdfs = [p for p in selected_pdfs if p.stem not in existing_ids]
-    skipped_no_metadata = [str(p) for p in selected_pdfs if not find_metadata_for_pdf(paperpile_index, p.name)]
-    selected_pdfs = [p for p in selected_pdfs if find_metadata_for_pdf(paperpile_index, p.name)]
+    metadata_index = _load_metadata_index_for_settings(settings)
+    metadata_by_pdf = {p: find_metadata_for_pdf(metadata_index, p.name, str(p)) for p in selected_pdfs}
+
+    existing = _get_existing_identities(settings) if skip_existing else {
+        "article_ids": set(),
+        "doi": set(),
+        "zotero_item_key": set(),
+        "zotero_attachment_key": set(),
+        "title_year_key": set(),
+        "file_stem": set(),
+    }
+    skipped_existing = [str(p) for p in selected_pdfs if _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
+    selected_pdfs = [p for p in selected_pdfs if not _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
+
+    require_match = bool(settings.metadata_require_match)
+    skipped_no_metadata = [str(p) for p in selected_pdfs if require_match and not metadata_by_pdf.get(p)]
+    if require_match:
+        selected_pdfs = [p for p in selected_pdfs if metadata_by_pdf.get(p)]
 
     if not selected_pdfs:
         if progress_callback:
@@ -483,7 +572,7 @@ def ingest_pdfs(
             article = _load_article_cached(
                 pdf_path=p,
                 settings=settings,
-                metadata=find_metadata_for_pdf(paperpile_index, p.name),
+                metadata=_prepare_metadata_for_ingest(metadata_by_pdf.get(p)),
             )
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]

@@ -2,11 +2,11 @@
 
 This project provides:
 
-- PDF sync from Google Drive (`rclone`)
+- PDF source refresh from local Nextcloud-synced folders
 - Ingestion into Neo4j (`Article`, `Author`, `Chunk`, `Token`, `Reference`, `CITES`)
 - Contextual retrieval (token + vector signal + citation neighborhood)
 - A web GUI for sync, ingest, and search
-- Metadata enrichment from `Paperpile.json` (title, authors, year, citekey, DOI, journal, publisher)
+- Metadata enrichment from Zotero local DB (with optional Paperpile compatibility backend)
 - Grounded LLM Q&A via OpenAI API using only retrieved RAG context and returning citations
 
 ## 1) Start Neo4j
@@ -20,8 +20,13 @@ Default DB env values:
 - `NEO4J_URI=bolt://localhost:7687`
 - `NEO4J_USER=neo4j`
 - `NEO4J_PASSWORD=archaResearchAssistant`
-- `PAPERPILE_JSON=Paperpile.json`
-- `PDF_SOURCE_DIR=\\192.168.0.37\pooled\media\Books\pdfs` (optional; default PDF source directory)
+- `METADATA_BACKEND=zotero` (supports `zotero` or `paperpile` during migration)
+- `ZOTERO_DB_PATH=...` (required for Zotero backend)
+- `ZOTERO_STORAGE_ROOT=...` (optional; used to resolve `storage:` attachments)
+- `PAPERPILE_JSON=Paperpile.json` (legacy backend)
+- `NEXTCLOUD_PDF_ROOT=...` (recommended)
+- `PDF_SOURCE_DIR=...` (optional override; defaults to `NEXTCLOUD_PDF_ROOT` when set)
+- `METADATA_REQUIRE_MATCH=1` (optional; default strict metadata matching)
 - `OPENAI_API_KEY=...`
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 - `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
@@ -45,19 +50,17 @@ Example for your model directory:
 export QWEN3_MODEL_PATH='C:\Users\rjbischo\ASU Dropbox\Robert Bischoff\RA\CatMapper\LLM'
 ```
 
-## 2) Sync PDFs from Google Drive
+## 2) Refresh local source and metadata
 
-The script uses:
+The sync action now validates local Nextcloud PDF availability and refreshes metadata coverage (no remote copy step).
 
-- `gdrive:Library/Paperpile/allPapers` -> `\\192.168.0.37\pooled\media\Books\pdfs`
-
-Run:
+Run local refresh/coverage summary:
 
 ```bash
-scripts/sync_pdfs_from_gdrive.sh
+python scripts/refresh_zotero_metadata.py
 ```
 
-Dry-run:
+Legacy Google Drive copy script is still available as fallback:
 
 ```bash
 scripts/sync_pdfs_from_gdrive.sh --dry-run
@@ -172,8 +175,8 @@ Notes:
 - default ingest behavior skips already-ingested PDFs; use override existing to reprocess.
 - in `batch` mode, selection order is: readable PDFs -> skip existing (unless override) -> metadata filter -> first N.
 - in `all` mode, selected PDFs are processed as sequential batches and progress is updated after each batch.
-- ingest metadata is pulled from `Paperpile.json` by matching attachment filename to the local PDF basename.
-- PDFs without matching `Paperpile.json` metadata are skipped automatically.
+- ingest metadata is loaded via `METADATA_BACKEND` (`zotero` default, `paperpile` legacy).
+- PDFs without matching metadata are skipped automatically in strict mode (`METADATA_REQUIRE_MATCH=1`).
 - ingest uses Anystyle citation extraction by default and falls back to the built-in heuristic parser if Anystyle fails or returns no references.
 - ingest can alternatively run local Qwen3 LoRA citation parsing when `CITATION_PARSER=qwen`.
 - ingest can run a structured hybrid pipeline when `CITATION_PARSER=qwen_refsplit_anystyle`:
@@ -202,7 +205,7 @@ Use the **Model Details & Diagnostics** tab in the web UI to inspect:
 
 Click **Run Diagnostics** to execute runtime checks:
 
-- `paperpile_json_exists`
+- `metadata_source_exists`
 - `sync_script_exists`
 - `openai_api_key_set`
 - `metadata_coverage_nonzero`
@@ -219,6 +222,12 @@ Build graph:
 python scripts/build_graph.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs'
 python scripts/build_graph.py --mode all --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs'
 python scripts/build_graph.py --mode batch --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs' --override-existing
+```
+
+Backfill article identity fields on existing graph (one-time migration):
+
+```bash
+python scripts/migrate_article_identities.py
 ```
 
 Build Anystyle image (recommended for ingest quality):

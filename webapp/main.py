@@ -17,8 +17,9 @@ from pydantic import BaseModel, Field
 from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
 from src.rag.llm_answer import ask_openai_grounded, preprocess_search_query
+from src.rag.metadata_provider import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_metadata_index
 from src.rag.neo4j_store import GraphStore
-from src.rag.paperpile_metadata import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_paperpile_index
+from src.rag.paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.retrieval import contextual_retrieve
 from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
@@ -51,6 +52,26 @@ def _load_dotenv(path: Path) -> None:
 _load_dotenv(DOTENV_PATH)
 
 
+def load_paperpile_index(path: str) -> dict:
+    # Backward-compatible import point for tests and legacy workflows.
+    return _legacy_load_paperpile_index(path)
+
+
+def _load_metadata_index_for_settings(settings: Settings):
+    backend = (settings.metadata_backend or "").strip().lower()
+    if backend == "paperpile" or not (settings.zotero_db_path or "").strip():
+        legacy = load_paperpile_index(settings.paperpile_json)
+        from src.rag.metadata_provider import MetadataIndex
+
+        return MetadataIndex(
+            backend="paperpile",
+            by_basename=legacy,
+            by_normalized={},
+            by_path_normalized={},
+        )
+    return load_metadata_index(settings)
+
+
 def _default_pdf_source_dir() -> str:
     try:
         return Settings().pdf_source_dir
@@ -73,7 +94,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.18.192156")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.18.195240")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -299,12 +320,14 @@ def diagnostics() -> dict:
     checks: list[dict[str, Any]] = []
 
     # Config and file checks
-    paperpile_path = Path(settings.paperpile_json)
+    metadata_backend = (settings.metadata_backend or "").strip().lower()
+    source_path = settings.paperpile_json if metadata_backend == "paperpile" else settings.zotero_db_path
+    metadata_path = Path(source_path) if source_path else None
     checks.append(
         {
-            "name": "paperpile_json_exists",
-            "ok": paperpile_path.exists(),
-            "details": str(paperpile_path),
+            "name": "metadata_source_exists",
+            "ok": bool(metadata_path and metadata_path.exists()),
+            "details": str(metadata_path) if metadata_path else "Not configured",
         }
     )
     checks.append(
@@ -323,7 +346,7 @@ def diagnostics() -> dict:
     )
 
     # Metadata coverage checks
-    metadata_index = load_paperpile_index(settings.paperpile_json)
+    metadata_index = _load_metadata_index_for_settings(settings)
     pdf_root = _diagnostics_pdf_root()
     pdf_files = iter_pdf_files(pdf_root) if pdf_root.exists() else []
     unmatched = find_unmatched_pdfs(pdf_root, metadata_index) if pdf_root.exists() else []
@@ -337,7 +360,7 @@ def diagnostics() -> dict:
         {
             "name": "metadata_coverage_nonzero",
             "ok": with_meta > 0,
-            "details": f"{with_meta}/{total_local_pdfs} local PDFs matched to metadata",
+            "details": f"{with_meta}/{total_local_pdfs} local PDFs matched to {metadata_index.backend} metadata",
         }
     )
     hdr = _sample_valid_pdf_headers(str(pdf_root), sample_limit=300) if pdf_root.exists() else {"checked": 0, "valid": 0}
@@ -382,82 +405,38 @@ def diagnostics() -> dict:
 @app.post("/api/sync")
 def sync_pdfs(req: SyncRequest) -> dict:
     def run(job: JobState) -> dict:
-        if not SYNC_SCRIPT.exists():
-            raise RuntimeError(f"Sync script not found: {SYNC_SCRIPT}")
-        cmd = [str(SYNC_SCRIPT)]
-        if req.dry_run:
-            cmd.append("--dry-run")
+        jobs.set_progress("sync", 0.0, "Checking local source")
+        settings = Settings()
+        pdf_root = Path(settings.pdf_source_dir)
+        if not pdf_root.exists():
+            raise RuntimeError(f"PDF source directory not found: {pdf_root}")
 
-        remote_path = "gdrive:Library/Paperpile/allPapers"
-        local_dir = _default_pdf_source_dir()
-        total_remote = _count_remote_pdfs(remote_path)
-        jobs.set_progress("sync", 0.0, "Starting sync")
+        if job.cancel_event.is_set():
+            jobs.set_progress("sync", 0.0, "Cancelled")
+            return {"ok": False, "cancelled": True}
 
-        stdout_buf: list[str] = []
-        stderr_buf: list[str] = []
-        max_log_lines = 4000
+        jobs.set_progress("sync", 30.0, "Loading metadata index")
+        metadata_index = _load_metadata_index_for_settings(settings)
 
-        def _drain_output(stream: Any, sink: list[str]) -> None:
-            for line in iter(stream.readline, ""):
-                sink.append(line)
-                if len(sink) > max_log_lines:
-                    del sink[: len(sink) - max_log_lines]
-            stream.close()
+        if job.cancel_event.is_set():
+            jobs.set_progress("sync", 30.0, "Cancelled")
+            return {"ok": False, "cancelled": True}
 
-        def _log_tail() -> tuple[str, str]:
-            return ("".join(stdout_buf)[-12000:], "".join(stderr_buf)[-12000:])
+        jobs.set_progress("sync", 65.0, "Scanning local PDFs")
+        pdf_files = iter_pdf_files(pdf_root)
+        unmatched = [p for p in pdf_files if not find_metadata_for_pdf(metadata_index, p.name, str(p))]
+        matched = len(pdf_files) - len(unmatched)
 
-        proc = subprocess.Popen(
-            cmd,
-            cwd=ROOT,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-        )
-        if proc.stdout is None or proc.stderr is None:
-            raise RuntimeError("Failed to capture sync process output streams.")
-        out_thread = threading.Thread(target=_drain_output, args=(proc.stdout, stdout_buf), daemon=True)
-        err_thread = threading.Thread(target=_drain_output, args=(proc.stderr, stderr_buf), daemon=True)
-        out_thread.start()
-        err_thread.start()
-        with jobs._lock:
-            job.proc = proc
-        while proc.poll() is None:
-            if job.cancel_event.is_set():
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                out_thread.join(timeout=2)
-                err_thread.join(timeout=2)
-                out, err = _log_tail()
-                jobs.set_progress("sync", job.progress_percent, "Cancelled")
-                return {"ok": False, "cancelled": True, "stdout": out, "stderr": err}
-            if total_remote and total_remote > 0:
-                local_count = _count_local_pdfs(str(ROOT / local_dir))
-                pct = min(99.0, (local_count / total_remote) * 100.0)
-                jobs.set_progress("sync", pct, f"Local PDFs: {local_count}/{total_remote}")
-            else:
-                jobs.set_progress("sync", 50.0, "Sync in progress")
-            time.sleep(0.2)
-        out_thread.join(timeout=2)
-        err_thread.join(timeout=2)
-        out, err = _log_tail()
-        if proc.returncode != 0:
-            jobs.set_progress("sync", 100.0, f"Sync failed (exit {proc.returncode})")
-            error_detail = (err or out).strip()[-800:]
-            if error_detail:
-                raise RuntimeError(f"Sync failed (exit {proc.returncode}): {error_detail}")
-            raise RuntimeError(f"Sync failed (exit {proc.returncode}).")
-        jobs.set_progress("sync", 100.0, "Sync complete")
+        jobs.set_progress("sync", 100.0, "Local source refresh complete")
         return {
-            "ok": proc.returncode == 0,
-            "returncode": proc.returncode,
-            "stdout": out[-12000:],
-            "stderr": err[-12000:],
+            "ok": True,
+            "dry_run": bool(req.dry_run),
+            "metadata_backend": metadata_index.backend,
+            "pdf_source_dir": str(pdf_root),
+            "pdfs_total": len(pdf_files),
+            "pdfs_with_metadata": matched,
+            "pdfs_unmatched": len(unmatched),
+            "unmatched_sample": [str(p) for p in unmatched[:30]],
         }
 
     return jobs.start("sync", run)
@@ -684,12 +663,12 @@ def ingest_preview(req: IngestPreviewRequest) -> dict:
             existing_ids = store.existing_article_ids()
         finally:
             store.close()
-        paperpile = load_paperpile_index(settings.paperpile_json)
+        metadata_index = _load_metadata_index_for_settings(settings)
 
         max_rows = 300
         rows = []
         for p in resolved[:max_rows]:
-            meta = find_metadata_for_pdf(paperpile, p.name) or {}
+            meta = find_metadata_for_pdf(metadata_index, p.name, str(p)) or {}
             rows.append(
                 {
                     "path": str(p),
