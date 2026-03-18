@@ -71,6 +71,10 @@ class ArticleDoc:
     source_path: str
     chunks: list[Chunk]
     citations: list[Citation]
+    zotero_item_key: str | None = None
+    zotero_attachment_key: str | None = None
+    title_year_key: str | None = None
+    metadata_source: str | None = None
 
 
 def normalize_title(text: str) -> str:
@@ -372,9 +376,13 @@ def load_article(
         authors=authors,
         citekey=metadata.get("citekey"),
         paperpile_id=metadata.get("paperpile_id"),
+        zotero_item_key=metadata.get("zotero_item_key"),
+        zotero_attachment_key=metadata.get("zotero_attachment_key"),
         doi=metadata.get("doi"),
         journal=metadata.get("journal"),
         publisher=metadata.get("publisher"),
+        title_year_key=metadata.get("title_year_key"),
+        metadata_source=metadata.get("metadata_source"),
         source_path=str(pdf_path),
         chunks=chunks,
         citations=citations,

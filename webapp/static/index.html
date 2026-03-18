@@ -22,7 +22,7 @@
     <section class="panel">
       <h2>How To Use</h2>
       <ol>
-        <li>Click <strong>Sync PDFs</strong> to mirror Google Drive Paperpile files into <code>\\192.168.0.37\pooled\media\Books\pdfs</code>.</li>
+        <li>Click <strong>Sync PDFs</strong> to refresh local Nextcloud/Zotero coverage checks for your configured PDF source directory.</li>
         <li>Choose ingest mode:
           <code>batch</code> for batch upload (first N using <code>Batch Size</code>), <code>all</code> for full corpus in automatic batches of <code>Batch Size</code>, or <code>custom</code> with explicit file paths.
         </li>
@@ -113,7 +113,7 @@
       <section class="panel">
         <h2>Architecture</h2>
         <ul>
-          <li><strong>Data source:</strong> PDFs in <code>\\192.168.0.37\pooled\media\Books\pdfs</code> plus bibliographic metadata from <code>Paperpile.json</code>.</li>
+          <li><strong>Data source:</strong> PDFs in your configured local source directory plus bibliographic metadata from Zotero local DB (or legacy Paperpile backend).</li>
           <li><strong>Graph model:</strong> <code>Article</code>, <code>Author</code>, <code>Chunk</code>, <code>Token</code>, <code>Reference</code>, <code>CITES</code>.</li>
           <li><strong>Retrieval:</strong> Hybrid token + vector search, then lexical reranking.</li>
           <li><strong>LLM grounding:</strong> RAG chunks are passed as citation blocks <code>[C1]</code>, <code>[C2]</code>, etc.; answers are expected to cite these IDs inline.</li>

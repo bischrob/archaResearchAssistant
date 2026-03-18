@@ -34,7 +34,10 @@ def _env_not_false(name: str, default: bool = True) -> bool:
 @dataclass(frozen=True)
 class Settings:
     pdf_source_dir: str = field(
-        default_factory=lambda: _env_str("PDF_SOURCE_DIR", r"\\192.168.0.37\pooled\media\Books\pdfs").strip()
+        default_factory=lambda: _env_str(
+            "PDF_SOURCE_DIR",
+            _env_str("NEXTCLOUD_PDF_ROOT", r"\\192.168.0.37\pooled\media\Books\pdfs"),
+        ).strip()
     )
     neo4j_uri: str = field(default_factory=lambda: _env_str("NEO4J_URI", "bolt://localhost:7687"))
     neo4j_user: str = field(default_factory=lambda: _env_str("NEO4J_USER", "neo4j"))
@@ -43,6 +46,20 @@ class Settings:
         default_factory=lambda: _env_str("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     )
     paperpile_json: str = field(default_factory=lambda: _env_str("PAPERPILE_JSON", "Paperpile.json"))
+    metadata_backend: str = field(default_factory=lambda: _env_str("METADATA_BACKEND", "zotero").strip().lower())
+    metadata_require_match: bool = field(default_factory=lambda: _env_not_false("METADATA_REQUIRE_MATCH", True))
+    zotero_db_path: str = field(
+        default_factory=lambda: _env_str(
+            "ZOTERO_DB_PATH",
+            _env_str("ZOTERO_LOCAL_DB_PATH", ""),
+        ).strip()
+    )
+    zotero_storage_root: str = field(
+        default_factory=lambda: _env_str(
+            "ZOTERO_STORAGE_ROOT",
+            _env_str("ZOTERO_STORAGE_DIR", ""),
+        ).strip()
+    )
     chunk_size_words: int = field(default_factory=lambda: _env_int("CHUNK_SIZE_WORDS", 220))
     chunk_overlap_words: int = field(default_factory=lambda: _env_int("CHUNK_OVERLAP_WORDS", 45))
     citation_min_quality: float = field(default_factory=lambda: _env_float("CITATION_MIN_QUALITY", 0.35))
