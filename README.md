@@ -28,6 +28,7 @@ Default DB env values:
 - `PDF_SOURCE_DIR=...` (optional override; defaults to `NEXTCLOUD_PDF_ROOT` when set)
 - `METADATA_REQUIRE_MATCH=1` (optional; default strict metadata matching)
 - `OPENAI_API_KEY=...`
+- `API_BEARER_TOKEN=...` (optional; if set, required for `/api/sync*` and `/api/ingest*`)
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 - `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
 - `CHUNK_STRIP_PAGE_NOISE=1` (optional; strips repeated headers/footers/page numbers before chunking)
@@ -132,6 +133,25 @@ What it does in order:
 Open:
 
 - `start.sh` prints the URL. Default is `http://localhost:8000`, but it will auto-pick the next open port if `8000` is busy.
+
+## 3b) Zotero plugin (rapid incremental sync)
+
+This repo includes a rapid Zotero plugin scaffold at:
+
+- `plugins/zotero-rag-sync/`
+
+Behavior:
+
+- watches **My Library** item changes
+- requires Better BibTeX to derive citekeys
+- writes `Citation Key: ...` into item `Extra`
+- calls local backend `POST /api/sync` + `POST /api/ingest` (`mode=custom`)
+
+Configure plugin prefs:
+
+- `extensions.zotero-rag-sync.backendURL` (default `http://127.0.0.1:8000`)
+- `extensions.zotero-rag-sync.bearerToken` (must match `API_BEARER_TOKEN` if enabled)
+- `extensions.zotero-rag-sync.debounceSeconds` (default `15`)
 
 ## 4) Enable auto-versioning on commit
 

@@ -39,3 +39,9 @@
 - Symptom: `/api/ask/export` PDF returns 400.
 - Cause: missing `pandoc` and/or PDF engine binary.
 - Fix: install pandoc and at least one engine (`wkhtmltopdf`, `weasyprint`, `xelatex`, `pdflatex`).
+
+## Zotero plugin "not installing"
+- Symptom: plugin behavior missing and no plugin logs.
+- Cause: Zotero session started in Safe Mode (`safeMode => true`), plugin copied to non-active profile, or manifest missing `applications.zotero.update_url` (reported as `Invalid XPI`).
+- Fix: start Zotero in normal mode, verify active profile `extensions/rag-sync@rjbischo.local.xpi`, and ensure manifest includes `applications.zotero.update_url`.
+- Details: [[60_Troubleshooting/06_zotero_plugin_install_not_visible_2026-03-18]]
