@@ -62,6 +62,12 @@ SEED="${SEED:-42}"
 EVAL_RATIO="${EVAL_RATIO:-0.15}"
 STAGE1_WEIGHTS="${STAGE1_WEIGHTS:-synthetic=6,silver=3,gold=1}"
 STAGE2_WEIGHTS="${STAGE2_WEIGHTS:-gold=6,silver=3,synthetic=1}"
+STAGE1_TASK_WEIGHTS="${STAGE1_TASK_WEIGHTS:-parse_reference_json=1,split_reference_chunk=3}"
+STAGE2_TASK_WEIGHTS="${STAGE2_TASK_WEIGHTS:-parse_reference_json=1,split_reference_chunk=6}"
+SPLIT_FROM_PARSE_PER_TIER="${SPLIT_FROM_PARSE_PER_TIER:-160}"
+SPLIT_WINDOW_SIZE="${SPLIT_WINDOW_SIZE:-12}"
+SPLIT_WINDOW_STEP="${SPLIT_WINDOW_STEP:-8}"
+SPLIT_NOISE_PROB="${SPLIT_NOISE_PROB:-0.35}"
 
 STAGE1_EPOCHS="${STAGE1_EPOCHS:-1.0}"
 STAGE2_EPOCHS="${STAGE2_EPOCHS:-1.0}"
@@ -79,6 +85,8 @@ STAGE2_MAX_TRAIN="${STAGE2_MAX_TRAIN:-3000}"
 RUN_STAGE1="${RUN_STAGE1:-1}"
 RUN_STAGE2="${RUN_STAGE2:-1}"
 USE_4BIT="${USE_4BIT:-0}"
+SPLIT_SAMPLE_LOSS_WEIGHT="${SPLIT_SAMPLE_LOSS_WEIGHT:-1.6}"
+SPLIT_BOUNDARY_LOSS_WEIGHT="${SPLIT_BOUNDARY_LOSS_WEIGHT:-2.2}"
 
 cancel_job() {
   local reason="$1"
@@ -186,7 +194,13 @@ python "${PREP_SCRIPT}" \
   --stage1-max-train "${STAGE1_MAX_TRAIN}" \
   --stage2-max-train "${STAGE2_MAX_TRAIN}" \
   --stage1-weights "${STAGE1_WEIGHTS}" \
-  --stage2-weights "${STAGE2_WEIGHTS}"
+  --stage2-weights "${STAGE2_WEIGHTS}" \
+  --stage1-task-weights "${STAGE1_TASK_WEIGHTS}" \
+  --stage2-task-weights "${STAGE2_TASK_WEIGHTS}" \
+  --split-from-parse-per-tier "${SPLIT_FROM_PARSE_PER_TIER}" \
+  --split-window-size "${SPLIT_WINDOW_SIZE}" \
+  --split-window-step "${SPLIT_WINDOW_STEP}" \
+  --split-noise-prob "${SPLIT_NOISE_PROB}"
 
 if [[ "${RUN_STAGE1}" == "1" ]]; then
   python "${TRAIN_SCRIPT}" \
@@ -204,6 +218,8 @@ if [[ "${RUN_STAGE1}" == "1" ]]; then
     --lora-r "${LORA_R}" \
     --lora-alpha "${LORA_ALPHA}" \
     --lora-dropout "${LORA_DROPOUT}" \
+    --split-sample-loss-weight "${SPLIT_SAMPLE_LOSS_WEIGHT}" \
+    --split-boundary-loss-weight "${SPLIT_BOUNDARY_LOSS_WEIGHT}" \
     --gradient-checkpointing \
     --seed "${SEED}" \
     "${FOURBIT_ARGS[@]}"
@@ -229,6 +245,8 @@ if [[ "${RUN_STAGE2}" == "1" ]]; then
     --lora-r "${LORA_R}" \
     --lora-alpha "${LORA_ALPHA}" \
     --lora-dropout "${LORA_DROPOUT}" \
+    --split-sample-loss-weight "${SPLIT_SAMPLE_LOSS_WEIGHT}" \
+    --split-boundary-loss-weight "${SPLIT_BOUNDARY_LOSS_WEIGHT}" \
     --gradient-checkpointing \
     --seed "${SEED}" \
     "${FOURBIT_ARGS[@]}"

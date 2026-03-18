@@ -22,6 +22,16 @@ REFERENCE_HEADING_RE = re.compile(
 )
 HEADING_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9'&/-]*")
 REFERENCE_START_RE = re.compile(r"^(?:\[\d+\]\s*|\d+\.\s+)?[A-Z][A-Za-z .,'&-]+(?:\(|,)?\s*(?:19|20)\d{2}\b")
+LEADING_REF_MARKER_RE = re.compile(r"^\s*(?:\[\d+\]|\d+[.)])\s+")
+MERGED_MARKER_RE = re.compile(r"\[(\d+)\]\s")
+NOISE_REFERENCE_RE = re.compile(
+    r"(attention visualizations|<eos>|<pad>|^\s*references\s*$|^figure\s+\d+)",
+    re.IGNORECASE,
+)
+TAIL_NOISE_RE = re.compile(
+    r"(attention visualizations|<eos>|<pad>|\bfigure\s+\d+\s*:)",
+    re.IGNORECASE,
+)
 
 SECTION_SYSTEM_PROMPT = (
     "You are segmenting academic PDF text by section headings. "
@@ -499,8 +509,77 @@ def _parse_reference_rows(payload: object) -> list[str]:
     return rows
 
 
+def _clean_reference_row(row: str) -> str:
+    return " ".join((row or "").split()).strip()
+
+
+def _split_numbered_rows(text: str) -> list[str]:
+    parts = re.split(r"(?=\[\d+\]\s)", text or "")
+    out: list[str] = []
+    for part in parts:
+        clean = _clean_reference_row(part)
+        if clean:
+            out.append(clean)
+    return out
+
+
+def _drop_leading_marker(text: str) -> str:
+    return LEADING_REF_MARKER_RE.sub("", (text or "").strip())
+
+
+def _sanitize_reference_rows(rows: list[str]) -> list[str]:
+    cleaned: list[str] = []
+    for row in rows:
+        text = _clean_reference_row(row)
+        if not text or len(text) < 12:
+            continue
+        noise_match = TAIL_NOISE_RE.search(text)
+        if noise_match:
+            text = _clean_reference_row(text[: noise_match.start()])
+            if not text or len(text) < 12:
+                continue
+        if NOISE_REFERENCE_RE.fullmatch(text):
+            continue
+        marker_count = len(MERGED_MARKER_RE.findall(text))
+        if marker_count > 1:
+            cleaned.extend(_split_numbered_rows(text))
+            continue
+        cleaned.append(text)
+
+    out: list[str] = []
+    seen: set[str] = set()
+    for row in cleaned:
+        compact = _drop_leading_marker(_clean_reference_row(row))
+        if not compact or len(compact) < 12:
+            continue
+        if NOISE_REFERENCE_RE.search(compact):
+            continue
+        key = compact.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(compact)
+    return out
+
+
+def _looks_invalid_split(rows: list[str], source_block: str) -> bool:
+    if not rows:
+        return True
+    noise_rows = sum(1 for row in rows if NOISE_REFERENCE_RE.search(row))
+    if noise_rows > 0:
+        return True
+    marker_hits = len(re.findall(r"\[\d+\]\s", source_block or ""))
+    if marker_hits >= 8 and len(rows) <= max(2, marker_hits // 6):
+        return True
+    return False
+
+
 def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings | None = None) -> list[str]:
     cfg = settings or Settings()
+    global_numbered = _sanitize_reference_rows(_split_numbered_rows(reference_text))
+    if global_numbered:
+        return global_numbered
+
     max_input_chars = max(1200, min(int(cfg.qwen_max_input_chars * 0.78), int(cfg.qwen_reference_split_window_chars)))
     windows = _reference_windows(reference_text, max_chars=max_input_chars)
     if not windows:
@@ -508,45 +587,56 @@ def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings
 
     out: list[str] = []
     for block in windows:
-        user = (
-            "Split the bibliography text below into one item per full reference.\n"
-            "Important: page breaks do not end references; continue references across page boundaries.\n"
-            "Return JSON only in the required schema.\n\n"
-            f"Bibliography text:\n{block}"
-        )
-        parsed = None
-        try:
-            raw = generate_with_qwen(
-                messages=[
-                    {"role": "system", "content": REFERENCE_SPLIT_SYSTEM_PROMPT},
-                    {"role": "user", "content": user},
-                ],
-                settings=cfg,
-                task="citation",
-                max_new_tokens=max(256, min(int(cfg.qwen_citation_max_new_tokens), 900)),
-                temperature=0.0,
-            )
-            parsed = decode_qwen_json(raw)
-        except Exception:
+        refs: list[str] = []
+        prompts = [
+            (
+                "Split the bibliography text below into one item per full reference.\n"
+                "Important: page breaks do not end references; continue references across page boundaries.\n"
+                "Do not include headers, figure captions, or tokens such as <EOS>/<pad>.\n"
+                "Return JSON only in the required schema.\n\n"
+                f"Bibliography text:\n{block}"
+            ),
+            (
+                "Retry with strict validation.\n"
+                "Output JSON only: {\"references\": [\"one reference\", \"one reference\"]}.\n"
+                "Rules: one reference per item, no merged items, no headers/captions/padding tokens.\n\n"
+                f"Bibliography text:\n{block}"
+            ),
+        ]
+        for user in prompts:
             parsed = None
+            try:
+                raw = generate_with_qwen(
+                    messages=[
+                        {"role": "system", "content": REFERENCE_SPLIT_SYSTEM_PROMPT},
+                        {"role": "user", "content": user},
+                    ],
+                    settings=cfg,
+                    task="citation",
+                    max_new_tokens=max(256, min(int(cfg.qwen_citation_max_new_tokens), 900)),
+                    temperature=0.0,
+                )
+                parsed = decode_qwen_json(raw)
+            except Exception:
+                parsed = None
+            refs = _sanitize_reference_rows(_parse_reference_rows(parsed))
+            if not _looks_invalid_split(refs, block):
+                break
 
-        refs = _parse_reference_rows(parsed)
+        # Strict post-processing for numbered bibliographies: one marker -> one output row.
+        numbered_refs = _sanitize_reference_rows(_split_numbered_rows(block))
+        if numbered_refs:
+            refs = numbered_refs
+
         if not refs:
-            refs = _heuristic_reference_split(block)
+            refs = _sanitize_reference_rows(_heuristic_reference_split(block))
+        if _looks_invalid_split(refs, block):
+            numbered = _sanitize_reference_rows(_split_numbered_rows(block))
+            if numbered:
+                refs = numbered
         out.extend(refs)
 
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for row in out:
-        clean = " ".join((row or "").split()).strip()
-        if len(clean) < 12:
-            continue
-        key = clean.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(clean)
-    return deduped
+    return _sanitize_reference_rows(out)
 
 
 def extract_structured_chunks_and_citations(

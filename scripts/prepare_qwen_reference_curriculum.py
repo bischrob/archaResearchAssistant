@@ -20,12 +20,20 @@ PARSE_SYSTEM_PROMPT = (
 SPLIT_SYSTEM_PROMPT = (
     "You split bibliography text into individual references. "
     'Return JSON only with this schema: {"references":["<one reference>", "<one reference>"]}. '
+    "Each list item must contain exactly one full reference. "
+    "Drop section headers, figure captions, page artifacts, and tokens like <EOS>/<pad>. "
     "Do not add commentary and do not invent text."
 )
 DOI_RE = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
 YEAR_RE = re.compile(r"\b(1[6-9]\d{2}|20\d{2}|2100)\b")
 WORD_RE = re.compile(r"[A-Za-z][A-Za-z'-]+")
 URL_RE = re.compile(r"https?://\S+", re.IGNORECASE)
+REF_LEADING_MARKER_RE = re.compile(r"^\s*(?:\[\d+\]|\d+[.)])\s+")
+NOISE_RE = re.compile(
+    r"(?:^|\b)(references|bibliography|attention visualizations|figure\s+\d+|table\s+\d+|<eos>|<pad>)(?:\b|$)",
+    re.IGNORECASE,
+)
+REFERENCE_START_RE = re.compile(r"^\s*(?:\[\d+\]|\d+[.)])\s+")
 
 
 @dataclass
@@ -69,6 +77,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--min-title-chars", type=int, default=5)
     p.add_argument("--stage1-weights", default="synthetic=6,silver=3,gold=1")
     p.add_argument("--stage2-weights", default="gold=6,silver=3,synthetic=1")
+    p.add_argument("--stage1-task-weights", default="parse_reference_json=1,split_reference_chunk=3")
+    p.add_argument("--stage2-task-weights", default="parse_reference_json=1,split_reference_chunk=6")
+    p.add_argument("--split-from-parse-per-tier", type=int, default=160)
+    p.add_argument("--split-window-size", type=int, default=12)
+    p.add_argument("--split-window-step", type=int, default=8)
+    p.add_argument("--split-noise-prob", type=float, default=0.35)
     p.add_argument("--stage1-max-train", type=int, default=0, help="0 means no cap.")
     p.add_argument("--stage2-max-train", type=int, default=0, help="0 means no cap.")
     return p.parse_args()
@@ -76,6 +90,42 @@ def parse_args() -> argparse.Namespace:
 
 def _normalize_ws(value: str) -> str:
     return " ".join((value or "").split()).strip()
+
+
+def _strip_leading_ref_marker(text: str) -> str:
+    return REF_LEADING_MARKER_RE.sub("", (text or "").strip())
+
+
+def _looks_like_noise_reference(text: str) -> bool:
+    raw = _normalize_ws(text)
+    if len(raw) < 12:
+        return True
+    if NOISE_RE.search(raw):
+        return True
+    if raw.lower().startswith("references"):
+        return True
+    return False
+
+
+def _canonical_reference_text(text: str) -> str:
+    clean = _normalize_ws(_strip_leading_ref_marker(text))
+    clean = clean.strip(" -–—")
+    return clean
+
+
+def _canonical_reference_list(references: list[str]) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in references:
+        clean = _canonical_reference_text(item)
+        if _looks_like_noise_reference(clean):
+            continue
+        key = clean.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(clean)
+    return out
 
 
 def _extract_raw_reference(user_text: str) -> str:
@@ -423,17 +473,20 @@ def _build_reference_block(refs: list[str], variant: str, rnd: random.Random) ->
 
 
 def _make_split_messages(reference_block: str, references: list[str]) -> list[dict[str, str]]:
+    target = _canonical_reference_list(references)
     return [
         {"role": "system", "content": SPLIT_SYSTEM_PROMPT},
         {
             "role": "user",
             "content": (
                 "Split the bibliography text below into one item per full reference.\n"
+                "Important: keep one reference per list element; do not merge references.\n"
+                "Do not return headers/captions/padding tokens.\n"
                 "Return JSON only in the required schema.\n\n"
                 f"Bibliography text:\n{reference_block}"
             ),
         },
-        {"role": "assistant", "content": json.dumps({"references": references}, ensure_ascii=False)},
+        {"role": "assistant", "content": json.dumps({"references": target}, ensure_ascii=False)},
     ]
 
 
@@ -468,7 +521,10 @@ def load_gold_examples(gold_path: Path, seed: int) -> tuple[list[CurriculumExamp
             target = _target_from_csl(entry)
             if not rendered or not target:
                 continue
-            rendered_refs.append(rendered)
+            canonical_rendered = _canonical_reference_text(rendered)
+            if _looks_like_noise_reference(canonical_rendered):
+                continue
+            rendered_refs.append(canonical_rendered)
             out.append(
                 CurriculumExample(
                     tier="gold",
@@ -485,7 +541,7 @@ def load_gold_examples(gold_path: Path, seed: int) -> tuple[list[CurriculumExamp
             )
             stats["parse_examples"] += 1
 
-        windows = _split_windows(rendered_refs)
+        windows = _split_windows(_canonical_reference_list(rendered_refs))
         for subset in windows:
             variant = rnd.choice(["plain", "numbered"])
             block = _build_reference_block(subset, variant=variant, rnd=rnd)
@@ -504,6 +560,100 @@ def load_gold_examples(gold_path: Path, seed: int) -> tuple[list[CurriculumExamp
                 )
             )
             stats["split_examples"] += 1
+    return out, stats
+
+
+def _extract_raw_reference_from_parse_example(ex: CurriculumExample) -> str:
+    if len(ex.messages) < 2:
+        return ""
+    user = str(ex.messages[1].get("content") or "")
+    return _canonical_reference_text(_extract_raw_reference(user))
+
+
+def _inject_post_reference_noise(block: str, rnd: random.Random) -> str:
+    noise_variants = [
+        "Attention Visualizations\nFigure 3: Example attention plot.",
+        "<EOS>\n<pad>\n<pad>",
+        "Figure 2: Additional analysis and chart labels.",
+    ]
+    if rnd.random() < 0.5:
+        return block + "\n" + rnd.choice(noise_variants)
+    return "References\n" + block + "\n" + rnd.choice(noise_variants)
+
+
+def _window_references(refs: list[str], *, window_size: int, step: int) -> list[list[str]]:
+    n = len(refs)
+    if n < 2:
+        return []
+    if n <= window_size:
+        return [refs]
+    out: list[list[str]] = []
+    i = 0
+    while i < n:
+        chunk = refs[i : i + window_size]
+        if len(chunk) >= 2:
+            out.append(chunk)
+        if i + window_size >= n:
+            break
+        i += step
+    return out
+
+
+def synthesize_split_examples_from_parse_examples(
+    *,
+    examples: list[CurriculumExample],
+    tier: str,
+    source: str,
+    seed: int,
+    max_examples: int,
+    window_size: int,
+    window_step: int,
+    noise_prob: float,
+) -> tuple[list[CurriculumExample], dict[str, int]]:
+    stats = {"generated": 0, "windows": 0}
+    refs: list[str] = []
+    for ex in examples:
+        raw = _extract_raw_reference_from_parse_example(ex)
+        if _looks_like_noise_reference(raw):
+            continue
+        refs.append(raw)
+
+    refs = _canonical_reference_list(refs)
+    if not refs:
+        return [], stats
+
+    rnd = random.Random(seed)
+    rnd.shuffle(refs)
+    windows = _window_references(
+        refs,
+        window_size=max(4, int(window_size)),
+        step=max(2, int(window_step)),
+    )
+    if max_examples > 0:
+        windows = windows[:max_examples]
+
+    out: list[CurriculumExample] = []
+    for idx, subset in enumerate(windows):
+        stats["windows"] += 1
+        variant = rnd.choice(["plain", "numbered"])
+        block = _build_reference_block(subset, variant=variant, rnd=rnd)
+        if rnd.random() < max(0.0, min(1.0, noise_prob)):
+            block = _inject_post_reference_noise(block, rnd=rnd)
+        out.append(
+            CurriculumExample(
+                tier=tier,
+                task="split_reference_chunk",
+                messages=_make_split_messages(block, subset),
+                meta={
+                    "tier": tier,
+                    "task": "split_reference_chunk",
+                    "source": source,
+                    "generator": f"parse_pool_{variant}",
+                    "window_index": idx,
+                },
+            )
+        )
+        stats["generated"] += 1
     return out, stats
 
 
@@ -542,6 +692,7 @@ def _split_train_eval(examples: list[CurriculumExample], eval_ratio: float, seed
 def _weighted_stage_rows(
     train_by_tier: dict[str, list[CurriculumExample]],
     weights: dict[str, int],
+    task_weights: dict[str, int],
     seed: int,
     max_rows: int = 0,
 ) -> list[CurriculumExample]:
@@ -551,7 +702,8 @@ def _weighted_stage_rows(
         if weight <= 0:
             continue
         for ex in examples:
-            for _ in range(weight):
+            task_weight = max(1, int(task_weights.get(ex.task, 1)))
+            for _ in range(weight * task_weight):
                 rows.append(copy.deepcopy(ex))
     rnd = random.Random(seed)
     rnd.shuffle(rows)
@@ -602,7 +754,33 @@ def main() -> None:
     )
     gold_examples, gold_stats = load_gold_examples(gold_path, seed=seed)
 
+    stage1_weights = _parse_weight_map(args.stage1_weights)
+    stage2_weights = _parse_weight_map(args.stage2_weights)
+    stage1_task_weights = _parse_weight_map(args.stage1_task_weights)
+    stage2_task_weights = _parse_weight_map(args.stage2_task_weights)
+
     all_examples = silver_examples + synthetic_examples + gold_examples
+    silver_split_examples, silver_split_stats = synthesize_split_examples_from_parse_examples(
+        examples=silver_examples,
+        tier="silver",
+        source="silver_parse_pool",
+        seed=seed + 3001,
+        max_examples=max(0, int(args.split_from_parse_per_tier)),
+        window_size=max(4, int(args.split_window_size)),
+        window_step=max(2, int(args.split_window_step)),
+        noise_prob=float(args.split_noise_prob),
+    )
+    synthetic_split_examples, synthetic_split_stats = synthesize_split_examples_from_parse_examples(
+        examples=synthetic_examples,
+        tier="synthetic",
+        source="synthetic_parse_pool",
+        seed=seed + 3002,
+        max_examples=max(0, int(args.split_from_parse_per_tier)),
+        window_size=max(4, int(args.split_window_size)),
+        window_step=max(2, int(args.split_window_step)),
+        noise_prob=float(args.split_noise_prob),
+    )
+    all_examples.extend(silver_split_examples + synthetic_split_examples)
     deduped, dedupe_stats = _dedupe_with_priority(all_examples)
 
     by_tier: dict[str, list[CurriculumExample]] = {"gold": [], "silver": [], "synthetic": []}
@@ -619,18 +797,17 @@ def main() -> None:
     rnd = random.Random(seed + 99)
     rnd.shuffle(eval_rows)
 
-    stage1_weights = _parse_weight_map(args.stage1_weights)
-    stage2_weights = _parse_weight_map(args.stage2_weights)
-
     stage1_train = _weighted_stage_rows(
         train_by_tier,
         weights=stage1_weights,
+        task_weights=stage1_task_weights,
         seed=seed + 1001,
         max_rows=max(0, int(args.stage1_max_train)),
     )
     stage2_train = _weighted_stage_rows(
         train_by_tier,
         weights=stage2_weights,
+        task_weights=stage2_task_weights,
         seed=seed + 2001,
         max_rows=max(0, int(args.stage2_max_train)),
     )
@@ -677,11 +854,15 @@ def main() -> None:
         "weights": {
             "stage1": stage1_weights,
             "stage2": stage2_weights,
+            "stage1_task": stage1_task_weights,
+            "stage2_task": stage2_task_weights,
         },
         "input_stats": {
             "silver": silver_stats,
             "synthetic": synthetic_stats,
             "gold": gold_stats,
+            "synthetic_split_from_parse": synthetic_split_stats,
+            "silver_split_from_parse": silver_split_stats,
         },
         "dedupe": dedupe_stats,
         "pool_counts": {

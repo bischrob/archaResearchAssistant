@@ -18,6 +18,8 @@ Last reviewed: 2026-02-21
 - [[00_Project/07_ingest_status]]
 - [[00_Project/08_reference_lora_gold_dataset]]
 - [[00_Project/09_qwen3_reference_curriculum_training_on_sol]]
+- [[00_Project/10_interaction_log]]
+- [[00_Project/11_qwen_reference_split_hardening_2026-03-17]]
 
 ## Backend Modules
 - [[10_Backend/01_settings_and_config_module]]
