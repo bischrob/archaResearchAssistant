@@ -208,6 +208,32 @@ Equivalent command:
 make start
 ```
 
+## 3d) Daily Dropbox mirror (rclone)
+
+This repo includes:
+
+- `scripts/rclone_sync_dropbox.sh`
+
+Default destination:
+
+- `dropbox:Projects/researchAssistant`
+
+Configure Dropbox remote once:
+
+```bash
+rclone config
+```
+
+Run one manual sync:
+
+```bash
+scripts/rclone_sync_dropbox.sh
+```
+
+Daily schedule (installed via cron):
+
+- `15 2 * * * /home/rjbischo/researchAssistant/scripts/rclone_sync_dropbox.sh`
+
 ## 3b) Zotero plugin (rapid incremental sync)
 
 This repo includes a rapid Zotero plugin scaffold at:

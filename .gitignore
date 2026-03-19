@@ -80,3 +80,7 @@ ocr/paddleocr/text/*
 logs/web_gui.pid
 data/zotero_latest30_*
 archive/*/.DS_Store
+
+# Private/local knowledge and debug artifacts
+Vault/
+zoterodebuglog.txt
