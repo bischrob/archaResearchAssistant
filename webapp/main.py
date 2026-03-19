@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.165223")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.175256")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -364,7 +364,7 @@ def health() -> dict:
         stats = store.graph_stats()
     finally:
         store.close()
-    return {"status": "ok", "neo4j_uri": settings.neo4j_uri, "stats": stats}
+    return {"status": "ok", "version": app.version, "neo4j_uri": settings.neo4j_uri, "stats": stats}
 
 
 @app.get("/api/diagnostics")
@@ -473,16 +473,9 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             jobs.set_progress("sync", 0.0, "Cancelled")
             return {"ok": False, "cancelled": True}
 
-        # Keep preprocessing in the first 10% of sync progress.
-        jobs.set_progress("sync", 4.0, "Loading metadata index")
-        metadata_index = _load_metadata_index_for_settings(settings)
-
-        if job.cancel_event.is_set():
-            jobs.set_progress("sync", 4.0, "Cancelled")
-            return {"ok": False, "cancelled": True}
-
         if source_mode == "zotero_db":
-            jobs.set_progress("sync", 6.0, "Loading Zotero attachment paths")
+            # Reserve first 5% for anti-join preprocessing.
+            jobs.set_progress("sync", 2.0, "Loading Zotero PDF attachment metadata")
             db_path_raw = (settings.zotero_db_path or "").strip()
             if db_path_raw:
                 db_path = resolve_input_path(db_path_raw)
@@ -503,9 +496,39 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             storage_root = storage_root_raw or str(db_path.parent / "storage")
             rows = load_zotero_entries(str(db_path), storage_root)
             total_rows = len(rows)
-            resolved: list[Path] = []
+            jobs.set_progress("sync", 3.0, f"Loaded {total_rows} Zotero PDF attachment rows")
+
+            jobs.set_progress("sync", 4.0, "Reading existing Zotero identifiers from Neo4j")
+            store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+            try:
+                with store.driver.session() as session:
+                    neo4j_zotero_ids = {
+                        str(r["pid"])
+                        for r in session.run(
+                            """
+                            MATCH (a:Article)
+                            WHERE coalesce(a.zotero_persistent_id, '') <> ''
+                            RETURN DISTINCT a.zotero_persistent_id AS pid
+                            """
+                        )
+                        if str(r["pid"] or "").strip()
+                    }
+            finally:
+                store.close()
+
+            zotero_by_pid: dict[str, dict[str, Any]] = {}
+            for row in rows:
+                pid = str(row.get("zotero_persistent_id") or "").strip()
+                if not pid or pid in zotero_by_pid:
+                    continue
+                zotero_by_pid[pid] = row
+
+            missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
+            jobs.set_progress("sync", 5.0, f"Anti-join complete: {len(missing_rows)} PDFs missing in Neo4j")
+
+            ingest_candidates: list[Path] = []
             missing_paths: list[str] = []
-            for idx, row in enumerate(rows, start=1):
+            for row in missing_rows:
                 if job.cancel_event.is_set():
                     jobs.set_progress("sync", 0.0, "Cancelled")
                     return {"ok": False, "cancelled": True}
@@ -514,27 +537,115 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     continue
                 p = Path(raw)
                 if p.exists():
-                    resolved.append(p)
+                    ingest_candidates.append(p)
                 else:
                     missing_paths.append(raw)
-                if total_rows > 0:
-                    progress = 6.0 + ((idx / total_rows) * 4.0)
-                    jobs.set_progress("sync", progress, f"Resolving Zotero paths {idx}/{total_rows}: {Path(raw).name}")
 
             dedup: dict[str, Path] = {}
-            for p in resolved:
+            for p in ingest_candidates:
                 dedup[str(p)] = p
-            pdf_files = sorted(dedup.values(), key=lambda p: str(p).lower())
+            ingest_candidates = sorted(dedup.values(), key=lambda p: str(p).lower())
+            pdf_files = list(ingest_candidates)
             source_stats = {
                 "source_mode": "zotero_db",
                 "zotero_db_path": str(db_path),
                 "zotero_storage_root": storage_root,
                 "zotero_attachment_rows": total_rows,
-                "zotero_paths_found": len(pdf_files),
+                "zotero_unique_parent_items": len(zotero_by_pid),
+                "zotero_missing_in_neo4j": len(missing_rows),
+                "zotero_paths_found": len(ingest_candidates),
                 "zotero_paths_missing": len(missing_paths),
                 "zotero_missing_sample": missing_paths[:30],
             }
-        else:
+
+            ingest_summary: dict[str, Any] | None = None
+            ingest_ran = bool(req.run_ingest and not req.dry_run)
+
+            if not ingest_candidates:
+                jobs.set_progress("sync", 100.0, "Sync complete (no missing Zotero PDFs to ingest)")
+                return {
+                    "ok": True,
+                    "dry_run": bool(req.dry_run),
+                    "metadata_backend": settings.metadata_backend,
+                    "source_mode": source_mode,
+                    "pdf_source_dir": str(pdf_root),
+                    "pdf_source_dir_raw": configured_source,
+                    "source_stats": source_stats,
+                    "pdfs_total": len(zotero_by_pid),
+                    "pdfs_with_metadata": len(ingest_candidates),
+                    "pdfs_unmatched": 0,
+                    "unmatched_sample": [],
+                    "ingest_candidate_count": 0,
+                    "ingest_ran": False,
+                    "ingest_summary": None,
+                }
+
+            jobs.set_progress("sync", 5.0, f"{len(ingest_candidates)} PDFs need ingest")
+            if ingest_ran:
+                jobs.set_progress("sync", 6.0, f"Starting ingest for {len(ingest_candidates)} PDFs")
+
+                def on_ingest_progress(percent: float, message: str) -> None:
+                    # Map ingest 0..100 to sync 5..99
+                    mapped = 5.0 + (max(0.0, min(100.0, float(percent))) * 0.94)
+                    jobs.set_progress("sync", mapped, f"Ingest: {message}")
+
+                summary = ingest_pdfs(
+                    selected_pdfs=ingest_candidates,
+                    wipe=False,
+                    settings=settings,
+                    should_cancel=lambda: job.cancel_event.is_set(),
+                    skip_existing=bool(req.ingest_skip_existing),
+                    progress_callback=on_ingest_progress,
+                )
+                ingest_summary = {
+                    "ingested_articles": summary.ingested_articles,
+                    "total_chunks": summary.total_chunks,
+                    "total_references": summary.total_references,
+                    "selected_pdfs": summary.selected_pdfs,
+                    "skipped_existing_pdfs": summary.skipped_existing_pdfs,
+                    "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
+                    "failed_pdfs": summary.failed_pdfs,
+                    "citation_override_pdfs": summary.citation_override_pdfs,
+                    "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
+                    "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
+                    "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
+                    "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
+                    "anystyle_disabled_reason": summary.anystyle_disabled_reason,
+                    "anystyle_failure_samples": summary.anystyle_failure_samples,
+                    "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
+                    "qwen_applied_pdfs": summary.qwen_applied_pdfs,
+                    "qwen_empty_pdfs": summary.qwen_empty_pdfs,
+                    "qwen_failed_pdfs": summary.qwen_failed_pdfs,
+                    "qwen_disabled_reason": summary.qwen_disabled_reason,
+                    "qwen_failure_samples": summary.qwen_failure_samples,
+                }
+
+            jobs.set_progress("sync", 100.0, "Sync complete")
+            return {
+                "ok": True,
+                "dry_run": bool(req.dry_run),
+                "metadata_backend": settings.metadata_backend,
+                "source_mode": source_mode,
+                "pdf_source_dir": str(pdf_root),
+                "pdf_source_dir_raw": configured_source,
+                "source_stats": source_stats,
+                "pdfs_total": len(zotero_by_pid),
+                "pdfs_with_metadata": len(ingest_candidates),
+                "pdfs_unmatched": 0,
+                "unmatched_sample": [],
+                "ingest_candidate_count": len(ingest_candidates),
+                "ingest_ran": ingest_ran,
+                "ingest_summary": ingest_summary,
+            }
+
+        # Filesystem mode keeps the broader scan + match flow.
+        jobs.set_progress("sync", 4.0, "Loading metadata index")
+        metadata_index = _load_metadata_index_for_settings(settings)
+        if job.cancel_event.is_set():
+            jobs.set_progress("sync", 4.0, "Cancelled")
+            return {"ok": False, "cancelled": True}
+
+        if source_mode != "zotero_db":
             if not pdf_root.exists():
                 raise RuntimeError(f"PDF source directory not found: {pdf_root}")
 

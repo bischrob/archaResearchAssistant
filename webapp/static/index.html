@@ -11,22 +11,26 @@
     <header>
       <div class="brand-line">
         <h1>Research Assistant</h1>
-        <span class="version-badge">v3.0</span>
+        <span class="version-badge" id="appVersionBadge">v-</span>
         <span class="mode-badge">Basic Mode</span>
       </div>
       <p class="tagline">Neo4j-backed ingestion, retrieval, and grounded answer workflows.</p>
     </header>
 
     <section class="panel">
-      <h2>Workflow Scope</h2>
-      <div class="kv">
-        <strong>Visible Sections</strong><span>System/Health, Sync PDFs, Ingest, Search, Diagnostics.</span>
-        <strong>Removed from GUI</strong><span>How To Use, LLM Answer panel, Model Details tab.</span>
-      </div>
+      <details open>
+        <summary><h2>Suggested Workflow</h2></summary>
+        <div class="kv">
+          <strong>1) Health</strong><span>Set API token if needed, then click Refresh Health.</span>
+          <strong>2) Sync + Ingest</strong><span>Use Zotero DB mode, keep Skip Existing on, and run Sync + Ingest.</span>
+          <strong>3) Search</strong><span>Run a query after ingest completes.</span>
+          <strong>4) Diagnostics</strong><span>Use Diagnostics if sync or ingest fails.</span>
+        </div>
+      </details>
     </section>
 
-    <section class="panel grid">
-      <div>
+    <section class="panel grid system-sync-grid">
+      <div class="system-card">
         <h2>System</h2>
         <label>API Bearer Token (optional)
           <input id="apiBearerToken" type="password" placeholder="Bearer token for secured API" />
@@ -35,40 +39,65 @@
         <div id="healthOut" class="output"></div>
       </div>
 
-      <div>
-        <h2>Sync PDFs</h2>
+      <div class="sync-card">
+        <h2>Sync + Ingest</h2>
+        <label>Source Mode
+          <select id="syncSourceMode">
+            <option value="zotero_db" selected>Zotero DB (anti-join)</option>
+            <option value="filesystem">Filesystem</option>
+          </select>
+        </label>
         <label><input type="checkbox" id="syncDryRun" /> Dry run</label>
-        <button id="syncBtn">Run Sync</button>
+        <label><input type="checkbox" id="syncRunIngest" checked /> Run ingest after sync</label>
+        <label><input type="checkbox" id="syncSkipExisting" checked /> Skip already ingested PDFs</label>
+        <button id="syncBtn">Run Sync + Ingest</button>
         <button id="syncStopBtn">Stop Sync</button>
         <div id="syncOut" class="output"></div>
       </div>
     </section>
 
     <section class="panel">
-      <h2>Ingest</h2>
-      <div class="row">
-        <label>Mode
-          <select id="ingestMode">
-            <option value="batch">batch upload</option>
-            <option value="all">all</option>
-            <option value="custom">custom</option>
-          </select>
-        </label>
-        <label>Source Dir
-          <input id="sourceDir" value="\\192.168.0.37\pooled\media\Books\pdfs" />
-        </label>
-        <label>Batch Size
-          <input id="partialCount" type="number" value="3" min="1" />
-        </label>
-        <label><input type="checkbox" id="overrideExisting" /> Override Existing (reprocess already ingested PDFs)</label>
+      <h2>Documentation</h2>
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab-target="docsQuickstart">Quickstart</button>
+        <button class="tab-btn" data-tab-target="docsSyncGuide">Sync + Ingest Guide</button>
+        <button class="tab-btn" data-tab-target="docsSearchGuide">Search Guide</button>
       </div>
-      <label>Custom PDFs (one path per line)</label>
-      <textarea id="customPdfs" rows="4" placeholder="\\192.168.0.37\pooled\media\Books\pdfs\file1.pdf&#10;\\192.168.0.37\pooled\media\Books\pdfs\file2.pdf"></textarea>
-      <button id="ingestPreviewBtn">Preview Selection</button>
-      <button id="ingestBtn">Run Ingest</button>
-      <button id="ingestStopBtn">Stop Ingest</button>
-      <div id="ingestPreviewOut" class="output"></div>
-      <div id="ingestOut" class="output"></div>
+
+      <div id="docsQuickstart" class="tab-content active markdown-body">
+        <p><strong>Step 1.</strong> In <strong>System</strong>, add bearer token only if your API is secured.</p>
+        <p><strong>Step 2.</strong> Click <strong>Refresh Health</strong> and confirm status is <code>ok</code>.</p>
+        <p><strong>Step 3.</strong> In <strong>Sync + Ingest</strong>, keep <code>Source Mode = Zotero DB</code>.</p>
+        <p><strong>Step 4.</strong> Leave <code>Skip already ingested PDFs</code> on for normal incremental updates.</p>
+        <p><strong>Step 5.</strong> Click <strong>Run Sync + Ingest</strong> and watch progress.</p>
+      </div>
+
+      <div id="docsSyncGuide" class="tab-content markdown-body">
+        <h3>API Key Setup</h3>
+        <p><strong>OpenAI key (required for LLM answering):</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file, then restart the web service.</p>
+        <p><strong>API bearer token (optional):</strong> if backend auth is enabled with <code>API_BEARER_TOKEN</code>, paste that token in the <strong>System</strong> panel field.</p>
+        <p>The bearer token is saved in your browser for convenience and sent with API requests from this UI.</p>
+        <h3>Model + LoRA Setup</h3>
+        <p>Download your own Qwen3 base model and set <code>QWEN3_MODEL_PATH</code> in <code>.env</code>.</p>
+        <p>Download the recommended LoRA release asset and set <code>QWEN3_CITATION_ADAPTER_PATH</code>:</p>
+        <p><a href="https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710" target="_blank" rel="noopener noreferrer">LoRA release: lora-20260319-104710</a></p>
+        <h3>Anystyle Setup</h3>
+        <p>Build/start Anystyle with Docker:</p>
+        <pre><code>docker compose build anystyle
+docker compose up -d anystyle</code></pre>
+        <p>Recommended parser mode is <code>CITATION_PARSER=qwen_refsplit_anystyle</code>.</p>
+        <h3>Sync + Ingest Controls</h3>
+        <p><strong>Recommended default:</strong> Zotero DB mode with ingest enabled and skip-existing enabled.</p>
+        <p><strong>Dry run:</strong> Turn on <code>Dry run</code> to check missing counts without ingesting.</p>
+        <p><strong>Stop behavior:</strong> <strong>Stop Sync</strong> requests cancellation; status changes to <code>cancelled</code> once processing stops.</p>
+        <p><strong>Progress meaning:</strong> Early stage reports detection; later stage reports ingest file-by-file work.</p>
+      </div>
+
+      <div id="docsSearchGuide" class="tab-content markdown-body">
+        <p><strong>Count Results By = Papers</strong> returns top papers and uses <code>Chunks per Paper</code> for evidence snippets.</p>
+        <p><strong>Count Results By = Chunks</strong> returns best individual chunks directly.</p>
+        <p>Use a smaller result count for faster iteration, then increase once you find promising leads.</p>
+      </div>
     </section>
 
     <section class="panel">

@@ -78,7 +78,8 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
               ai.path AS attachment_path_raw,
               ai.contentType AS content_type,
               att.key AS attachment_key,
-              parent.key AS parent_key
+              parent.key AS parent_key,
+              parent.libraryID AS library_id
             FROM itemAttachments ai
             JOIN items att ON att.itemID = ai.itemID
             LEFT JOIN items parent ON parent.itemID = ai.parentItemID
@@ -176,6 +177,7 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
 
             attachment_key = (row["attachment_key"] or "").strip() or None
             parent_key = (row["parent_key"] or "").strip() or None
+            library_id = int(row["library_id"]) if row["library_id"] is not None else 1
             source_path = _resolve_attachment_path(path_raw, attachment_key or "", storage_root)
 
             out.append(
@@ -189,6 +191,8 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
                     "publisher": publisher,
                     "authors": authors_by_item.get(parent_item_id, []),
                     "zotero_item_key": parent_key,
+                    "zotero_library_id": library_id,
+                    "zotero_persistent_id": (f"{library_id}:{parent_key}" if parent_key else None),
                     "zotero_attachment_key": attachment_key,
                     "zotero_parent_item_id": parent_item_id,
                     "zotero_attachment_item_id": int(row["attachment_item_id"]),

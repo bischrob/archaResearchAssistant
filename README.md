@@ -11,6 +11,10 @@ This project provides:
 
 ## Quickstart (New Users)
 
+Full step-by-step guide:
+
+- `docs/NEW_USER_SETUP.md`
+
 Prerequisites:
 
 - Python 3.10+
@@ -57,6 +61,10 @@ make smoke
 make sync-example
 make ingest-preview-example
 ```
+
+Qwen3 LoRA release asset (download + checksum):
+
+- https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710
 
 If you do not have Zotero configured yet:
 
@@ -415,6 +423,19 @@ Build Anystyle image (recommended for ingest quality):
 ```bash
 docker compose build anystyle
 ```
+
+Run Anystyle service:
+
+```bash
+docker compose up -d anystyle
+```
+
+How Anystyle is used in this pipeline:
+
+- During ingest, citation/reference extraction uses `CITATION_PARSER=qwen_refsplit_anystyle` by default.
+- The parser combines Qwen-based splitting with Anystyle parsing for higher-quality references.
+- If Anystyle is unavailable or fails and `ANYSTYLE_REQUIRE_SUCCESS=0`, ingest continues with fallback behavior.
+- If you want strict Anystyle success, set `ANYSTYLE_REQUIRE_SUCCESS=1`.
 
 Test ingest with shared pipeline in forced-Anystyle mode:
 

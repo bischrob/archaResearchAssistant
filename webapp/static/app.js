@@ -119,13 +119,35 @@ function stopPolling(name) {
   }
 }
 
+function initDocumentationTabs() {
+  const tabButtons = Array.from(document.querySelectorAll(".tab-btn[data-tab-target]"));
+  if (!tabButtons.length) return;
+  const panes = Array.from(document.querySelectorAll(".tab-content"));
+  for (const btn of tabButtons) {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-tab-target");
+      for (const b of tabButtons) b.classList.remove("active");
+      btn.classList.add("active");
+      for (const p of panes) {
+        p.classList.toggle("active", p.id === targetId);
+      }
+    });
+  }
+}
+
 function renderHealth(payload) {
   const out = document.getElementById("healthOut");
   const stats = payload?.stats || {};
+  const appVersion = String(payload?.version || "").trim();
+  const badge = document.getElementById("appVersionBadge");
+  if (badge) {
+    badge.textContent = appVersion ? `v${appVersion}` : "v-";
+  }
   out.innerHTML = `
     ${statusHeader({ status: "completed" }, "System Health")}
     <div class="kv">
       <strong>Status</strong><span>${escapeHtml(payload?.status || "unknown")}</span>
+      <strong>Version</strong><span>${escapeHtml(appVersion || "-")}</span>
       <strong>Neo4j URI</strong><span>${escapeHtml(payload?.neo4j_uri || "")}</span>
       <strong>Articles</strong><span>${escapeHtml(stats.articles ?? 0)}</span>
       <strong>Chunks</strong><span>${escapeHtml(stats.chunks ?? 0)}</span>
@@ -433,10 +455,15 @@ document.getElementById("healthBtn").addEventListener("click", async () => {
 
 document.getElementById("syncBtn").addEventListener("click", async () => {
   try {
+    const dryRun = document.getElementById("syncDryRun").checked;
+    const runIngest = document.getElementById("syncRunIngest").checked && !dryRun;
     await api("/api/sync", {
-      dry_run: document.getElementById("syncDryRun").checked,
+      dry_run: dryRun,
+      source_mode: document.getElementById("syncSourceMode").value || "zotero_db",
+      run_ingest: runIngest,
+      ingest_skip_existing: document.getElementById("syncSkipExisting").checked,
     });
-    renderSimpleMessage(document.getElementById("syncOut"), "PDF Sync", "running", "Starting sync...");
+    renderSimpleMessage(document.getElementById("syncOut"), "Sync + Ingest", "running", "Starting workflow...");
     startPolling("sync", async (payload) => {
       renderSyncJob(payload);
       if (payload.status !== "running") {
@@ -444,7 +471,7 @@ document.getElementById("syncBtn").addEventListener("click", async () => {
       }
     });
   } catch (err) {
-    renderSimpleMessage(document.getElementById("syncOut"), "PDF Sync", "failed", err.message);
+    renderSimpleMessage(document.getElementById("syncOut"), "Sync + Ingest", "failed", err.message);
   }
 });
 
@@ -454,65 +481,6 @@ document.getElementById("syncStopBtn").addEventListener("click", async () => {
     renderSyncJob(payload);
   } catch (err) {
     renderSimpleMessage(document.getElementById("syncOut"), "PDF Sync", "failed", err.message);
-  }
-});
-
-document.getElementById("ingestBtn").addEventListener("click", async () => {
-  const mode = document.getElementById("ingestMode").value;
-  const partialCount = parseInt(document.getElementById("partialCount").value || "3", 10);
-  const lines = document.getElementById("customPdfs").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
-  try {
-    await api("/api/ingest", {
-      mode,
-      source_dir: document.getElementById("sourceDir").value.trim() || "\\\\192.168.0.37\\pooled\\media\\Books\\pdfs",
-      pdfs: lines,
-      override_existing: document.getElementById("overrideExisting").checked,
-      partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),
-    });
-    renderSimpleMessage(document.getElementById("ingestOut"), "Ingest Job", "running", "Starting ingest...");
-    startPolling("ingest", async (payload) => {
-      renderIngestJob(payload);
-      if (payload.status !== "running") {
-        await refreshHealth();
-      }
-    });
-  } catch (err) {
-    renderSimpleMessage(document.getElementById("ingestOut"), "Ingest Job", "failed", err.message);
-  }
-});
-
-document.getElementById("ingestPreviewBtn").addEventListener("click", async () => {
-  const mode = document.getElementById("ingestMode").value;
-  const partialCount = parseInt(document.getElementById("partialCount").value || "3", 10);
-  const lines = document.getElementById("customPdfs").value
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
-  const out = document.getElementById("ingestPreviewOut");
-  renderSimpleMessage(out, "Ingest Preview", "running", "Building preview...");
-  try {
-    const payload = await api("/api/ingest/preview", {
-      mode,
-      source_dir: document.getElementById("sourceDir").value.trim() || "\\\\192.168.0.37\\pooled\\media\\Books\\pdfs",
-      pdfs: lines,
-      override_existing: document.getElementById("overrideExisting").checked,
-      partial_count: Number.isNaN(partialCount) ? 3 : Math.max(1, partialCount),
-    });
-    renderIngestPreview(payload);
-  } catch (err) {
-    renderSimpleMessage(out, "Ingest Preview", "failed", err.message);
-  }
-});
-
-document.getElementById("ingestStopBtn").addEventListener("click", async () => {
-  try {
-    const payload = await api("/api/ingest/stop", {});
-    renderIngestJob(payload);
-  } catch (err) {
-    renderSimpleMessage(document.getElementById("ingestOut"), "Ingest Job", "failed", err.message);
   }
 });
 
@@ -576,10 +544,9 @@ document.getElementById("diagBtn").addEventListener("click", async () => {
 });
 
 renderSyncJob({ status: "idle" });
-renderSimpleMessage(document.getElementById("ingestPreviewOut"), "Ingest Preview", "idle", "Click Preview Selection.");
-renderIngestJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
 renderSimpleMessage(document.getElementById("diagOut"), "Diagnostics", "idle", "Click Run Diagnostics.");
+initDocumentationTabs();
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
 });

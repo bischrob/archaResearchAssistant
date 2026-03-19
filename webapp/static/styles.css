@@ -120,6 +120,18 @@ h1 {
   gap: 14px;
 }
 
+.system-sync-grid {
+  grid-template-columns: minmax(240px, 1fr) minmax(440px, 2fr);
+}
+
+.system-card .output {
+  min-height: 70px;
+}
+
+.sync-card .output {
+  min-height: 140px;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -232,6 +244,19 @@ details {
   margin-top: 8px;
 }
 
+details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary h2 {
+  display: inline;
+}
+
 .empty {
   color: var(--muted);
 }
@@ -322,6 +347,10 @@ details {
   .brand-line {
     flex-wrap: wrap;
     gap: 10px;
+  }
+
+  .system-sync-grid {
+    grid-template-columns: 1fr;
   }
 }
 
