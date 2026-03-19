@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.025701")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.032848")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -128,7 +128,7 @@ class QueryRequest(BaseModel):
     query: str
     limit: int = Field(default=20, ge=1, le=20)
     limit_scope: str = Field(default="papers", pattern="^(papers|chunks)$")
-    chunks_per_paper: int = Field(default=1, ge=1, le=5)
+    chunks_per_paper: int = Field(default=8, ge=1, le=20)
 
 
 class ArticleLookupRequest(BaseModel):

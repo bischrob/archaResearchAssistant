@@ -660,13 +660,15 @@ document.getElementById("queryBtn").addEventListener("click", async () => {
   const query = document.getElementById("queryText").value.trim();
   const limit = parseInt(document.getElementById("queryLimit").value || "20", 10);
   const limitScope = document.getElementById("queryLimitScope").value || "papers";
-  const chunksPerPaper = parseInt(document.getElementById("queryChunksPerPaper").value || "1", 10);
+  const chunksPerPaper = parseInt(document.getElementById("queryChunksPerPaper").value || "8", 10);
+  const normalizedChunksPerPaper = Number.isNaN(chunksPerPaper) ? 8 : Math.max(1, Math.min(20, chunksPerPaper));
+  const requestChunksPerPaper = limitScope === "papers" ? normalizedChunksPerPaper : 1;
   try {
     await api("/api/query", {
       query,
       limit,
       limit_scope: limitScope,
-      chunks_per_paper: Number.isNaN(chunksPerPaper) ? 1 : Math.max(1, chunksPerPaper),
+      chunks_per_paper: requestChunksPerPaper,
     });
     renderSimpleMessage(document.getElementById("queryResults"), "Query", "running", "Starting query...");
     startPolling("query", (job) => {
@@ -676,6 +678,21 @@ document.getElementById("queryBtn").addEventListener("click", async () => {
     renderSimpleMessage(document.getElementById("queryResults"), "Query", "failed", err.message);
   }
 });
+
+function updateQueryScopeControls() {
+  const limitScope = document.getElementById("queryLimitScope").value || "papers";
+  const chunksInput = document.getElementById("queryChunksPerPaper");
+  const chunksLabel = document.getElementById("queryChunksPerPaperLabel");
+  const paperMode = limitScope === "papers";
+  chunksInput.disabled = !paperMode;
+  chunksLabel.style.opacity = paperMode ? "1" : "0.6";
+  chunksInput.title = paperMode
+    ? "Used only when Count Results By = Papers"
+    : "Disabled because Count Results By = Chunks";
+}
+
+document.getElementById("queryLimitScope").addEventListener("change", updateQueryScopeControls);
+updateQueryScopeControls();
 
 document.getElementById("queryStopBtn").addEventListener("click", async () => {
   try {

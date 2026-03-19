@@ -543,7 +543,7 @@ def test_query_validation_and_success(monkeypatch, client):
     assert captured["query"] == "chronology"
     assert captured["limit"] == 20
     assert captured["limit_scope"] == "papers"
-    assert captured["chunks_per_paper"] == 1
+    assert captured["chunks_per_paper"] == 8
 
 
 def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
