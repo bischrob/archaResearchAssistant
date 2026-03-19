@@ -74,6 +74,7 @@ documents.xlsx
 documents2.xlsx
 documents.2xlsx
 drafts/
+archive/
 ocr/paddleocr/text/*
 
 # Local runtime capture artifacts

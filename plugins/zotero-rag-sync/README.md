@@ -32,7 +32,7 @@ This plugin watches **My Library** item changes, ensures a Better BibTeX citatio
 - `extensions.zotero-rag-sync.backendURL` (default `http://127.0.0.1:8000`)
 - `extensions.zotero-rag-sync.bearerToken`
 - `extensions.zotero-rag-sync.sourceMode` (`zotero_db` or `filesystem`, default `zotero_db`)
-- `extensions.zotero-rag-sync.sourceDir` (default `C:\Users\rjbischo\Nextcloud\zotero`)
+- `extensions.zotero-rag-sync.sourceDir` (default empty; set this only for filesystem mode)
 - `extensions.zotero-rag-sync.debounceSeconds` (default `15`)
 - `extensions.zotero-rag-sync.paused` (default `false`)
 

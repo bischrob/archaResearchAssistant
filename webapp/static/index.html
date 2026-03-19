@@ -59,44 +59,46 @@
     <section class="panel">
       <h2>Documentation</h2>
       <div class="tab-bar">
-        <button class="tab-btn active" data-tab-target="docsQuickstart">Quickstart</button>
-        <button class="tab-btn" data-tab-target="docsSyncGuide">Sync + Ingest Guide</button>
-        <button class="tab-btn" data-tab-target="docsSearchGuide">Search Guide</button>
+        <button class="tab-btn active" data-tab-target="docsSetup">Setup</button>
+        <button class="tab-btn" data-tab-target="docsSyncGuide">Sync + Ingest</button>
+        <button class="tab-btn" data-tab-target="docsSearchGuide">Search / Citation Lookup</button>
+        <button class="tab-btn" data-tab-target="docsTroubleshooting">Troubleshooting</button>
       </div>
 
-      <div id="docsQuickstart" class="tab-content active markdown-body">
-        <p><strong>Step 1.</strong> In <strong>System</strong>, add bearer token only if your API is secured.</p>
-        <p><strong>Step 2.</strong> Click <strong>Refresh Health</strong> and confirm status is <code>ok</code>.</p>
-        <p><strong>Step 3.</strong> In <strong>Sync + Ingest</strong>, keep <code>Source Mode = Zotero DB</code>.</p>
-        <p><strong>Step 4.</strong> Leave <code>Skip already ingested PDFs</code> on for normal incremental updates.</p>
-        <p><strong>Step 5.</strong> Click <strong>Run Sync + Ingest</strong> and watch progress.</p>
+      <div id="docsSetup" class="tab-content active markdown-body">
+        <p><strong>OpenAI API key:</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file.</p>
+        <p><strong>Zotero:</strong> set <code>ZOTERO_DB_PATH</code> and usually <code>ZOTERO_STORAGE_ROOT</code>.</p>
+        <p><strong>Qwen3:</strong> download your own base model and set <code>QWEN3_MODEL_PATH</code>.</p>
+        <p><strong>LoRA release asset:</strong> use the published adapter release and set <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
+        <p><a href="https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710" target="_blank" rel="noopener noreferrer">LoRA release asset</a></p>
+        <p><strong>API bearer token:</strong> only enter it in the System panel if backend auth is enabled.</p>
       </div>
 
       <div id="docsSyncGuide" class="tab-content markdown-body">
-        <h3>API Key Setup</h3>
-        <p><strong>OpenAI key (required for LLM answering):</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file, then restart the web service.</p>
-        <p><strong>API bearer token (optional):</strong> if backend auth is enabled with <code>API_BEARER_TOKEN</code>, paste that token in the <strong>System</strong> panel field.</p>
-        <p>The bearer token is saved in your browser for convenience and sent with API requests from this UI.</p>
-        <h3>Model + LoRA Setup</h3>
-        <p>Download your own Qwen3 base model and set <code>QWEN3_MODEL_PATH</code> in <code>.env</code>.</p>
-        <p>Download the recommended LoRA release asset and set <code>QWEN3_CITATION_ADAPTER_PATH</code>:</p>
-        <p><a href="https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710" target="_blank" rel="noopener noreferrer">LoRA release: lora-20260319-104710</a></p>
-        <h3>Anystyle Setup</h3>
-        <p>Build/start Anystyle with Docker:</p>
+        <p><strong>Recommended default:</strong> use <code>Zotero DB (anti-join)</code> with ingest enabled and skip-existing enabled.</p>
+        <p><strong>Dry run:</strong> turn on <code>Dry run</code> to check missing counts without ingesting.</p>
+        <p><strong>Anystyle:</strong> build and start it with Docker if you want the recommended citation parser:</p>
         <pre><code>docker compose build anystyle
 docker compose up -d anystyle</code></pre>
         <p>Recommended parser mode is <code>CITATION_PARSER=qwen_refsplit_anystyle</code>.</p>
-        <h3>Sync + Ingest Controls</h3>
-        <p><strong>Recommended default:</strong> Zotero DB mode with ingest enabled and skip-existing enabled.</p>
-        <p><strong>Dry run:</strong> Turn on <code>Dry run</code> to check missing counts without ingesting.</p>
-        <p><strong>Stop behavior:</strong> <strong>Stop Sync</strong> requests cancellation; status changes to <code>cancelled</code> once processing stops.</p>
-        <p><strong>Progress meaning:</strong> Early stage reports detection; later stage reports ingest file-by-file work.</p>
+        <p><strong>Stop behavior:</strong> <strong>Stop Sync</strong> requests cancellation. The job becomes <code>cancelled</code> when processing stops.</p>
+        <p><strong>Progress meaning:</strong> early progress reports Zotero detection, then ingest progresses file-by-file.</p>
       </div>
 
       <div id="docsSearchGuide" class="tab-content markdown-body">
-        <p><strong>Count Results By = Papers</strong> returns top papers and uses <code>Chunks per Paper</code> for evidence snippets.</p>
+        <p><strong>Citation-first lookup:</strong> use paper-scoped search when you already know the paper identity.</p>
+        <p><strong>Count Results By = Papers</strong> returns top papers and uses <code>Chunks per Paper</code> for supporting snippets.</p>
         <p><strong>Count Results By = Chunks</strong> returns best individual chunks directly.</p>
-        <p>Use a smaller result count for faster iteration, then increase once you find promising leads.</p>
+        <p>Use smaller result counts for faster lookup, then widen only if needed.</p>
+      </div>
+
+      <div id="docsTroubleshooting" class="tab-content markdown-body">
+        <p><strong>Zotero DB path missing:</strong> set <code>ZOTERO_DB_PATH</code>.</p>
+        <p><strong>Zotero storage missing:</strong> set <code>ZOTERO_STORAGE_ROOT</code>.</p>
+        <p><strong>Anystyle not running:</strong> start the Docker service.</p>
+        <p><strong>Qwen model or LoRA missing:</strong> set <code>QWEN3_MODEL_PATH</code> and <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
+        <p><strong>Bearer token mismatch:</strong> make the UI token match <code>API_BEARER_TOKEN</code>.</p>
+        <p><strong>Neo4j or Docker unavailable:</strong> run preflight and restart services.</p>
       </div>
     </section>
 

@@ -2,6 +2,14 @@
 
 This guide is the fastest path to a working local setup.
 
+Related docs:
+
+- [Documentation Index](INDEX.md)
+- [Model Setup](MODEL_SETUP.md)
+- [Anystyle Setup](ANYSTYLE_SETUP.md)
+- [Citation Lookup Guide](CITATION_LOOKUP.md)
+- [Troubleshooting](TROUBLESHOOTING.md)
+
 ## 1) Prerequisites
 
 - Python 3.10+
@@ -28,36 +36,11 @@ Optional API auth:
 
 ## 3) Download the LoRA adapter
 
-Release asset:
-
-- https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710
-
-Download and unpack:
-
-- `qwen3-reference-split-500-cpu_49006992-lora-20260319-104710.tar.gz`
-- verify with the `.sha256` file
-
-Set:
-
-- `QWEN3_CITATION_ADAPTER_PATH=<unpacked adapter directory>`
+Use the published release asset and setup steps in [Model Setup](MODEL_SETUP.md).
 
 ## 4) Install and enable Anystyle
 
-Anystyle improves citation/reference extraction during ingest.
-
-Build and run:
-
-```bash
-docker compose build anystyle
-docker compose up -d anystyle
-```
-
-Recommended env settings:
-
-- `CITATION_PARSER=qwen_refsplit_anystyle`
-- `ANYSTYLE_SERVICE=anystyle`
-- `ANYSTYLE_TIMEOUT_SECONDS=240`
-- `ANYSTYLE_REQUIRE_SUCCESS=0`
+Use the build, runtime, and fallback guidance in [Anystyle Setup](ANYSTYLE_SETUP.md).
 
 ## 5) Start services
 

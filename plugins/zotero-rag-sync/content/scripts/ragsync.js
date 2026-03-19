@@ -57,7 +57,7 @@ var RAGSync = {
   },
 
   getSourceDir() {
-    return this.getStringPref(this.prefSourceDir, 'C:\\Users\\rjbischo\\Nextcloud\\zotero');
+    return this.getStringPref(this.prefSourceDir, '');
   },
 
   getSourceMode() {
