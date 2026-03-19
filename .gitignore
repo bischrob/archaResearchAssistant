@@ -75,3 +75,8 @@ documents2.xlsx
 documents.2xlsx
 drafts/
 ocr/paddleocr/text/*
+
+# Local runtime capture artifacts
+logs/web_gui.pid
+data/zotero_latest30_*
+archive/*/.DS_Store
