@@ -76,6 +76,7 @@ documents.2xlsx
 drafts/
 archive/
 ocr/paddleocr/text/*
+scripts/sbatch_sol_*.sh
 
 # Local runtime capture artifacts
 logs/web_gui.pid
