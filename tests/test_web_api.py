@@ -1,4 +1,5 @@
 import time
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -59,17 +60,289 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
 
     monkeypatch.setattr(webmain, "Settings", FakeSettings)
     monkeypatch.setattr(webmain, "load_paperpile_index", lambda _path: {"a.pdf": {"title": "A"}})
+    started = threading.Event()
+    release = threading.Event()
+    monkeypatch.setattr(
+        webmain,
+        "find_metadata_for_pdf",
+        lambda *args, **kwargs: (started.set() or release.wait(1) or None),
+    )
 
     start = client.post("/api/sync", json={"dry_run": True})
     assert start.status_code == 200
     assert start.json()["status"] == "running"
+    assert started.wait(1.0)
 
     stop = client.post("/api/sync/stop")
     assert stop.status_code == 200
+    stop_payload = stop.json()
+    assert stop_payload["stop_state"] == "accepted"
+    assert stop_payload["cancel_requested"] is True
+    assert stop_payload["lifecycle_state"] in {"running", "cancelling"}
+    release.set()
 
     final = wait_for_status(client, "/api/sync/status")
     assert final["status"] in {"cancelled", "completed"}
+    assert final["terminal_reason"] in {"cancelled", "completed"}
     assert "request_id" in final
+
+
+def test_sync_stop_reports_noop_when_idle(client):
+    resp = client.post("/api/sync/stop")
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload["status"] == "idle"
+    assert payload["lifecycle_state"] == "idle"
+    assert payload["stop_state"] == "noop_idle"
+    assert payload["cancel_requested"] is False
+
+
+@pytest.mark.parametrize(
+    ("source_mode", "run_ingest", "metadata_backend"),
+    [
+        ("filesystem", False, "paperpile"),
+        ("zotero_db", True, "zotero"),
+    ],
+)
+def test_sync_source_modes_and_run_ingest(monkeypatch, tmp_path: Path, client, source_mode, run_ingest, metadata_backend):
+    pdf_root = tmp_path / "pdfs"
+    pdf_root.mkdir()
+    pdf1 = pdf_root / "one.pdf"
+    pdf2 = pdf_root / "two.pdf"
+    pdf1.write_bytes(b"%PDF-1.7\n")
+    pdf2.write_bytes(b"%PDF-1.7\n")
+
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    zotero_storage = tmp_path / "storage"
+    zotero_storage.mkdir()
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "pdf_source_dir": str(pdf_root),
+            "metadata_backend": metadata_backend,
+            "paperpile_json": str(tmp_path / "Paperpile.json"),
+            "zotero_db_path": str(zotero_db),
+            "zotero_storage_root": str(zotero_storage),
+            "zip_pdf_cache_dir": str(tmp_path / "zip_cache"),
+            "zip_pdf_enable": False,
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "_load_metadata_index_for_settings", lambda settings: SimpleNamespace(backend=metadata_backend))
+
+    if source_mode == "filesystem":
+        def fake_collect_source_pdfs(*, source_root, cache_root, include_zip, progress_cb=None):
+            assert source_root == pdf_root
+            return [pdf1, pdf2], {"source_mode": "filesystem", "files": 2}
+
+        monkeypatch.setattr(webmain, "collect_source_pdfs", fake_collect_source_pdfs)
+
+        def fake_load_zotero_entries(*args, **kwargs):
+            raise AssertionError("load_zotero_entries should not be called for filesystem mode")
+
+        monkeypatch.setattr(webmain, "load_zotero_entries", fake_load_zotero_entries)
+    else:
+        def fake_collect_source_pdfs(*args, **kwargs):
+            raise AssertionError("collect_source_pdfs should not be called for zotero_db mode")
+
+        monkeypatch.setattr(webmain, "collect_source_pdfs", fake_collect_source_pdfs)
+
+        def fake_load_zotero_entries(db_path, storage_root):
+            assert Path(db_path) == zotero_db
+            assert storage_root == str(zotero_storage)
+            return [
+                {"attachment_path": str(pdf1)},
+                {"attachment_path": str(pdf2)},
+            ]
+
+        monkeypatch.setattr(webmain, "load_zotero_entries", fake_load_zotero_entries)
+
+    monkeypatch.setattr(
+        webmain,
+        "find_metadata_for_pdf",
+        lambda index, filename, path_hint=None: {"title": filename} if filename in {pdf1.name, pdf2.name} else None,
+    )
+
+    ingest_calls = []
+
+    def fake_ingest_pdfs(**kwargs):
+        ingest_calls.append(kwargs)
+        selected = kwargs["selected_pdfs"]
+        return IngestSummary(
+            ingested_articles=len(selected),
+            total_chunks=len(selected) * 2,
+            total_references=len(selected),
+            selected_pdfs=[str(p) for p in selected],
+            skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
+            failed_pdfs=[],
+        )
+
+    monkeypatch.setattr(webmain, "ingest_pdfs", fake_ingest_pdfs)
+
+    resp = client.post(
+        "/api/sync",
+        json={
+            "dry_run": False,
+            "source_dir": str(pdf_root),
+            "source_mode": source_mode,
+            "run_ingest": run_ingest,
+            "ingest_skip_existing": True,
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "running"
+
+    final = wait_for_status(client, "/api/sync/status")
+    assert final["status"] == "completed"
+    assert final["lifecycle_state"] == "completed"
+    assert final["terminal_reason"] == "completed"
+    assert final["result"]["source_mode"] == source_mode
+    assert final["result"]["pdfs_total"] == 2
+    assert final["result"]["ingest_ran"] is run_ingest
+    if run_ingest:
+        assert len(ingest_calls) == 1
+        assert ingest_calls[0]["skip_existing"] is True
+        assert final["result"]["ingest_summary"]["ingested_articles"] == 2
+    else:
+        assert ingest_calls == []
+        assert final["result"]["ingest_summary"] is None
+
+
+def test_sync_zero_pdf_terminal_completion(monkeypatch, tmp_path: Path, client):
+    pdf_root = tmp_path / "empty"
+    pdf_root.mkdir()
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "pdf_source_dir": str(pdf_root),
+            "metadata_backend": "paperpile",
+            "paperpile_json": str(tmp_path / "Paperpile.json"),
+            "zotero_db_path": "",
+            "zotero_storage_root": "",
+            "zip_pdf_cache_dir": str(tmp_path / "zip_cache"),
+            "zip_pdf_enable": False,
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "_load_metadata_index_for_settings", lambda settings: SimpleNamespace(backend="paperpile"))
+
+    def fake_collect_source_pdfs(*, source_root, cache_root, include_zip, progress_cb=None):
+        assert source_root == pdf_root
+        return [], {"source_mode": "filesystem", "files": 0}
+
+    monkeypatch.setattr(webmain, "collect_source_pdfs", fake_collect_source_pdfs)
+
+    def fail_find_metadata(*args, **kwargs):
+        raise AssertionError("find_metadata_for_pdf should not be called when no PDFs are discovered")
+
+    monkeypatch.setattr(webmain, "find_metadata_for_pdf", fail_find_metadata)
+    monkeypatch.setattr(webmain, "ingest_pdfs", lambda **kwargs: (_ for _ in ()).throw(AssertionError("ingest should not run")))
+
+    resp = client.post(
+        "/api/sync",
+        json={"dry_run": False, "source_dir": str(pdf_root), "source_mode": "filesystem", "run_ingest": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "running"
+
+    final = wait_for_status(client, "/api/sync/status")
+    assert final["status"] == "completed"
+    assert final["lifecycle_state"] == "completed"
+    assert final["terminal_reason"] == "completed"
+    assert final["progress_percent"] == 100.0
+    assert final["progress_message"] == "Sync complete (no PDFs found)"
+    assert final["result"]["pdfs_total"] == 0
+    assert final["result"]["ingest_ran"] is False
+    assert final["result"]["ingest_summary"] is None
+
+
+def test_sync_stop_transitions_through_cancelling(monkeypatch, tmp_path: Path, client):
+    pdf_root = tmp_path / "pdfs"
+    pdf_root.mkdir()
+    pdf = pdf_root / "cancel-me.pdf"
+    pdf.write_bytes(b"%PDF-1.7\n")
+
+    started = threading.Event()
+    release = threading.Event()
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "pdf_source_dir": str(pdf_root),
+            "metadata_backend": "paperpile",
+            "paperpile_json": str(tmp_path / "Paperpile.json"),
+            "zotero_db_path": "",
+            "zotero_storage_root": "",
+            "zip_pdf_cache_dir": str(tmp_path / "zip_cache"),
+            "zip_pdf_enable": False,
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "_load_metadata_index_for_settings", lambda settings: SimpleNamespace(backend="paperpile"))
+    monkeypatch.setattr(webmain, "collect_source_pdfs", lambda **kwargs: ([pdf], {"source_mode": "filesystem", "files": 1}))
+    monkeypatch.setattr(webmain, "find_metadata_for_pdf", lambda index, filename, path_hint=None: {"title": filename})
+
+    def fake_ingest_pdfs(**kwargs):
+        started.set()
+        while not release.is_set():
+            time.sleep(0.01)
+        return IngestSummary(
+            ingested_articles=1,
+            total_chunks=1,
+            total_references=1,
+            selected_pdfs=[str(pdf)],
+            skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
+            failed_pdfs=[],
+        )
+
+    monkeypatch.setattr(webmain, "ingest_pdfs", fake_ingest_pdfs)
+
+    start = client.post(
+        "/api/sync",
+        json={"dry_run": False, "source_dir": str(pdf_root), "source_mode": "filesystem", "run_ingest": True},
+    )
+    assert start.status_code == 200
+    start_payload = start.json()
+    assert start_payload["status"] == "running"
+
+    assert started.wait(1.0)
+    stop = client.post("/api/sync/stop")
+    assert stop.status_code == 200
+    stop_payload = stop.json()
+    assert stop_payload["status"] == "running"
+    assert stop_payload["lifecycle_state"] == "cancelling"
+    assert stop_payload["stop_state"] == "accepted"
+    assert stop_payload["cancel_requested"] is True
+
+    release.set()
+    final = wait_for_status(client, "/api/sync/status")
+    assert final["status"] == "cancelled"
+    assert final["lifecycle_state"] == "cancelled"
+    assert final["terminal_reason"] == "cancelled"
+    assert final["request_id"] == start_payload["request_id"]
 
 
 def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, client):
@@ -482,3 +755,28 @@ def test_api_bearer_token_enforced_when_set(monkeypatch, client):
 
     good = client.get("/api/sync/status", headers={"Authorization": "Bearer secret-token"})
     assert good.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "method,path,payload",
+    [
+        ("post", "/api/sync", {"dry_run": True}),
+        ("post", "/api/sync/stop", {}),
+        ("get", "/api/sync/status", None),
+        ("post", "/api/ingest", {}),
+        ("post", "/api/ingest/preview", {}),
+        ("post", "/api/ingest/stop", {}),
+        ("get", "/api/ingest/status", None),
+        ("post", "/api/query", {"query": "x"}),
+        ("post", "/api/query/stop", {}),
+        ("get", "/api/query/status", None),
+    ],
+)
+def test_job_endpoints_require_bearer_token_when_set(monkeypatch, client, method, path, payload):
+    monkeypatch.setenv("API_BEARER_TOKEN", "secret-token")
+    request = getattr(client, method)
+    kwargs = {}
+    if payload is not None:
+        kwargs["json"] = payload
+    resp = request(path, **kwargs)
+    assert resp.status_code == 401

@@ -98,8 +98,12 @@ function statusClass(status) {
   return `status-${status || "idle"}`;
 }
 
+function jobState(job) {
+  return job?.lifecycle_state || job?.status || "idle";
+}
+
 function statusHeader(job, label) {
-  const status = job?.lifecycle_state || job?.status || "idle";
+  const status = jobState(job);
   const running = status === "running" || status === "cancelling";
   return `
     <div class="status-line">
@@ -126,7 +130,7 @@ function progressBlock(job) {
 function renderSimpleMessage(el, title, status, message) {
   el.innerHTML = `
     <div class="status-line">
-      ${status === "running" ? '<span class="spinner"></span>' : ""}
+      ${status === "running" || status === "cancelling" ? '<span class="spinner"></span>' : ""}
       <strong>${escapeHtml(title)}</strong>
       <span class="status-pill ${statusClass(status)}">${escapeHtml(status)}</span>
     </div>
@@ -187,6 +191,7 @@ function renderSyncJob(job) {
     renderSimpleMessage(out, "Sync", "idle", "Not started.");
     return;
   }
+  const state = jobState(job);
   const result = job.result || {};
   const sourceStats = result.source_stats || {};
   const ingest = result.ingest_summary || {};
@@ -195,6 +200,7 @@ function renderSyncJob(job) {
     ${statusHeader(job, "PDF Sync")}
     ${progressBlock(job)}
     <div class="kv">
+      <strong>Lifecycle</strong><span>${escapeHtml(state)}</span>
       <strong>Success</strong><span>${escapeHtml(result.ok ?? job.status === "completed")}</span>
       <strong>Source Mode</strong><span>${escapeHtml(result.source_mode ?? "-")}</span>
       <strong>PDFs Total</strong><span>${escapeHtml(result.pdfs_total ?? "-")}</span>
@@ -203,6 +209,7 @@ function renderSyncJob(job) {
       <strong>Ingest Ran</strong><span>${escapeHtml(result.ingest_ran ?? false)}</span>
       <strong>Ingested Articles</strong><span>${escapeHtml(ingest.ingested_articles ?? "-")}</span>
       <strong>Ingest Failed PDFs</strong><span>${escapeHtml((ingest.failed_pdfs || []).length)}</span>
+      <strong>Terminal Reason</strong><span>${escapeHtml(job.terminal_reason ?? "-")}</span>
       <strong>Stop State</strong><span>${escapeHtml(job.stop_state ?? "-")}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
@@ -217,6 +224,7 @@ function renderIngestJob(job) {
     renderSimpleMessage(out, "Ingest", "idle", "Not started.");
     return;
   }
+  const state = jobState(job);
   const summary = job.result?.summary || {};
   const selected = summary.selected_pdfs || [];
   const skipped = summary.skipped_existing_pdfs || [];
@@ -256,6 +264,7 @@ function renderIngestJob(job) {
       <strong>Qwen Applied</strong><span>${escapeHtml(qwenApplied)}</span>
       <strong>Qwen Empty</strong><span>${escapeHtml(qwenEmpty)}</span>
       <strong>Qwen Failed</strong><span>${escapeHtml(qwenFailed)}</span>
+      <strong>Lifecycle</strong><span>${escapeHtml(state)}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
     ${anystyleDisabledReason ? `<div class="empty">Anystyle disabled for remainder of ingest: ${escapeHtml(anystyleDisabledReason)}</div>` : ""}
@@ -296,7 +305,7 @@ function renderIngestJob(job) {
     ${skipped.length ? `<details><summary>Skipped Existing PDFs (${skipped.length})</summary><ul class="list-box">${skipped.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${skippedMeta.length ? `<details><summary>Skipped No Metadata PDFs (${skippedMeta.length})</summary><ul class="list-box">${skippedMeta.slice(0, 100).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
     ${failed.length ? `<details><summary>Failed PDFs (${failed.length})</summary><ul class="list-box">${failed.slice(0, 100).map((x) => `<li>${escapeHtml(x.pdf)}: ${escapeHtml(x.error)}</li>`).join("")}</ul></details>` : ""}
-    ${job.status === "running" ? '<div class="empty">Ingest is running. Use Stop to cancel.</div>' : ""}
+    ${state === "running" || state === "cancelling" ? '<div class="empty">Ingest is running. Use Stop to cancel.</div>' : ""}
   `;
 }
 
@@ -358,15 +367,16 @@ function renderQueryJob(job) {
     renderSimpleMessage(results, "Query", "idle", "No query executed yet.");
     return;
   }
-  if (job.status === "running") {
-    renderSimpleMessage(results, "Query", "running", "Searching...");
+  const state = jobState(job);
+  if (state === "running" || state === "cancelling") {
+    renderSimpleMessage(results, "Query", state, state === "cancelling" ? "Cancelling..." : "Searching...");
     return;
   }
-  if (job.status === "cancelled") {
+  if (state === "cancelled") {
     renderSimpleMessage(results, "Query", "cancelled", "Query cancelled.");
     return;
   }
-  if (job.status === "failed") {
+  if (state === "failed") {
     renderSimpleMessage(results, "Query", "failed", job.error || "Query failed.");
     return;
   }
@@ -551,13 +561,15 @@ document.getElementById("healthBtn").addEventListener("click", async () => {
   }
 });
 
-const apiTokenInput = document.getElementById("apiBearerToken");
-if (apiTokenInput) {
-  apiTokenInput.value = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
-  apiTokenInput.addEventListener("change", () => {
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, apiTokenInput.value.trim());
-  });
-}
+  const apiTokenInput = document.getElementById("apiBearerToken");
+  if (apiTokenInput) {
+    apiTokenInput.value = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+    const persistToken = () => {
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, apiTokenInput.value.trim());
+    };
+    apiTokenInput.addEventListener("input", persistToken);
+    apiTokenInput.addEventListener("change", persistToken);
+  }
 
 document.getElementById("syncBtn").addEventListener("click", async () => {
   try {

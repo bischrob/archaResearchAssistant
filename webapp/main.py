@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.024507")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.025010")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -247,6 +247,7 @@ class JobManager:
                     job.cancel_event.set()
                     job.cancel_requested = True
                     job.stop_state = "accepted"
+                    job.progress_message = "Cancellation requested."
                     if job.proc and job.proc.poll() is None:
                         job.proc.terminate()
         return self.status(name)

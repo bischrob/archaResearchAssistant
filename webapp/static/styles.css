@@ -131,6 +131,7 @@ button:hover { background: #005457; }
 }
 
 .status-running { background: var(--warn); }
+.status-cancelling { background: var(--warn); }
 .status-completed { background: var(--ok); }
 .status-cancelled { background: var(--muted); }
 .status-failed { background: var(--danger); }

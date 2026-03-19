@@ -89,15 +89,32 @@ var RAGSync = {
     return this.syncInProgress ? 'Sync Now (Running...)' : 'Sync Now';
   },
 
+  getCancelSyncLabel() {
+    return this.syncInProgress ? 'Cancel Running Sync' : 'Cancel Sync';
+  },
+
   updateMenuState() {
     const win = this.getMainWindow();
     if (!win || !win.document) {
       return;
     }
     const syncItem = win.document.getElementById('rag-sync-menu-sync-now');
+    const cancelItem = win.document.getElementById('rag-sync-menu-cancel-sync');
     if (syncItem) {
       syncItem.setAttribute('label', this.getSyncNowLabel());
-      syncItem.setAttribute('disabled', this.syncInProgress ? 'true' : 'false');
+      if (this.syncInProgress) {
+        syncItem.setAttribute('disabled', 'true');
+      } else {
+        syncItem.removeAttribute('disabled');
+      }
+    }
+    if (cancelItem) {
+      cancelItem.setAttribute('label', this.getCancelSyncLabel());
+      if (this.syncInProgress) {
+        cancelItem.removeAttribute('disabled');
+      } else {
+        cancelItem.setAttribute('disabled', 'true');
+      }
     }
   },
 
@@ -376,6 +393,7 @@ var RAGSync = {
 
     const pw = this.openProgressWindow('Sync in progress...');
     this.updateProgressWindow(5, 'Submitting sync request');
+    let backgroundMode = false;
 
     try {
       const startReq = await this.postJSON('/api/sync', {
@@ -399,21 +417,22 @@ var RAGSync = {
       while (Date.now() - startedAt < this.syncPollTimeoutMS) {
         const status = await this.getJSON('/api/sync/status');
         const pct = Number(status.progress_percent || 0);
-        const msg = String(status.progress_message || status.status || 'Working...');
+        const lifecycle = String(status.lifecycle_state || status.status || 'working');
+        const msg = String(status.progress_message || lifecycle || 'Working...');
         if (!this.overlayDismissed) {
           this.updateProgressWindow(pct, msg);
         }
 
         if (
-          status.status === 'completed' ||
-          status.status === 'failed' ||
-          status.status === 'cancelled' ||
-          status.status === 'idle'
+          lifecycle === 'running' ||
+          lifecycle === 'cancelling'
         ) {
-          terminalStatus = status;
-          break;
+          await this.sleep(this.syncPollIntervalMS);
+          continue;
         }
-        await this.sleep(this.syncPollIntervalMS);
+
+        terminalStatus = status;
+        break;
       }
 
       if (!terminalStatus) {
@@ -425,12 +444,16 @@ var RAGSync = {
         } catch (_err) {
           liveStatus = null;
         }
-        if (liveStatus && String(liveStatus.status || '') === 'running') {
+        const liveLifecycle = String(liveStatus && (liveStatus.lifecycle_state || liveStatus.status) || '');
+        if (liveStatus && (liveLifecycle === 'running' || liveLifecycle === 'cancelling')) {
           const pct = Number(liveStatus.progress_percent || 0);
           const message = String(
             liveStatus.progress_message ||
             'Sync is still running in the background. Use Show Diagnostics to check progress.'
           );
+          backgroundMode = true;
+          this.syncInProgress = true;
+          this.updateMenuState();
           if (!this.overlayDismissed) {
             this.updateProgressWindow(pct, 'Sync continues in background');
             this.addProgressDetail(message);
@@ -438,9 +461,30 @@ var RAGSync = {
           }
           this.setLastSync('running', message, null);
           this.log(`Sync still running after polling timeout: ${message}`);
-          return;
         }
-        throw new Error('Timed out waiting for /api/sync/status to reach terminal state.');
+        if (!backgroundMode) {
+          throw new Error('Timed out waiting for /api/sync/status to reach terminal state.');
+        }
+      }
+
+      while (backgroundMode && !terminalStatus) {
+        const status = await this.getJSON('/api/sync/status');
+        const pct = Number(status.progress_percent || 0);
+        const lifecycle = String(status.lifecycle_state || status.status || 'working');
+        const msg = String(status.progress_message || lifecycle || 'Working...');
+        if (!this.overlayDismissed) {
+          this.updateProgressWindow(pct, msg);
+        }
+        if (
+          status.status === 'completed' ||
+          status.status === 'failed' ||
+          status.status === 'cancelled' ||
+          status.status === 'idle'
+        ) {
+          terminalStatus = status;
+          break;
+        }
+        await this.sleep(this.syncPollIntervalMS);
       }
 
       if (terminalStatus.status === 'completed' || terminalStatus.status === 'idle') {
@@ -526,6 +570,7 @@ var RAGSync = {
     this.version = version;
     this.rootURI = rootURI;
     this.injectToolsMenu();
+    this.updateMenuState();
 
     this.initialized = true;
     this.log('startup');
@@ -568,6 +613,9 @@ var RAGSync = {
       makeItem('rag-sync-menu-sync-now', this.getSyncNowLabel(), () => this.syncNow())
     );
     popup.appendChild(
+      makeItem('rag-sync-menu-cancel-sync', this.getCancelSyncLabel(), () => void this.requestSyncStop())
+    );
+    popup.appendChild(
       makeItem('rag-sync-menu-retry-failed', 'Retry Failed', () => this.retryFailed())
     );
     popup.appendChild(
@@ -583,6 +631,8 @@ var RAGSync = {
     } else {
       toolsPopup.appendChild(menu);
     }
+
+    this.updateMenuState();
   },
 
   shutdown() {
