@@ -12,28 +12,17 @@
       <div class="brand-line">
         <h1>Research Assistant</h1>
         <span class="version-badge">v3.0</span>
+        <span class="mode-badge">Basic Mode</span>
       </div>
       <p class="tagline">Neo4j-backed ingestion, retrieval, and grounded answer workflows.</p>
     </header>
 
-    <section class="panel tab-bar">
-      <button class="tab-btn active" data-tab="operationsTab">Operations</button>
-      <button class="tab-btn" data-tab="detailsTab">Model Details & Diagnostics</button>
-    </section>
-
-    <div id="operationsTab" class="tab-content active">
     <section class="panel">
-      <h2>How To Use</h2>
-      <ol>
-        <li>Click <strong>Sync PDFs</strong> to refresh local Nextcloud/Zotero coverage checks for your configured PDF source directory.</li>
-        <li>Choose ingest mode:
-          <code>batch</code> for batch upload (first N using <code>Batch Size</code>), <code>all</code> for full corpus in automatic batches of <code>Batch Size</code>, or <code>custom</code> with explicit file paths.
-        </li>
-        <li>By default, already ingested PDFs are skipped. Enable <strong>Override Existing</strong> to reprocess them.</li>
-        <li>Run <strong>Ingest</strong> to add/update graph data. Citation extraction uses Anystyle by default with automatic fallback to the built-in parser if needed. Existing Neo4j data is never erased. Unreadable files are skipped and shown in <code>failed_pdfs</code>.</li>
-        <li>Use <strong>Stop</strong> on Sync/Ingest/Query to cancel a running action.</li>
-        <li>Ask a retrieval query in <strong>Search</strong> to get chunks with author and citation context.</li>
-      </ol>
+      <h2>Workflow Scope</h2>
+      <div class="kv">
+        <strong>Visible Sections</strong><span>System/Health, Sync PDFs, Ingest, Search, Diagnostics.</span>
+        <strong>Removed from GUI</strong><span>How To Use, LLM Answer panel, Model Details tab.</span>
+      </div>
     </section>
 
     <section class="panel grid">
@@ -107,60 +96,10 @@
     </section>
 
     <section class="panel">
-      <h2>LLM Answer (RAG Grounded)</h2>
-      <div class="row">
-        <input id="askQuestion" placeholder="Ask a question grounded in your ingested corpus..." />
-        <input id="askRagResults" type="number" value="8" min="1" max="30" />
-        <input id="askModel" placeholder="model (default from env OPENAI_MODEL)" />
-        <label><input type="checkbox" id="askPreprocessSearch" checked /> Preprocess search query (LLM rewrite)</label>
-        <label><input type="checkbox" id="askEnforceCitations" checked /> Enforce citations</label>
-      </div>
-      <button id="askBtn">Ask ChatGPT (Grounded)</button>
-      <button id="askExportMdBtn">Export Markdown</button>
-      <button id="askExportCsvBtn">Export Citations CSV</button>
-      <button id="askExportPdfBtn">Export PDF (Pandoc)</button>
-      <div id="askOut" class="output"></div>
+      <h2>Diagnostics</h2>
+      <button id="diagBtn">Run Diagnostics</button>
+      <div id="diagOut" class="output"></div>
     </section>
-    </div>
-
-    <div id="detailsTab" class="tab-content">
-      <section class="panel">
-        <h2>Architecture</h2>
-        <ul>
-          <li><strong>Data source:</strong> PDFs in your configured local source directory plus bibliographic metadata from Zotero local DB (or legacy Paperpile backend).</li>
-          <li><strong>Graph model:</strong> <code>Article</code>, <code>Author</code>, <code>Chunk</code>, <code>Token</code>, <code>Reference</code>, <code>CITES</code>.</li>
-          <li><strong>Retrieval:</strong> Hybrid token + vector search, then lexical reranking.</li>
-          <li><strong>LLM grounding:</strong> RAG chunks are passed as citation blocks <code>[C1]</code>, <code>[C2]</code>, etc.; answers are expected to cite these IDs inline.</li>
-          <li><strong>Safety:</strong> citation enforcement + unsupported-sentence risk audit.</li>
-          <li><strong>Incremental ingest:</strong> already-ingested files can be skipped; parsing cache is used for speed.</li>
-        </ul>
-      </section>
-
-      <section class="panel">
-        <h2>How Query Works</h2>
-        <ol>
-          <li><strong>Pre-LLM query parsing:</strong> the query is parsed into likely terms (tokens, years, quoted phrases, author-like terms).</li>
-          <li><strong>Candidate retrieval:</strong> the parsed query is matched through multiple channels: chunk vectors, token overlap, and author-node matches.</li>
-          <li><strong>Relationship expansion:</strong> each chunk is connected to its parent <code>Article</code> and related <code>Author</code> nodes, and article citation links are inspected through <code>(Article)-[:CITES]-&gt;(Article)</code>.</li>
-          <li><strong>Context enrichment:</strong> results include citation neighborhood signals (what the source cites and what cites it) so highly connected, contextually relevant work is easier to surface.</li>
-          <li><strong>Reranking:</strong> candidates are reranked using chunk/title/author overlap, year and phrase matches, and graph-aware features to produce a final combined score.</li>
-          <li><strong>Low-confidence fallback:</strong> if top results do not strongly match title/author signals, author-channel candidates are force-merged and reranked before final context is selected.</li>
-          <li><strong>Grounded answering:</strong> selected chunks are passed to the LLM as numbered citation blocks (<code>[C1]</code>, <code>[C2]</code>, ...), and final answers are expected to cite those blocks inline.</li>
-        </ol>
-        <p>
-          <strong>Relationship usage summary:</strong>
-          <code>Author -[WROTE]-&gt; Article -[HAS_CHUNK]-&gt; Chunk</code>,
-          <code>Article -[CITES]-&gt; Article</code>,
-          and reference metadata links are used to provide richer retrieval context than isolated chunk matching.
-        </p>
-      </section>
-
-      <section class="panel">
-        <h2>Diagnostics</h2>
-        <button id="diagBtn">Run Diagnostics</button>
-        <div id="diagOut" class="output"></div>
-      </section>
-    </div>
   </main>
 
   <script src="/static/app.js"></script>
