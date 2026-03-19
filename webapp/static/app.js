@@ -43,8 +43,6 @@ async function apiGet(path) {
 }
 
 const pollers = {};
-let lastAskReport = null;
-let askLoadingTimer = null;
 
 function escapeHtml(v) {
   return String(v ?? "")
@@ -53,46 +51,6 @@ function escapeHtml(v) {
     .replaceAll(">", "&gt;");
 }
 
-function markdownToHtml(markdown) {
-  let text = escapeHtml(String(markdown || "").replaceAll("\r\n", "\n"));
-  const codeBlocks = [];
-  text = text.replace(/```([\s\S]*?)```/g, (_, code) => {
-    const token = `@@CODEBLOCK_${codeBlocks.length}@@`;
-    codeBlocks.push(`<pre><code>${code}</code></pre>`);
-    return token;
-  });
-  text = text.replace(/^### (.+)$/gm, "<h3>$1</h3>");
-  text = text.replace(/^## (.+)$/gm, "<h2>$1</h2>");
-  text = text.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  text = text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  text = text.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  text = text.replace(/`([^`]+)`/g, "<code>$1</code>");
-  text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
-  text = text.replace(/(?:^|\n)((?:- .*(?:\n|$))+)/g, (m, list) => {
-    const items = list
-      .trim()
-      .split("\n")
-      .map((line) => line.replace(/^- /, "").trim())
-      .map((item) => `<li>${item}</li>`)
-      .join("");
-    return `\n<ul>${items}</ul>\n`;
-  });
-  const blocks = text
-    .split(/\n{2,}/)
-    .map((b) => b.trim())
-    .filter(Boolean)
-    .map((b) => {
-      if (/^<(h1|h2|h3|ul|pre)/.test(b) || /^@@CODEBLOCK_\d+@@$/.test(b)) {
-        return b;
-      }
-      return `<p>${b.replaceAll("\n", "<br />")}</p>`;
-    });
-  let html = blocks.join("\n");
-  for (let i = 0; i < codeBlocks.length; i += 1) {
-    html = html.replace(`@@CODEBLOCK_${i}@@`, codeBlocks[i]);
-  }
-  return html;
-}
 
 function statusClass(status) {
   return `status-${status || "idle"}`;
@@ -427,65 +385,6 @@ function renderQueryJob(job) {
   `;
 }
 
-function renderAskResult(payload) {
-  const out = document.getElementById("askOut");
-  const used = payload?.used_citations || [];
-  const allCites = payload?.all_citations || [];
-  const answer = payload?.answer || "";
-  const audit = payload?.audit || {};
-  const preprocess = payload?.query_preprocess || {};
-  out.innerHTML = `
-    ${statusHeader({ status: "completed" }, "LLM Answer")}
-    <div class="kv">
-      <strong>Model</strong><span>${escapeHtml(payload?.model || "")}</span>
-      <strong>Search Query Used</strong><span>${escapeHtml(payload?.search_query_used || payload?.question || "")}</span>
-      <strong>Preprocess Backend</strong><span>${escapeHtml(preprocess.backend || "openai")}</span>
-      <strong>Preprocess Method</strong><span>${escapeHtml(preprocess.method || "identity")}</span>
-      <strong>RAG Results Used</strong><span>${escapeHtml(payload?.rag_results_count ?? 0)}</span>
-      <strong>Citations Referenced</strong><span>${escapeHtml(used.length)}</span>
-      <strong>Citation Enforcement</strong><span>${escapeHtml(payload?.citation_enforced ?? true)}</span>
-      <strong>Risk</strong><span>${escapeHtml(audit.risk_label || "n/a")} (${escapeHtml(audit.risk_score ?? "n/a")})</span>
-    </div>
-    ${preprocess.error ? `<div class="empty">Preprocess fallback: ${escapeHtml(preprocess.error)}</div>` : ""}
-    ${audit.unsupported_sentence_count ? `<details><summary>Potentially Unsupported Sentences (${escapeHtml(audit.unsupported_sentence_count)})</summary><ul class="list-box">${(audit.unsupported_sentences || []).map((s) => `<li>${escapeHtml(s)}</li>`).join("")}</ul></details>` : ""}
-    <details open>
-      <summary>Answer</summary>
-      <article class="markdown-body">${markdownToHtml(answer)}</article>
-    </details>
-    ${used.length ? `
-      <details open>
-        <summary>Used Citations (${used.length})</summary>
-        <table class="preview-table">
-          <thead>
-            <tr>
-              <th>ID</th><th>Title</th><th>Year</th><th>Authors</th><th>Citekey</th><th>Pages</th><th>Chunk</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${used.map((c) => `
-              <tr>
-                <td>${escapeHtml(c.citation_id)}</td>
-                <td>${escapeHtml(c.article_title || "")}</td>
-                <td>${escapeHtml(c.article_year || "")}</td>
-                <td>${escapeHtml((c.authors || []).join(", "))}</td>
-                <td>${escapeHtml(c.citekey || "")}</td>
-                <td>${escapeHtml(c.page_start || "")}-${escapeHtml(c.page_end || "")}</td>
-                <td>${escapeHtml(c.chunk_id || "")}</td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
-      </details>
-    ` : '<div class="empty">No inline [C#] citations were detected in the model output.</div>'}
-    <details>
-      <summary>All Provided Context Citations (${allCites.length})</summary>
-      <ul class="list-box">
-        ${allCites.slice(0, 200).map((c) => `<li>${escapeHtml(c.citation_id)} - ${escapeHtml(c.article_title || "")}</li>`).join("")}
-      </ul>
-    </details>
-  `;
-}
-
 function renderDiagnostics(payload) {
   const out = document.getElementById("diagOut");
   const checks = payload?.checks || [];
@@ -513,45 +412,6 @@ function renderDiagnostics(payload) {
   `;
 }
 
-function initTabs() {
-  const buttons = Array.from(document.querySelectorAll(".tab-btn"));
-  const tabs = Array.from(document.querySelectorAll(".tab-content"));
-  for (const btn of buttons) {
-    btn.addEventListener("click", () => {
-      const target = btn.getAttribute("data-tab");
-      buttons.forEach((b) => b.classList.remove("active"));
-      tabs.forEach((t) => t.classList.remove("active"));
-      btn.classList.add("active");
-      const tab = document.getElementById(target);
-      if (tab) tab.classList.add("active");
-    });
-  }
-}
-
-async function downloadReport(format, filename) {
-  if (!lastAskReport) {
-    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", "No report to export yet.");
-    return;
-  }
-  const res = await fetch("/api/ask/export", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ report: lastAskReport, format }),
-  });
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(txt || "Export failed");
-  }
-  const blob = await res.blob();
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
 
 document.getElementById("healthBtn").addEventListener("click", async () => {
   try {
@@ -703,76 +563,6 @@ document.getElementById("queryStopBtn").addEventListener("click", async () => {
   }
 });
 
-document.getElementById("askBtn").addEventListener("click", async () => {
-  const out = document.getElementById("askOut");
-  const question = document.getElementById("askQuestion").value.trim();
-  const ragResults = parseInt(document.getElementById("askRagResults").value || "8", 10);
-  const model = document.getElementById("askModel").value.trim();
-  if (!question) {
-    renderSimpleMessage(out, "LLM Answer", "failed", "Question cannot be empty.");
-    return;
-  }
-  const loadingSteps = [
-    "Parsing question and extracting likely search terms...",
-    "Running pre-LLM query rewrite...",
-    "Searching Neo4j with the rewritten query...",
-    "Compiling grounded citation context...",
-    "Calling model for final grounded answer...",
-  ];
-  let loadingIndex = 0;
-  renderSimpleMessage(out, "LLM Answer", "running", loadingSteps[loadingIndex]);
-  if (askLoadingTimer) clearInterval(askLoadingTimer);
-  askLoadingTimer = setInterval(() => {
-    loadingIndex = Math.min(loadingIndex + 1, loadingSteps.length - 1);
-    renderSimpleMessage(out, "LLM Answer", "running", loadingSteps[loadingIndex]);
-  }, 1400);
-  try {
-    const payload = await api("/api/ask", {
-      question,
-      rag_results: ragResults,
-      model: model || null,
-      enforce_citations: document.getElementById("askEnforceCitations").checked,
-      preprocess_search: document.getElementById("askPreprocessSearch").checked,
-    });
-    if (askLoadingTimer) {
-      clearInterval(askLoadingTimer);
-      askLoadingTimer = null;
-    }
-    lastAskReport = payload;
-    renderAskResult(payload);
-  } catch (err) {
-    if (askLoadingTimer) {
-      clearInterval(askLoadingTimer);
-      askLoadingTimer = null;
-    }
-    renderSimpleMessage(out, "LLM Answer", "failed", err.message);
-  }
-});
-
-document.getElementById("askExportMdBtn").addEventListener("click", async () => {
-  try {
-    await downloadReport("markdown", "rag_answer_report.md");
-  } catch (err) {
-    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
-  }
-});
-
-document.getElementById("askExportCsvBtn").addEventListener("click", async () => {
-  try {
-    await downloadReport("csv", "rag_used_citations.csv");
-  } catch (err) {
-    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
-  }
-});
-
-document.getElementById("askExportPdfBtn").addEventListener("click", async () => {
-  try {
-    await downloadReport("pdf", "rag_answer_report.pdf");
-  } catch (err) {
-    renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "failed", err.message);
-  }
-});
-
 document.getElementById("diagBtn").addEventListener("click", async () => {
   const out = document.getElementById("diagOut");
   renderSimpleMessage(out, "Diagnostics", "running", "Running checks...");
@@ -789,9 +579,7 @@ renderSyncJob({ status: "idle" });
 renderSimpleMessage(document.getElementById("ingestPreviewOut"), "Ingest Preview", "idle", "Click Preview Selection.");
 renderIngestJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
-renderSimpleMessage(document.getElementById("askOut"), "LLM Answer", "idle", "Ask a grounded question.");
 renderSimpleMessage(document.getElementById("diagOut"), "Diagnostics", "idle", "Click Run Diagnostics.");
-initTabs();
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
 });
