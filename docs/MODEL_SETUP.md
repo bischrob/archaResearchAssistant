@@ -10,18 +10,28 @@ This project can run with OpenAI-backed answering alone, but local Qwen features
 
 ## Base model
 
-Bring your own Qwen3 base model and point `QWEN3_MODEL_PATH` at the local model directory.
+The current repository defaults, local training scripts, and released citation adapter are aligned to this base model:
+
+- `Qwen/Qwen3-4B-Instruct-2507`
+
+Recommended source:
+
+- https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+
+Use that exact model unless you have a clear reason to retune adapters or revalidate parsing quality against another checkpoint.
+
+Point `QWEN3_MODEL_PATH` at the local model directory.
 
 Set in `.env`:
 
 ```bash
-QWEN3_MODEL_PATH=/path/to/qwen3-base-model
+QWEN3_MODEL_PATH=/path/to/Qwen3-4B-Instruct-2507
 ```
 
 Disk expectations:
 
 - base model: several GB
-- local repo example currently uses a base model directory around 7-8 GB
+- current local usage is around 7-8 GB on disk for `Qwen3-4B-Instruct-2507`
 
 ## LoRA adapter
 
@@ -56,3 +66,4 @@ Disk expectations:
 - If `QWEN3_CITATION_ADAPTER_PATH` is set, local citation extraction can use the adapter.
 - If it is not set, runtime may auto-select the newest local adapter found under `models/` when available.
 - If you do not want local Qwen citation parsing, use the OpenAI-only and/or Anystyle-supported flows instead.
+- Training scripts under `scripts/` also default to `Qwen3-4B-Instruct-2507`, so changing the base model should be treated as a compatibility decision, not a cosmetic one.

@@ -28,7 +28,7 @@ Set at minimum:
 - `METADATA_BACKEND=zotero`
 - `ZOTERO_DB_PATH=<path to zotero.sqlite>`
 - `ZOTERO_STORAGE_ROOT=<path to Zotero storage>`
-- `QWEN3_MODEL_PATH=<path to local Qwen3 base model>`
+- `QWEN3_MODEL_PATH=<path to local Qwen/Qwen3-4B-Instruct-2507 base model>`
 
 Optional API auth:
 
@@ -37,6 +37,10 @@ Optional API auth:
 ## 3) Download the LoRA adapter
 
 Use the published release asset and setup steps in [Model Setup](MODEL_SETUP.md).
+
+Recommended base-model version for current repo usage:
+
+- `Qwen/Qwen3-4B-Instruct-2507`
 
 ## 4) Install and enable Anystyle
 

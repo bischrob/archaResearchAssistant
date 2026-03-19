@@ -32,4 +32,5 @@ Start here based on your role.
 - GPU: optional
 - OpenAI API key: required for grounded LLM answer flows
 - Local Qwen3 base model: optional unless using local Qwen-powered parsing or preprocessing
+- Recommended Qwen base model for current usage: `Qwen/Qwen3-4B-Instruct-2507`
 - LoRA adapter: recommended for local citation extraction workflows

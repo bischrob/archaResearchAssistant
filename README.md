@@ -37,6 +37,16 @@ Recommended citation-extraction LoRA:
 
 - https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710
 
+## Recommended Qwen3 Base Model
+
+Current code and training scripts in this repository are aligned to:
+
+- `Qwen/Qwen3-4B-Instruct-2507`
+
+Recommended source:
+
+- https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+
 ## Supported Setup Matrix
 
 - OS: Linux and WSL are the primary documented environments
@@ -95,61 +105,4 @@ git config core.hooksPath .githooks
 
 ```bash
 scripts/rclone_sync_dropbox.sh
-```
-cd ~/researchAssistant
-sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
-```
-
-Queue-friendly overrides (still partial GPU, <=32GB RAM):
-
-```bash
-ssh sol
-cd ~/researchAssistant
-RUN_STAGE2=0 MAX_LENGTH=768 STAGE1_EPOCHS=1.0 sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
-```
-
-Note: `USE_4BIT=0` is the default in this script for SOL stability. Enable only if needed:
-
-```bash
-USE_4BIT=1 sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
-```
-
-Then run stage 2 in a separate job:
-
-```bash
-ssh sol
-cd ~/researchAssistant
-RUN_STAGE1=0 RUN_STAGE2=1 STAGE1_OUTPUT=models/qwen3-reference-lora-curriculum_<stage1_jobid>/stage1 \
-  sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
-```
-
-Generate extra supervision examples from sampled PDFs:
-
-```bash
-python scripts/generate_reference_lora_samples.py \
-  --pdf-dir '\\192.168.0.37\pooled\media\Books\pdfs' \
-  --paperpile-json Paperpile.json \
-  --sample-pdfs 120 \
-  --max-citations-per-pdf 18 \
-  --existing-jsonl data/reference_lora_train.jsonl \
-  --existing-jsonl data/reference_lora_eval.jsonl \
-  --output-jsonl data/reference_lora_pdf_samples.jsonl \
-  --summary-json data/reference_lora_pdf_samples_summary.json \
-  --merge-into-train data/reference_lora_train.jsonl \
-  --merge-into-eval data/reference_lora_eval.jsonl \
-  --eval-ratio 0.15
-```
-
-Custom files:
-
-```bash
-python scripts/build_graph.py --mode custom \
-  --pdf '\\192.168.0.37\pooled\media\Books\pdfs\file1.pdf' \
-  --pdf '\\192.168.0.37\pooled\media\Books\pdfs\file2.pdf'
-```
-
-Query:
-
-```bash
-python scripts/query_graph.py "fremont culture chronology" --limit 5
 ```
