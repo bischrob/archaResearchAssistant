@@ -175,7 +175,14 @@ function renderSyncJob(job) {
   const result = job.result || {};
   const sourceStats = result.source_stats || {};
   const ingest = result.ingest_summary || {};
+  const reconcile = result.reconcile_summary || {};
   const unmatched = result.unmatched_sample || [];
+  const detectedInitial = sourceStats.zotero_missing_detected_initial ?? sourceStats.zotero_missing_in_neo4j ?? "-";
+  const reconciledExisting = sourceStats.zotero_reconciled_existing ?? reconcile.matched ?? "-";
+  const unresolvedAfterReconcile = sourceStats.zotero_missing_in_neo4j_after_reconcile ?? sourceStats.zotero_missing_in_neo4j ?? "-";
+  const remainingAfterIngest = sourceStats.zotero_missing_in_neo4j_after_ingest ?? unresolvedAfterReconcile;
+  const ingestCandidates = result.ingest_candidate_count ?? sourceStats.zotero_paths_found ?? "-";
+  const failedPdfs = Array.isArray(ingest.failed_pdfs) ? ingest.failed_pdfs.length : 0;
   out.innerHTML = `
     ${statusHeader(job, "PDF Sync")}
     ${progressBlock(job)}
@@ -183,16 +190,19 @@ function renderSyncJob(job) {
       <strong>Lifecycle</strong><span>${escapeHtml(state)}</span>
       <strong>Success</strong><span>${escapeHtml(result.ok ?? job.status === "completed")}</span>
       <strong>Source Mode</strong><span>${escapeHtml(result.source_mode ?? "-")}</span>
-      <strong>PDFs Total</strong><span>${escapeHtml(result.pdfs_total ?? "-")}</span>
-      <strong>With Metadata</strong><span>${escapeHtml(result.pdfs_with_metadata ?? "-")}</span>
-      <strong>Unmatched</strong><span>${escapeHtml(result.pdfs_unmatched ?? "-")}</span>
+      <strong>Zotero PDFs</strong><span>${escapeHtml(result.pdfs_total ?? "-")}</span>
+      <strong>Missing Detected</strong><span>${escapeHtml(detectedInitial)}</span>
+      <strong>Reconciled Existing</strong><span>${escapeHtml(reconciledExisting)}</span>
+      <strong>Need Ingest</strong><span>${escapeHtml(ingestCandidates)}</span>
       <strong>Ingest Ran</strong><span>${escapeHtml(result.ingest_ran ?? false)}</span>
       <strong>Ingested Articles</strong><span>${escapeHtml(ingest.ingested_articles ?? "-")}</span>
-      <strong>Ingest Failed PDFs</strong><span>${escapeHtml((ingest.failed_pdfs || []).length)}</span>
+      <strong>Ingest Failed PDFs</strong><span>${escapeHtml(failedPdfs)}</span>
+      <strong>Remaining Missing</strong><span>${escapeHtml(remainingAfterIngest)}</span>
       <strong>Terminal Reason</strong><span>${escapeHtml(job.terminal_reason ?? "-")}</span>
       <strong>Stop State</strong><span>${escapeHtml(job.stop_state ?? "-")}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
+    ${Object.keys(reconcile).length ? `<details><summary>Reconcile Summary</summary><pre>${escapeHtml(JSON.stringify(reconcile, null, 2))}</pre></details>` : ""}
     ${Object.keys(sourceStats).length ? `<details><summary>Source Stats</summary><pre>${escapeHtml(JSON.stringify(sourceStats, null, 2))}</pre></details>` : ""}
     ${unmatched.length ? `<details><summary>Unmatched Sample (${unmatched.length})</summary><ul class="list-box">${unmatched.slice(0, 30).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
   `;

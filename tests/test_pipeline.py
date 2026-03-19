@@ -946,10 +946,11 @@ def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, t
 
     monkeypatch.setattr(
         pipeline,
-        "_get_existing_identities",
-        lambda settings: {
+        "_get_existing_identity_hits_for_candidates",
+        lambda settings, selected_pdfs, metadata_by_pdf: {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -977,10 +978,11 @@ def test_choose_pdfs_test3_respects_partial_count_after_existing_skip(monkeypatc
 
     monkeypatch.setattr(
         pipeline,
-        "_get_existing_identities",
-        lambda settings: {
+        "_get_existing_identity_hits_for_candidates",
+        lambda settings, selected_pdfs, metadata_by_pdf: {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -1008,10 +1010,11 @@ def test_choose_pdfs_override_includes_existing(monkeypatch, tmp_path: Path) -> 
 
     monkeypatch.setattr(
         pipeline,
-        "_get_existing_identities",
-        lambda settings: {
+        "_get_existing_identity_hits_for_candidates",
+        lambda settings, selected_pdfs, metadata_by_pdf: {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -1038,10 +1041,11 @@ def test_choose_pdfs_skips_files_without_metadata_by_default(monkeypatch, tmp_pa
 
     monkeypatch.setattr(
         pipeline,
-        "_get_existing_identities",
-        lambda settings: {
+        "_get_existing_identity_hits_for_candidates",
+        lambda settings, selected_pdfs, metadata_by_pdf: {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),

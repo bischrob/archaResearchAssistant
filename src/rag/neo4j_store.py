@@ -82,6 +82,7 @@ class GraphStore:
             "CREATE TEXT INDEX article_title_norm_text IF NOT EXISTS FOR (a:Article) ON (a.title_norm)",
             "CREATE TEXT INDEX article_citekey_text IF NOT EXISTS FOR (a:Article) ON (a.citekey)",
             "CREATE TEXT INDEX article_doi_text IF NOT EXISTS FOR (a:Article) ON (a.doi)",
+            "CREATE TEXT INDEX article_zotero_persistent_id_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_persistent_id)",
             "CREATE TEXT INDEX article_zotero_item_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_item_key)",
             "CREATE TEXT INDEX article_zotero_attachment_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_attachment_key)",
             "CREATE TEXT INDEX article_title_year_key_text IF NOT EXISTS FOR (a:Article) ON (a.title_year_key)",
@@ -131,6 +132,7 @@ class GraphStore:
                 a.source_path = $source_path,
                 a.citekey = $citekey,
                 a.paperpile_id = $paperpile_id,
+                a.zotero_persistent_id = $zotero_persistent_id,
                 a.zotero_item_key = $zotero_item_key,
                 a.zotero_attachment_key = $zotero_attachment_key,
                 a.doi = $doi,
@@ -146,6 +148,7 @@ class GraphStore:
             source_path=article.source_path,
             citekey=article.citekey,
             paperpile_id=article.paperpile_id,
+            zotero_persistent_id=article.zotero_persistent_id,
             zotero_item_key=article.zotero_item_key,
             zotero_attachment_key=article.zotero_attachment_key,
             doi=article.doi,
@@ -673,6 +676,7 @@ class GraphStore:
                        a.title AS title,
                        a.year AS year,
                        a.doi AS doi,
+                       a.zotero_persistent_id AS zotero_persistent_id,
                        a.zotero_item_key AS zotero_item_key,
                        a.zotero_attachment_key AS zotero_attachment_key,
                        a.title_year_key AS title_year_key,
@@ -682,6 +686,7 @@ class GraphStore:
             out = {
                 "article_ids": set(),
                 "doi": set(),
+                "zotero_persistent_id": set(),
                 "zotero_item_key": set(),
                 "zotero_attachment_key": set(),
                 "title_year_key": set(),
@@ -697,6 +702,10 @@ class GraphStore:
                 doi = _normalize_doi(row.get("doi"))
                 if doi:
                     out["doi"].add(doi)
+
+                persistent_id = (row.get("zotero_persistent_id") or "").strip()
+                if persistent_id:
+                    out["zotero_persistent_id"].add(persistent_id)
 
                 item_key = (row.get("zotero_item_key") or "").strip()
                 if item_key:
@@ -729,6 +738,7 @@ class GraphStore:
         self,
         *,
         dois: set[str],
+        zotero_persistent_ids: set[str],
         zotero_item_keys: set[str],
         zotero_attachment_keys: set[str],
         title_year_keys: set[str],
@@ -740,6 +750,7 @@ class GraphStore:
         """
         hits = {
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -757,6 +768,17 @@ class GraphStore:
                     values=sorted(dois),
                 )
                 hits["doi"] = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+
+            if zotero_persistent_ids:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE coalesce(a.zotero_persistent_id, '') IN $values
+                    RETURN a.zotero_persistent_id AS value
+                    """,
+                    values=sorted(zotero_persistent_ids),
+                )
+                hits["zotero_persistent_id"] = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
 
             if zotero_item_keys:
                 rows = session.run(
@@ -820,6 +842,192 @@ class GraphStore:
                 stem_hits.update(str(r.get("value") or "").strip() for r in rows if r.get("value"))
                 hits["file_stem"] = stem_hits
         return hits
+
+    def reconcile_zotero_persistent_ids(self, rows: list[dict]) -> dict[str, object]:
+        """
+        Link missing Zotero persistent IDs onto already-ingested articles using exact-match identities.
+        This avoids expensive re-ingest work for articles that are already present in Neo4j.
+        """
+        matched = 0
+        unresolved = 0
+        ambiguous = 0
+        examples: list[dict[str, str]] = []
+
+        item_keys = {
+            str(row.get("zotero_item_key") or "").strip().lower()
+            for row in rows
+            if str(row.get("zotero_item_key") or "").strip()
+        }
+        attachment_keys = {
+            str(row.get("zotero_attachment_key") or "").strip().lower()
+            for row in rows
+            if str(row.get("zotero_attachment_key") or "").strip()
+        }
+        dois = {
+            _normalize_doi(row.get("doi"))
+            for row in rows
+            if _normalize_doi(row.get("doi"))
+        }
+        title_year_keys = {
+            (metadata_title_year_key(row) or "").strip().lower()
+            for row in rows
+            if (metadata_title_year_key(row) or "").strip()
+        }
+
+        def _unique_match_map(session, query: str, values: set[str]) -> tuple[dict[str, str], set[str]]:
+            if not values:
+                return {}, set()
+            rows_out = session.run(query, values=sorted(values))
+            unique: dict[str, str] = {}
+            ambiguous_values: set[str] = set()
+            for rec in rows_out:
+                value = str(rec.get("value") or "").strip()
+                ids = [str(x).strip() for x in (rec.get("ids") or []) if str(x).strip()]
+                if not value or not ids:
+                    continue
+                if len(ids) == 1:
+                    unique[value] = ids[0]
+                else:
+                    ambiguous_values.add(value)
+            return unique, ambiguous_values
+
+        with self.driver.session() as session:
+            item_map, item_ambiguous = _unique_match_map(
+                session,
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.zotero_item_key, '')) IN $values
+                WITH toLower(a.zotero_item_key) AS value, collect(DISTINCT a.id) AS ids
+                RETURN value, ids
+                """,
+                item_keys,
+            )
+            attachment_map, attachment_ambiguous = _unique_match_map(
+                session,
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.zotero_attachment_key, '')) IN $values
+                WITH toLower(a.zotero_attachment_key) AS value, collect(DISTINCT a.id) AS ids
+                RETURN value, ids
+                """,
+                attachment_keys,
+            )
+            doi_map, doi_ambiguous = _unique_match_map(
+                session,
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.doi, '')) IN $values
+                WITH toLower(a.doi) AS value, collect(DISTINCT a.id) AS ids
+                RETURN value, ids
+                """,
+                dois,
+            )
+            title_year_map, title_year_ambiguous = _unique_match_map(
+                session,
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.title_year_key, '')) IN $values
+                WITH toLower(a.title_year_key) AS value, collect(DISTINCT a.id) AS ids
+                RETURN value, ids
+                """,
+                title_year_keys,
+            )
+
+            updates: list[dict[str, str]] = []
+            for row in rows:
+                persistent_id = str(row.get("zotero_persistent_id") or "").strip()
+                if not persistent_id:
+                    unresolved += 1
+                    continue
+
+                item_key = str(row.get("zotero_item_key") or "").strip().lower()
+                attachment_key = str(row.get("zotero_attachment_key") or "").strip().lower()
+                doi = _normalize_doi(row.get("doi"))
+                title_year_key = (metadata_title_year_key(row) or "").strip().lower()
+
+                match_id = ""
+                match_method = ""
+                ambiguous_hit = False
+
+                if item_key:
+                    if item_key in item_ambiguous:
+                        ambiguous_hit = True
+                    elif item_key in item_map:
+                        match_id = item_map[item_key]
+                        match_method = "zotero_item_key"
+                if not match_id and not ambiguous_hit and attachment_key:
+                    if attachment_key in attachment_ambiguous:
+                        ambiguous_hit = True
+                    elif attachment_key in attachment_map:
+                        match_id = attachment_map[attachment_key]
+                        match_method = "zotero_attachment_key"
+                if not match_id and not ambiguous_hit and doi:
+                    if doi in doi_ambiguous:
+                        ambiguous_hit = True
+                    elif doi in doi_map:
+                        match_id = doi_map[doi]
+                        match_method = "doi"
+                if not match_id and not ambiguous_hit and title_year_key:
+                    if title_year_key in title_year_ambiguous:
+                        ambiguous_hit = True
+                    elif title_year_key in title_year_map:
+                        match_id = title_year_map[title_year_key]
+                        match_method = "title_year_key"
+
+                if not match_id:
+                    if ambiguous_hit:
+                        ambiguous += 1
+                    else:
+                        unresolved += 1
+                    continue
+
+                updates.append(
+                    {
+                        "id": match_id,
+                        "zotero_persistent_id": persistent_id,
+                        "zotero_item_key": item_key,
+                        "zotero_attachment_key": attachment_key,
+                    }
+                )
+                matched += 1
+                if len(examples) < 10:
+                    examples.append(
+                        {
+                            "article_id": match_id,
+                            "zotero_persistent_id": persistent_id,
+                            "method": match_method,
+                            "title": str(row.get("title") or ""),
+                        }
+                    )
+
+            if updates:
+                session.run(
+                    """
+                    UNWIND $rows AS row
+                    MATCH (a:Article {id: row.id})
+                    SET a.zotero_persistent_id = row.zotero_persistent_id,
+                        a.zotero_item_key = CASE
+                            WHEN row.zotero_item_key = '' THEN a.zotero_item_key
+                            ELSE row.zotero_item_key
+                        END,
+                        a.zotero_attachment_key = CASE
+                            WHEN row.zotero_attachment_key = '' THEN a.zotero_attachment_key
+                            ELSE row.zotero_attachment_key
+                        END,
+                        a.metadata_source = CASE
+                            WHEN coalesce(a.metadata_source, '') = '' THEN 'zotero'
+                            ELSE a.metadata_source
+                        END
+                    """,
+                    rows=updates,
+                )
+
+        return {
+            "matched": matched,
+            "unresolved": unresolved,
+            "ambiguous": ambiguous,
+            "examples": examples,
+        }
 
     def article_by_citekey(self, citekey: str, chunk_limit: int = 3) -> dict | None:
         key = (citekey or "").strip()

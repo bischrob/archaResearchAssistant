@@ -70,27 +70,50 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
-            """
-            SELECT
-              ai.itemID AS attachment_item_id,
-              ai.parentItemID AS parent_item_id,
-              ai.path AS attachment_path_raw,
-              ai.contentType AS content_type,
-              att.key AS attachment_key,
-              parent.key AS parent_key,
-              parent.libraryID AS library_id
-            FROM itemAttachments ai
-            JOIN items att ON att.itemID = ai.itemID
-            LEFT JOIN items parent ON parent.itemID = ai.parentItemID
-            WHERE ai.parentItemID IS NOT NULL
-              AND (
-                lower(coalesce(ai.contentType, '')) = 'application/pdf'
-                OR lower(coalesce(ai.path, '')) LIKE '%.pdf%'
-              )
-            ORDER BY ai.parentItemID ASC, ai.itemID ASC
-            """
-        ).fetchall()
+        try:
+            rows = conn.execute(
+                """
+                SELECT
+                  ai.itemID AS attachment_item_id,
+                  ai.parentItemID AS parent_item_id,
+                  ai.path AS attachment_path_raw,
+                  ai.contentType AS content_type,
+                  att.key AS attachment_key,
+                  parent.key AS parent_key,
+                  parent.libraryID AS library_id
+                FROM itemAttachments ai
+                JOIN items att ON att.itemID = ai.itemID
+                LEFT JOIN items parent ON parent.itemID = ai.parentItemID
+                WHERE ai.parentItemID IS NOT NULL
+                  AND (
+                    lower(coalesce(ai.contentType, '')) = 'application/pdf'
+                    OR lower(coalesce(ai.path, '')) LIKE '%.pdf%'
+                  )
+                ORDER BY ai.parentItemID ASC, ai.itemID ASC
+                """
+            ).fetchall()
+        except sqlite3.OperationalError:
+            rows = conn.execute(
+                """
+                SELECT
+                  ai.itemID AS attachment_item_id,
+                  ai.parentItemID AS parent_item_id,
+                  ai.path AS attachment_path_raw,
+                  ai.contentType AS content_type,
+                  att.key AS attachment_key,
+                  parent.key AS parent_key,
+                  1 AS library_id
+                FROM itemAttachments ai
+                JOIN items att ON att.itemID = ai.itemID
+                LEFT JOIN items parent ON parent.itemID = ai.parentItemID
+                WHERE ai.parentItemID IS NOT NULL
+                  AND (
+                    lower(coalesce(ai.contentType, '')) = 'application/pdf'
+                    OR lower(coalesce(ai.path, '')) LIKE '%.pdf%'
+                  )
+                ORDER BY ai.parentItemID ASC, ai.itemID ASC
+                """
+            ).fetchall()
 
         if not rows:
             return []

@@ -319,28 +319,39 @@ details > summary h2 {
 .markdown-body h2,
 .markdown-body h3 {
   margin: 0.4rem 0 0.5rem 0;
+  color: var(--ink);
 }
 
 .markdown-body p {
   margin: 0.5rem 0;
+  color: var(--ink);
 }
 
 .markdown-body ul {
   margin: 0.5rem 0 0.7rem 1.2rem;
+  color: var(--ink);
 }
 
 .markdown-body pre {
   overflow-x: auto;
   padding: 0.7rem;
-  background: #f4f7fb;
-  border: 1px solid #d7deea;
+  background: #ece8dc;
+  color: #26231e;
+  border: 1px solid #cfc6b2;
   border-radius: 6px;
 }
 
 .markdown-body code {
-  background: #f4f7fb;
+  background: #ece8dc;
+  color: #26231e;
   padding: 0.1rem 0.25rem;
   border-radius: 4px;
+}
+
+.markdown-body pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
 }
 
 @media (max-width: 720px) {

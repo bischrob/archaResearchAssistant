@@ -308,6 +308,7 @@ def _deserialize_article(obj: dict) -> ArticleDoc:
         authors=obj.get("authors", []),
         citekey=obj.get("citekey"),
         paperpile_id=obj.get("paperpile_id"),
+        zotero_persistent_id=obj.get("zotero_persistent_id"),
         zotero_item_key=obj.get("zotero_item_key"),
         zotero_attachment_key=obj.get("zotero_attachment_key"),
         doi=obj.get("doi"),
@@ -392,6 +393,7 @@ def _prepare_metadata_for_ingest(meta: dict | None) -> dict:
     out = dict(meta or {})
     out["doi"] = _normalize_doi(out.get("doi"))
     out["title_year_key"] = metadata_title_year_key(out)
+    out["zotero_persistent_id"] = str(out.get("zotero_persistent_id") or "").strip() or None
     return out
 
 
@@ -412,6 +414,7 @@ def _get_existing_identities(settings: Settings) -> dict[str, set[str]]:
         return {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -426,6 +429,7 @@ def _get_existing_identity_hits_for_candidates(
     metadata_by_pdf: dict[Path, dict | None],
 ) -> dict[str, set[str]]:
     dois: set[str] = set()
+    persistent_ids: set[str] = set()
     item_keys: set[str] = set()
     attachment_keys: set[str] = set()
     title_year_keys: set[str] = set()
@@ -436,6 +440,9 @@ def _get_existing_identity_hits_for_candidates(
         doi = _normalize_doi(meta.get("doi"))
         if doi:
             dois.add(doi)
+        persistent_id = str(meta.get("zotero_persistent_id") or "").strip()
+        if persistent_id:
+            persistent_ids.add(persistent_id)
         item_key = str(meta.get("zotero_item_key") or "").strip().lower()
         if item_key:
             item_keys.add(item_key)
@@ -449,10 +456,11 @@ def _get_existing_identity_hits_for_candidates(
         if stem:
             file_stems.add(stem)
 
-    if not any([dois, item_keys, attachment_keys, title_year_keys, file_stems]):
+    if not any([dois, persistent_ids, item_keys, attachment_keys, title_year_keys, file_stems]):
         return {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -470,6 +478,7 @@ def _get_existing_identity_hits_for_candidates(
         try:
             hits = store.existing_identity_hits(
                 dois=dois,
+                zotero_persistent_ids=persistent_ids,
                 zotero_item_keys=item_keys,
                 zotero_attachment_keys=attachment_keys,
                 title_year_keys=title_year_keys,
@@ -485,6 +494,7 @@ def _get_existing_identity_hits_for_candidates(
         return {
             "article_ids": set(),
             "doi": set(),
+            "zotero_persistent_id": set(),
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
@@ -496,6 +506,10 @@ def _get_existing_identity_hits_for_candidates(
 def _is_existing_pdf(pdf_path: Path, meta: dict | None, existing: dict[str, set[str]]) -> bool:
     doi = _normalize_doi((meta or {}).get("doi"))
     if doi and doi in existing["doi"]:
+        return True
+
+    persistent_id = ((meta or {}).get("zotero_persistent_id") or "").strip()
+    if persistent_id and persistent_id in existing["zotero_persistent_id"]:
         return True
 
     item_key = ((meta or {}).get("zotero_item_key") or "").strip().lower()
@@ -598,6 +612,7 @@ def ingest_pdfs(
     existing = _get_existing_identity_hits_for_candidates(settings, selected_pdfs, metadata_by_pdf) if skip_existing else {
         "article_ids": set(),
         "doi": set(),
+        "zotero_persistent_id": set(),
         "zotero_item_key": set(),
         "zotero_attachment_key": set(),
         "title_year_key": set(),

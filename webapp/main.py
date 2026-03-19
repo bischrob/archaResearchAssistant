@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.182831")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.184054")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -524,7 +524,36 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 zotero_by_pid[pid] = row
 
             missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
+            initial_missing_count = len(missing_rows)
             jobs.set_progress("sync", 5.0, f"Anti-join complete: {len(missing_rows)} PDFs missing in Neo4j")
+
+            jobs.set_progress("sync", 5.5, "Reconciling existing Neo4j articles with Zotero identifiers")
+            reconcile_summary: dict[str, Any] | None = None
+            if missing_rows:
+                store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                try:
+                    reconcile_summary = store.reconcile_zotero_persistent_ids(missing_rows)
+                finally:
+                    store.close()
+
+                store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                try:
+                    with store.driver.session() as session:
+                        neo4j_zotero_ids = {
+                            str(r["pid"])
+                            for r in session.run(
+                                """
+                                MATCH (a:Article)
+                                WHERE coalesce(a.zotero_persistent_id, '') <> ''
+                                RETURN DISTINCT a.zotero_persistent_id AS pid
+                                """
+                            )
+                            if str(r["pid"] or "").strip()
+                        }
+                finally:
+                    store.close()
+
+                missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
 
             ingest_candidates: list[Path] = []
             missing_paths: list[str] = []
@@ -552,11 +581,18 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 "zotero_storage_root": storage_root,
                 "zotero_attachment_rows": total_rows,
                 "zotero_unique_parent_items": len(zotero_by_pid),
+                "zotero_missing_detected_initial": initial_missing_count,
                 "zotero_missing_in_neo4j": len(missing_rows),
                 "zotero_paths_found": len(ingest_candidates),
                 "zotero_paths_missing": len(missing_paths),
                 "zotero_missing_sample": missing_paths[:30],
             }
+            if reconcile_summary is not None:
+                source_stats["zotero_reconciled_existing"] = int(reconcile_summary.get("matched", 0))
+                source_stats["zotero_reconcile_unresolved"] = int(reconcile_summary.get("unresolved", 0))
+                source_stats["zotero_reconcile_ambiguous"] = int(reconcile_summary.get("ambiguous", 0))
+                source_stats["zotero_reconcile_examples"] = list(reconcile_summary.get("examples", []))
+                source_stats["zotero_missing_in_neo4j_after_reconcile"] = len(missing_rows)
 
             ingest_summary: dict[str, Any] | None = None
             ingest_ran = bool(req.run_ingest and not req.dry_run)
@@ -578,6 +614,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     "ingest_candidate_count": 0,
                     "ingest_ran": False,
                     "ingest_summary": None,
+                    "reconcile_summary": reconcile_summary,
                 }
 
             jobs.set_progress("sync", 5.0, f"{len(ingest_candidates)} PDFs need ingest")
@@ -619,6 +656,25 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     "qwen_disabled_reason": summary.qwen_disabled_reason,
                     "qwen_failure_samples": summary.qwen_failure_samples,
                 }
+                store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                try:
+                    with store.driver.session() as session:
+                        neo4j_zotero_ids = {
+                            str(r["pid"])
+                            for r in session.run(
+                                """
+                                MATCH (a:Article)
+                                WHERE coalesce(a.zotero_persistent_id, '') <> ''
+                                RETURN DISTINCT a.zotero_persistent_id AS pid
+                                """
+                            )
+                            if str(r["pid"] or "").strip()
+                        }
+                finally:
+                    store.close()
+                source_stats["zotero_missing_in_neo4j_after_ingest"] = sum(
+                    1 for pid in zotero_by_pid.keys() if pid not in neo4j_zotero_ids
+                )
 
             jobs.set_progress("sync", 100.0, "Sync complete")
             return {
@@ -636,6 +692,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 "ingest_candidate_count": len(ingest_candidates),
                 "ingest_ran": ingest_ran,
                 "ingest_summary": ingest_summary,
+                "reconcile_summary": reconcile_summary,
             }
 
         # Filesystem mode keeps the broader scan + match flow.
