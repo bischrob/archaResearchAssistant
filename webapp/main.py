@@ -23,6 +23,7 @@ from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.path_utils import resolve_input_path
+from src.rag.zotero_attachment_resolver import ZoteroAttachmentResolver
 from src.rag.zotero_metadata import load_zotero_entries
 from src.rag.zip_pdf_source import collect_source_pdfs
 from src.rag.retrieval import article_claim_match, article_claim_match_by_article_id, contextual_retrieve
@@ -98,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.192525")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.235410")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -565,19 +566,33 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
 
             ingest_candidates: list[Path] = []
-            missing_paths: list[str] = []
-            for row in missing_rows:
-                if job.cancel_event.is_set():
-                    jobs.set_progress("sync", 0.0, "Cancelled")
-                    return {"ok": False, "cancelled": True}
-                raw = (row.get("attachment_path") or "").strip()
-                if not raw:
-                    continue
-                p = Path(raw)
-                if p.exists():
-                    ingest_candidates.append(p)
-                else:
-                    missing_paths.append(raw)
+            path_issue_counts: dict[str, int] = {}
+            path_issue_samples: dict[str, list[str]] = {}
+            resolver_counts: dict[str, int] = {}
+            resolver = ZoteroAttachmentResolver(settings)
+            try:
+                for idx, row in enumerate(missing_rows, start=1):
+                    if job.cancel_event.is_set():
+                        jobs.set_progress("sync", 0.0, "Cancelled")
+                        return {"ok": False, "cancelled": True}
+                    if missing_rows and (idx == 1 or idx % 25 == 0 or idx == len(missing_rows)):
+                        progress = 10.0 + ((idx / len(missing_rows)) * 2.0)
+                        jobs.set_progress("sync", progress, f"Resolving attachment paths {idx}/{len(missing_rows)}")
+
+                    resolution = resolver.resolve(row)
+                    if resolution.path is not None:
+                        ingest_candidates.append(resolution.path)
+                        resolver_name = resolution.resolver or "resolved"
+                        resolver_counts[resolver_name] = resolver_counts.get(resolver_name, 0) + 1
+                        continue
+
+                    path_issue_counts[resolution.issue_code] = path_issue_counts.get(resolution.issue_code, 0) + 1
+                    if resolution.detail:
+                        bucket = path_issue_samples.setdefault(resolution.issue_code, [])
+                        if len(bucket) < 10:
+                            bucket.append(resolution.detail)
+            finally:
+                resolver.close()
 
             dedup: dict[str, Path] = {}
             for p in ingest_candidates:
@@ -593,8 +608,10 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 "zotero_missing_detected_initial": initial_missing_count,
                 "zotero_missing_in_neo4j": len(missing_rows),
                 "zotero_paths_found": len(ingest_candidates),
-                "zotero_paths_missing": len(missing_paths),
-                "zotero_missing_sample": missing_paths[:30],
+                "zotero_paths_missing": sum(path_issue_counts.values()),
+                "zotero_path_resolver_counts": resolver_counts,
+                "zotero_path_issue_counts": path_issue_counts,
+                "zotero_path_issue_samples": path_issue_samples,
             }
             if reconcile_summary is not None:
                 source_stats["zotero_reconciled_existing"] = int(reconcile_summary.get("matched", 0))

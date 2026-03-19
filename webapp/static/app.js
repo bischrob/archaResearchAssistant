@@ -179,7 +179,9 @@ function renderSyncJob(job) {
   const unmatched = result.unmatched_sample || [];
   const detectedInitial = sourceStats.zotero_missing_detected_initial ?? sourceStats.zotero_missing_in_neo4j ?? "-";
   const reconciledExisting = sourceStats.zotero_reconciled_existing ?? reconcile.matched ?? "-";
-  const unresolvedAfterReconcile = sourceStats.zotero_missing_in_neo4j_after_reconcile ?? sourceStats.zotero_missing_in_neo4j ?? "-";
+  const unresolvedAfterReconcile =
+    sourceStats.zotero_missing_in_neo4j_after_reconcile ?? sourceStats.zotero_missing_in_neo4j ?? "-";
+  const ambiguousExistingMatches = sourceStats.zotero_reconcile_ambiguous ?? reconcile.ambiguous ?? "-";
   const remainingAfterIngest = sourceStats.zotero_missing_in_neo4j_after_ingest ?? unresolvedAfterReconcile;
   const ingestCandidates = result.ingest_candidate_count ?? sourceStats.zotero_paths_found ?? "-";
   const failedPdfs = Array.isArray(ingest.failed_pdfs) ? ingest.failed_pdfs.length : 0;
@@ -192,7 +194,8 @@ function renderSyncJob(job) {
       <strong>Source Mode</strong><span>${escapeHtml(result.source_mode ?? "-")}</span>
       <strong>Zotero PDFs</strong><span>${escapeHtml(result.pdfs_total ?? "-")}</span>
       <strong>Missing Detected</strong><span>${escapeHtml(detectedInitial)}</span>
-      <strong>Reconciled Existing</strong><span>${escapeHtml(reconciledExisting)}</span>
+      <strong>Already In Neo4j (Linked Now)</strong><span>${escapeHtml(reconciledExisting)}</span>
+      <strong>Ambiguous Existing Matches</strong><span>${escapeHtml(ambiguousExistingMatches)}</span>
       <strong>Need Ingest</strong><span>${escapeHtml(ingestCandidates)}</span>
       <strong>Ingest Ran</strong><span>${escapeHtml(result.ingest_ran ?? false)}</span>
       <strong>Ingested Articles</strong><span>${escapeHtml(ingest.ingested_articles ?? "-")}</span>
@@ -202,7 +205,7 @@ function renderSyncJob(job) {
       <strong>Stop State</strong><span>${escapeHtml(job.stop_state ?? "-")}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
-    ${Object.keys(reconcile).length ? `<details><summary>Reconcile Summary</summary><pre>${escapeHtml(JSON.stringify(reconcile, null, 2))}</pre></details>` : ""}
+    ${Object.keys(reconcile).length ? `<details><summary>Link Existing Articles Summary</summary><pre>${escapeHtml(JSON.stringify(reconcile, null, 2))}</pre></details>` : ""}
     ${Object.keys(sourceStats).length ? `<details><summary>Source Stats</summary><pre>${escapeHtml(JSON.stringify(sourceStats, null, 2))}</pre></details>` : ""}
     ${unmatched.length ? `<details><summary>Unmatched Sample (${unmatched.length})</summary><ul class="list-box">${unmatched.slice(0, 30).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
   `;

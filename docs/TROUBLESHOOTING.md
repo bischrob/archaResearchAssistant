@@ -12,6 +12,30 @@ Set:
 
 - `ZOTERO_STORAGE_ROOT=/path/to/Zotero/storage`
 
+Optional fallback for Zotero-managed attachment downloads:
+
+- `ZOTERO_WEBDAV_URL=...`
+- `ZOTERO_WEBDAV_USERNAME=...`
+- `ZOTERO_WEBDAV_PASSWORD=...`
+- `ZOTERO_WEBDAV_CACHE_DIR=data/zotero_webdav_cache`
+
+Notes:
+
+- This fallback is for Zotero-managed `storage:` attachments.
+- Linked Windows/UNC files can be mapped with `ZOTERO_LINKED_PATH_MAP_JSON` if you have a stable local mirror path.
+- Best long-term fix for linked files: in Zotero, select the affected items and run `Tools > RAG Sync > Normalize Linked PDFs To Stored Attachments`, then let Zotero sync those stored files to WebDAV.
+- It does not resolve unrelated remote URLs.
+- After updating `.env`, restart the API before retrying sync.
+
+## Zotero plugin progress window has no obvious exit
+
+Current behavior:
+
+- While work is running, the plugin overlay shows `Run in Background` and `Cancel Sync`
+- Once the job completes, fails, or is cancelled, the overlay shows `Close`
+
+If you still do not see `Close`, restart Zotero so it reloads the latest plugin XPI.
+
 ## Anystyle not running
 
 Start it with:

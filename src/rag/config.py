@@ -88,6 +88,21 @@ class Settings:
             _env_str("ZOTERO_STORAGE_DIR", ""),
         ).strip()
     )
+    zotero_webdav_url: str = field(default_factory=lambda: _env_str("ZOTERO_WEBDAV_URL", "").strip())
+    zotero_webdav_username: str = field(default_factory=lambda: _env_str("ZOTERO_WEBDAV_USERNAME", "").strip())
+    zotero_webdav_password: str = field(default_factory=lambda: _env_str("ZOTERO_WEBDAV_PASSWORD", "").strip())
+    zotero_webdav_cache_dir: str = field(
+        default_factory=lambda: _env_str("ZOTERO_WEBDAV_CACHE_DIR", "data/zotero_webdav_cache").strip()
+    )
+    zotero_linked_path_map_json: str = field(
+        default_factory=lambda: _env_str("ZOTERO_LINKED_PATH_MAP_JSON", "").strip()
+    )
+    zotero_attachment_override_json: str = field(
+        default_factory=lambda: _env_str(
+            "ZOTERO_ATTACHMENT_OVERRIDE_JSON",
+            "data/zotero_attachment_path_overrides.json",
+        ).strip()
+    )
     chunk_size_words: int = field(default_factory=lambda: _env_int("CHUNK_SIZE_WORDS", 220))
     chunk_overlap_words: int = field(default_factory=lambda: _env_int("CHUNK_OVERLAP_WORDS", 45))
     citation_min_quality: float = field(default_factory=lambda: _env_float("CITATION_MIN_QUALITY", 0.35))

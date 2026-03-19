@@ -68,6 +68,9 @@
       <div id="docsSetup" class="tab-content active markdown-body">
         <p><strong>OpenAI API key:</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file.</p>
         <p><strong>Zotero:</strong> set <code>ZOTERO_DB_PATH</code> and usually <code>ZOTERO_STORAGE_ROOT</code>.</p>
+        <p><strong>Zotero WebDAV fallback:</strong> if local Zotero storage is not reachable, set <code>ZOTERO_WEBDAV_URL</code>, <code>ZOTERO_WEBDAV_USERNAME</code>, <code>ZOTERO_WEBDAV_PASSWORD</code>, and optionally <code>ZOTERO_WEBDAV_CACHE_DIR</code> in <code>.env</code>.</p>
+        <p><strong>Linked-file mappings:</strong> if Zotero uses linked Windows or UNC paths, set <code>ZOTERO_LINKED_PATH_MAP_JSON</code> to map those prefixes to reachable local paths.</p>
+        <p><strong>Zotero plugin migration step:</strong> if your library still uses linked PDFs, run <code>Tools &gt; RAG Sync &gt; Normalize Linked PDFs To Stored Attachments</code> in Zotero before relying on WebDAV-backed sync.</p>
         <p><strong>Qwen3:</strong> use <code>Qwen/Qwen3-4B-Instruct-2507</code> as the recommended base model and set <code>QWEN3_MODEL_PATH</code>.</p>
         <p><strong>LoRA release asset:</strong> use the published adapter release and set <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
         <p><a href="https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507" target="_blank" rel="noopener noreferrer">Recommended Qwen3 base model</a></p>
@@ -78,12 +81,14 @@
       <div id="docsSyncGuide" class="tab-content markdown-body">
         <p><strong>Recommended default:</strong> use <code>Zotero DB (anti-join)</code> with ingest enabled and skip-existing enabled.</p>
         <p><strong>Dry run:</strong> turn on <code>Dry run</code> to check missing counts without ingesting.</p>
+        <p><strong>Attachment resolver order:</strong> local Zotero storage first, then cached WebDAV fallback for Zotero-managed <code>storage:</code> attachments, then linked-path mappings, then unresolved-path reporting.</p>
         <p><strong>Anystyle:</strong> build and start it with Docker if you want the recommended citation parser:</p>
         <pre><code>docker compose build anystyle
 docker compose up -d anystyle</code></pre>
         <p>Recommended parser mode is <code>CITATION_PARSER=qwen_refsplit_anystyle</code>.</p>
         <p><strong>Stop behavior:</strong> <strong>Stop Sync</strong> requests cancellation. The job becomes <code>cancelled</code> when processing stops.</p>
         <p><strong>Progress meaning:</strong> early progress reports Zotero detection, then ingest progresses file-by-file.</p>
+        <p><strong>Zotero plugin overlay:</strong> while running it shows <code>Run in Background</code> and <code>Cancel Sync</code>; after completion, failure, or cancellation it shows <code>Close</code>.</p>
       </div>
 
       <div id="docsSearchGuide" class="tab-content markdown-body">
@@ -96,6 +101,9 @@ docker compose up -d anystyle</code></pre>
       <div id="docsTroubleshooting" class="tab-content markdown-body">
         <p><strong>Zotero DB path missing:</strong> set <code>ZOTERO_DB_PATH</code>.</p>
         <p><strong>Zotero storage missing:</strong> set <code>ZOTERO_STORAGE_ROOT</code>.</p>
+        <p><strong>Zotero WebDAV fallback:</strong> add the <code>ZOTERO_WEBDAV_*</code> variables in <code>.env</code> and restart the API.</p>
+        <p><strong>Linked files still failing:</strong> add <code>ZOTERO_LINKED_PATH_MAP_JSON</code> if Zotero uses Windows or UNC linked paths that need to map to local Linux/WSL paths.</p>
+        <p><strong>Best long-term fix for linked files:</strong> normalize them into Zotero-managed stored attachments from the Zotero plugin, then let Zotero sync them to WebDAV.</p>
         <p><strong>Anystyle not running:</strong> start the Docker service.</p>
         <p><strong>Qwen model or LoRA missing:</strong> set <code>QWEN3_MODEL_PATH</code> and <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
         <p><strong>Bearer token mismatch:</strong> make the UI token match <code>API_BEARER_TOKEN</code>.</p>

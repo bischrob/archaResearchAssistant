@@ -93,6 +93,26 @@ var RAGSync = {
     return this.syncInProgress ? 'Cancel Running Sync' : 'Cancel Sync';
   },
 
+  getNormalizeAttachmentsLabel() {
+    return 'Normalize Linked PDFs To Stored Attachments';
+  },
+
+  setProgressWindowTerminalState(isTerminal) {
+    if (!this.progressWindow) {
+      return;
+    }
+    const terminal = !!isTerminal;
+    if (this.progressWindow.bgBtn) {
+      this.progressWindow.bgBtn.style.display = terminal ? 'none' : '';
+    }
+    if (this.progressWindow.cancelBtn) {
+      this.progressWindow.cancelBtn.style.display = terminal ? 'none' : '';
+    }
+    if (this.progressWindow.closeBtn) {
+      this.progressWindow.closeBtn.style.display = terminal ? '' : 'none';
+    }
+  },
+
   updateMenuState() {
     const win = this.getMainWindow();
     if (!win || !win.document) {
@@ -214,12 +234,24 @@ var RAGSync = {
       void this.requestSyncStop();
     });
     controls.appendChild(cancelBtn);
+
+    const closeBtn = doc.createElement('button');
+    closeBtn.textContent = 'Close';
+    closeBtn.setAttribute(
+      'style',
+      'display:none;padding:5px 10px;border:1px solid #9aa0a6;background:#f9fafb;color:#111827;border-radius:6px;cursor:pointer;'
+    );
+    closeBtn.addEventListener('click', () => {
+      this.closeProgressWindow();
+    });
+    controls.appendChild(closeBtn);
     panel.appendChild(controls);
 
     root.appendChild(panel);
     (doc.body || doc.documentElement).appendChild(root);
 
-    this.progressWindow = { root, message, bar, percent, detail, closeTimer: null };
+    this.progressWindow = { root, message, bar, percent, detail, bgBtn, cancelBtn, closeBtn, closeTimer: null };
+    this.setProgressWindowTerminalState(false);
     return this.progressWindow;
   },
 
@@ -492,6 +524,7 @@ var RAGSync = {
         if (!this.overlayDismissed) {
           this.updateProgressWindow(100, 'Sync completed');
           this.addProgressDetail(summary);
+          this.setProgressWindowTerminalState(true);
           this.startProgressCloseTimer(6000);
         }
         this.setLastSync('completed', summary, terminalStatus.finished_at);
@@ -502,6 +535,7 @@ var RAGSync = {
           this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync cancelled');
           this.markProgressError();
           this.addProgressDetail(message, true);
+          this.setProgressWindowTerminalState(true);
           this.startProgressCloseTimer(8000);
         }
         this.setLastSync('cancelled', message, terminalStatus.finished_at);
@@ -512,6 +546,7 @@ var RAGSync = {
           this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync failed');
           this.markProgressError();
           this.addProgressDetail(message, true);
+          this.setProgressWindowTerminalState(true);
           this.startProgressCloseTimer(10000);
         }
         this.setLastSync('failed', message, terminalStatus.finished_at);
@@ -523,6 +558,7 @@ var RAGSync = {
       this.updateProgressWindow(0, 'Sync failed');
       this.markProgressError();
       this.addProgressDetail(message, true);
+      this.setProgressWindowTerminalState(true);
       this.startProgressCloseTimer(8000);
       this.alert('RAG Sync Error', message);
       this.setLastSync('failed', message, null);
@@ -559,6 +595,177 @@ var RAGSync = {
       `Last sync message: ${this.lastSyncMessage}`,
     ];
     this.alert('RAG Sync Diagnostics', lines.join('\n'));
+  },
+
+  getSelectedItems() {
+    const win = this.getMainWindow();
+    if (!win || !win.ZoteroPane || typeof win.ZoteroPane.getSelectedItems !== 'function') {
+      return [];
+    }
+    try {
+      const items = win.ZoteroPane.getSelectedItems() || [];
+      return Array.isArray(items) ? items : [];
+    } catch (_err) {
+      return [];
+    }
+  },
+
+  isPDFItem(item) {
+    return !!(
+      item &&
+      item.isAttachment &&
+      item.isAttachment() &&
+      String(item.attachmentContentType || '').toLowerCase() === 'application/pdf'
+    );
+  },
+
+  isLinkedAttachment(item) {
+    if (!this.isPDFItem(item)) {
+      return false;
+    }
+    const linkedMode = Zotero.Attachments && typeof Zotero.Attachments.LINK_MODE_LINKED_FILE !== 'undefined'
+      ? Zotero.Attachments.LINK_MODE_LINKED_FILE
+      : 2;
+    return Number(item.attachmentLinkMode) === Number(linkedMode);
+  },
+
+  collectLinkedPDFAttachments(items) {
+    const candidates = [];
+    const seen = new Set();
+    for (const item of items || []) {
+      if (!item) {
+        continue;
+      }
+      if (this.isLinkedAttachment(item)) {
+        if (!seen.has(item.id)) {
+          seen.add(item.id);
+          candidates.push(item);
+        }
+        continue;
+      }
+      if (!(item.isAttachment && item.isAttachment()) && item.getAttachments) {
+        for (const childID of item.getAttachments() || []) {
+          if (seen.has(childID)) {
+            continue;
+          }
+          const child = Zotero.Items.get(childID);
+          if (this.isLinkedAttachment(child)) {
+            seen.add(childID);
+            candidates.push(child);
+          }
+        }
+      }
+    }
+    return candidates;
+  },
+
+  async normalizeLinkedAttachmentsToStored() {
+    const selectedItems = this.getSelectedItems();
+    if (!selectedItems.length) {
+      this.alert('RAG Sync', 'Select one or more items or linked PDF attachments first.');
+      return;
+    }
+
+    const attachments = this.collectLinkedPDFAttachments(selectedItems);
+    if (!attachments.length) {
+      this.alert('RAG Sync', 'No linked PDF attachments were found in the current selection.');
+      return;
+    }
+
+    const prompt = [
+      `Convert ${attachments.length} linked PDF attachment(s) into Zotero-managed stored attachments?`,
+      '',
+      'This keeps the same parent item and makes the files eligible for Zotero file sync/WebDAV.',
+      'The original linked attachment will be deleted only after the stored copy is created successfully.'
+    ].join('\n');
+    const confirmed = Services.prompt.confirm(
+      this.getMainWindow(),
+      'RAG Sync',
+      prompt
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.openProgressWindow('Normalizing linked PDF attachments...');
+    this.updateProgressWindow(0, `Preparing ${attachments.length} attachment(s)`);
+    this.addProgressDetail('Converting linked attachments into Zotero-managed stored attachments.');
+
+    const summary = {
+      selected: selectedItems.length,
+      candidates: attachments.length,
+      converted: 0,
+      skipped: 0,
+      failed: 0,
+    };
+    const failures = [];
+
+    for (let index = 0; index < attachments.length; index++) {
+      const attachment = attachments[index];
+      const pct = ((index + 1) / attachments.length) * 100;
+      const title = attachment.getField ? attachment.getField('title') : attachment.key;
+      this.updateProgressWindow(pct, `Converting ${index + 1}/${attachments.length}: ${title || attachment.key}`);
+      try {
+        const filePath = attachment.getFilePath ? attachment.getFilePath() : '';
+        if (!filePath) {
+          summary.skipped++;
+          failures.push(`Skipped ${attachment.key}: no local file path`);
+          continue;
+        }
+
+        const parentItemID = attachment.parentItemID;
+        if (!parentItemID) {
+          summary.skipped++;
+          failures.push(`Skipped ${attachment.key}: attachment has no parent item`);
+          continue;
+        }
+
+        const options = {
+          file: filePath,
+          parentItemID,
+          title: title || undefined,
+          contentType: 'application/pdf',
+        };
+        const storedAttachment = await Zotero.Attachments.importFromFile(options);
+        if (!storedAttachment || !storedAttachment.id) {
+          throw new Error('importFromFile returned no stored attachment');
+        }
+
+        try {
+          await attachment.eraseTx();
+        } catch (eraseErr) {
+          throw new Error(`stored copy created (${storedAttachment.key}) but linked attachment delete failed: ${eraseErr}`);
+        }
+
+        summary.converted++;
+      } catch (err) {
+        summary.failed++;
+        Zotero.logError(err);
+        failures.push(`Failed ${attachment.key}: ${String(err)}`);
+      }
+    }
+
+    const lines = [
+      `Selected items: ${summary.selected}`,
+      `Linked PDF candidates: ${summary.candidates}`,
+      `Converted to stored attachments: ${summary.converted}`,
+      `Skipped: ${summary.skipped}`,
+      `Failed: ${summary.failed}`,
+    ];
+    if (failures.length) {
+      lines.push('');
+      lines.push('Sample issues:');
+      lines.push(...failures.slice(0, 10));
+    }
+
+    if (summary.failed) {
+      this.markProgressError();
+    }
+    this.updateProgressWindow(100, 'Attachment normalization complete');
+    this.addProgressDetail(lines.join('\n'), summary.failed > 0);
+    this.setProgressWindowTerminalState(true);
+    this.startProgressCloseTimer(12000);
+    this.alert('RAG Sync', lines.join('\n'));
   },
 
   init({ id, version, rootURI }) {
@@ -623,6 +830,13 @@ var RAGSync = {
     );
     popup.appendChild(
       makeItem('rag-sync-menu-show-diagnostics', 'Show Diagnostics', () => this.showDiagnostics())
+    );
+    popup.appendChild(
+      makeItem(
+        'rag-sync-menu-normalize-linked',
+        this.getNormalizeAttachmentsLabel(),
+        () => void this.normalizeLinkedAttachmentsToStored()
+      )
     );
 
     const addonsMenu = doc.getElementById('menu_addons');

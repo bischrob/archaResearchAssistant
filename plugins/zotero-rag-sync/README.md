@@ -17,11 +17,19 @@ This plugin watches **My Library** item changes, ensures a Better BibTeX citatio
   - `RAG Sync: Retry Failed`
   - `RAG Sync: Pause/Resume`
   - `RAG Sync: Show Diagnostics`
+  - `RAG Sync: Normalize Linked PDFs To Stored Attachments`
 - `Sync Now` now opens a centered in-app progress overlay and shows an explicit error alert if backend sync fails.
 - `Sync Now` now polls `/api/sync/status` and displays live progress updates from backend status messages (including current filename when provided).
 - If you dismiss the overlay with `Run in Background`, the plugin stays in the running state until the backend reaches a terminal state. Use `Cancel Running Sync` to stop a background sync.
+- Once the overlay reaches a terminal state (`completed`, `failed`, or `cancelled`), it shows an explicit `Close` button.
 - Sync source supports ZIP-backed libraries: backend can scan ZIP files and surface embedded PDFs.
 - In current workflow, `Sync Now` triggers ingest into Neo4j as part of `/api/sync` unless backend `dry_run` is enabled.
+- `Normalize Linked PDFs To Stored Attachments` operates on the current Zotero selection. It imports linked PDF attachments into Zotero-managed storage under the same parent item and deletes the old linked attachment only after the stored copy is created successfully.
+- Best-practice workflow for WebDAV-backed sync:
+  1. Select the items whose linked PDF attachments you want to normalize.
+  2. Run `Tools > RAG Sync > Normalize Linked PDFs To Stored Attachments`.
+  3. Let Zotero finish its normal file sync to WebDAV.
+  4. Run `Sync Now` to ingest from Zotero-managed storage/WebDAV rather than external UNC paths.
 
 ## Required backend env
 

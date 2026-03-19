@@ -77,6 +77,27 @@ For full setup, including Zotero, LoRA, and Anystyle:
 3. Open the web UI and use `Sync + Ingest`.
 4. Use `Search` for paper or chunk retrieval.
 
+## Zotero WebDAV Fallback
+
+If Zotero-managed attachments are not locally reachable from the runtime, you can configure WebDAV fallback in [`.env.example`](/home/rjbischo/researchAssistant/.env.example):
+
+- `ZOTERO_WEBDAV_URL`
+- `ZOTERO_WEBDAV_USERNAME`
+- `ZOTERO_WEBDAV_PASSWORD`
+- `ZOTERO_WEBDAV_CACHE_DIR`
+
+The resolver order is:
+
+1. local Zotero storage
+2. cached/downloaded WebDAV copy for Zotero-managed `storage:` attachments
+3. linked-file resolution via stable local path mappings when configured
+4. unresolved path classification for anything still inaccessible
+
+See:
+
+- [docs/NEW_USER_SETUP.md](docs/NEW_USER_SETUP.md)
+- [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+
 ## Plugin
 
 The Zotero plugin scaffold lives in:
@@ -84,6 +105,14 @@ The Zotero plugin scaffold lives in:
 - `plugins/zotero-rag-sync/`
 
 It can trigger the combined backend sync and ingest workflow and supports bearer-token auth when enabled.
+
+Plugin workflow notes:
+
+- `Sync Now` opens a progress overlay with:
+  - `Run in Background` while work is still running
+  - `Cancel Sync` while work is still running
+  - `Close` once the run has completed, failed, or been cancelled
+- `Normalize Linked PDFs To Stored Attachments` converts selected linked PDF attachments into Zotero-managed stored attachments under the same parent item. This is the recommended way to migrate away from UNC/linked-file paths before relying on WebDAV-backed sync.
 
 ## Testing
 
