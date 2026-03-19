@@ -91,6 +91,30 @@ Job endpoints return a shared shape:
     - `citekeys` (list, deduped case-insensitively)
     - `chunk_limit` (1..20)
 
+## Known Paper Lookup Workflow (Citation-First)
+Use this path when you want a specific paper/citation record, not broad semantic retrieval.
+
+1) If you know the citekey:
+- Call `GET /api/article/{citekey}` with `chunk_limit=1`.
+- This is the most deterministic lookup path.
+
+2) If you know multiple citekeys:
+- Call `POST /api/articles/by-citekeys`.
+- Use `missing_citekeys` in the response to see exactly what is absent.
+
+3) If you only know title/author/year:
+- Call `POST /api/query` with:
+  - `limit_scope: "papers"`
+  - `chunks_per_paper: 1`
+  - quoted title terms + author surname + year in `query`
+
+Response fields to key on:
+- `article_citekey`
+- `article_title`
+- `article_year`
+- `article_doi`
+- `authors`
+
 ### Query
 - `POST /api/query`
   - Request fields:
@@ -160,6 +184,31 @@ curl -X POST http://127.0.0.1:8000/api/query \
     "limit":20,
     "limit_scope":"papers",
     "chunks_per_paper":8
+  }'
+```
+
+### Exact citation lookup by citekey
+```bash
+curl "http://127.0.0.1:8000/api/article/smith2024copyright?chunk_limit=1"
+```
+
+### Exact citation lookup for multiple known citekeys
+```bash
+curl -X POST http://127.0.0.1:8000/api/articles/by-citekeys \
+  -H 'Content-Type: application/json' \
+  -d '{"citekeys":["smith2024copyright","doe2023genai"],"chunk_limit":1}'
+```
+
+### Known-paper search when citekey is unknown
+```bash
+curl -X POST http://127.0.0.1:8000/api/query \
+  -H 'Content-Type: application/json' \
+  -H "Authorization: Bearer $API_BEARER_TOKEN" \
+  -d '{
+    "query":"\"copyright and artificial intelligence\" 2024 guadamuz",
+    "limit":10,
+    "limit_scope":"papers",
+    "chunks_per_paper":1
   }'
 ```
 

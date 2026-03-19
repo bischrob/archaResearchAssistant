@@ -161,6 +161,52 @@ Qwen adapter defaulting:
 
 - If `QWEN3_CITATION_ADAPTER_PATH` is not set, runtime now auto-selects the newest local adapter under `models/**/adapter_config.json` (excluding checkpoint directories).
 
+## 3c) Find a known paper quickly (citation-first lookup)
+
+If you already know the paper identity, use these paths in order:
+
+1) Known citekey (fastest exact match):
+
+```bash
+curl "http://127.0.0.1:8000/api/article/<citekey>?chunk_limit=1"
+```
+
+2) Multiple known citekeys:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/articles/by-citekeys" \
+  -H "Content-Type: application/json" \
+  -d '{"citekeys":["smith2024copyright","doe2023genai"],"chunk_limit":1}'
+```
+
+3) Known title/author/year but not citekey:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/query" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $API_BEARER_TOKEN" \
+  -d '{
+    "query":"\"Copyright and Artificial Intelligence\" 2024 Guadamuz",
+    "limit":10,
+    "limit_scope":"papers",
+    "chunks_per_paper":1
+  }'
+```
+
+Notes:
+
+- `limit` is number of paper results.
+- `chunks_per_paper` is how many supporting chunks are returned per paper.
+- For citation-only lookup, keep `chunks_per_paper=1` to minimize noise.
+- Results include `article_citekey`, `article_title`, `article_year`, `article_doi`, and `authors` when present.
+
+Optional direct Neo4j check:
+
+```bash
+docker exec -it neo4j cypher-shell -u neo4j -p archaResearchAssistant \
+  "MATCH (a:Article) WHERE toLower(a.title) CONTAINS toLower('Copyright and Artificial Intelligence') RETURN a.citekey, a.title, a.year, a.doi LIMIT 20;"
+```
+
 ## 4) Enable auto-versioning on commit
 
 The repository includes hooks that:

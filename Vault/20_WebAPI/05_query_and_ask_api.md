@@ -8,6 +8,10 @@
 - `GET /api/query/status`
 - `POST /api/query/stop`
 
+Known-paper lookup mode:
+- Set `limit_scope="papers"` and `chunks_per_paper=1` when users are trying to find a specific citation record quickly.
+- If citekey is known, prefer `GET /api/article/{citekey}` instead of `/api/query`.
+
 ### Query behavior
 - Validates non-empty query string.
 - Supports query controls:
