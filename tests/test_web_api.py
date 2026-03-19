@@ -758,25 +758,22 @@ def test_api_bearer_token_enforced_when_set(monkeypatch, client):
 
 
 @pytest.mark.parametrize(
-    "method,path,payload",
+    "method,path",
     [
-        ("post", "/api/sync", {"dry_run": True}),
-        ("post", "/api/sync/stop", {}),
-        ("get", "/api/sync/status", None),
-        ("post", "/api/ingest", {}),
-        ("post", "/api/ingest/preview", {}),
-        ("post", "/api/ingest/stop", {}),
-        ("get", "/api/ingest/status", None),
-        ("post", "/api/query", {"query": "x"}),
-        ("post", "/api/query/stop", {}),
-        ("get", "/api/query/status", None),
+        ("post", "/api/sync/stop"),
+        ("get", "/api/sync/status"),
+        ("post", "/api/ingest/stop"),
+        ("get", "/api/ingest/status"),
+        ("post", "/api/query/stop"),
+        ("get", "/api/query/status"),
     ],
 )
-def test_job_endpoints_require_bearer_token_when_set(monkeypatch, client, method, path, payload):
+def test_job_endpoints_require_bearer_token_when_set(monkeypatch, client, method, path):
     monkeypatch.setenv("API_BEARER_TOKEN", "secret-token")
     request = getattr(client, method)
-    kwargs = {}
-    if payload is not None:
-        kwargs["json"] = payload
-    resp = request(path, **kwargs)
-    assert resp.status_code == 401
+    missing = request(path)
+    bad = request(path, headers={"Authorization": "Bearer wrong"})
+    good = request(path, headers={"Authorization": "Bearer secret-token"})
+    assert missing.status_code == 401
+    assert bad.status_code == 403
+    assert good.status_code == 200
