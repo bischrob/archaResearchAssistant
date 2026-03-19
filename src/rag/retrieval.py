@@ -23,6 +23,30 @@ INTENT_STOPWORDS = {
     "papers",
 }
 
+REFERENCE_SECTION_HINTS = {
+    "references",
+    "bibliography",
+    "works cited",
+    "literature cited",
+}
+
+FACET_STOPWORDS = {
+    "already",
+    "directly",
+    "establish",
+    "establishes",
+    "evidence",
+    "mature",
+    "paper",
+    "papers",
+    "research",
+    "review",
+    "shows",
+    "source",
+    "study",
+    "substantial",
+}
+
 
 def tokenize_query(text: str) -> list[str]:
     tokens = re.findall(r"[A-Za-z][A-Za-z0-9'-]*", text.lower())
@@ -31,6 +55,75 @@ def tokenize_query(text: str) -> list[str]:
 
 def _token_set(text: str) -> set[str]:
     return set(re.findall(r"[a-z][a-z0-9'-]*", (text or "").lower()))
+
+
+def _looks_like_reference_chunk(text: str) -> bool:
+    lowered = (text or "").strip().lower()
+    if not lowered:
+        return False
+    if any(lowered.startswith(hint) for hint in REFERENCE_SECTION_HINTS):
+        return True
+    lines = [ln.strip() for ln in lowered.splitlines() if ln.strip()]
+    if not lines:
+        return False
+    doi_count = lowered.count("doi")
+    year_hits = re.findall(r"\b(?:19|20)\d{2}\b", lowered)
+    return doi_count >= 2 or len(year_hits) >= 5
+
+
+def _critical_claim_tokens(text: str) -> list[str]:
+    tokens = tokenize_query(text)
+    out = []
+    for token in tokens:
+        if token in FACET_STOPWORDS:
+            continue
+        if len(token) < 4:
+            continue
+        out.append(token)
+    return list(dict.fromkeys(out))
+
+
+def _archaeology_required(text: str) -> bool:
+    lowered = (text or "").lower()
+    return "archaeolog" in lowered
+
+
+def _domain_penalty(claim_text: str, article_title: str, chunk_text: str) -> float:
+    if not _archaeology_required(claim_text):
+        return 0.0
+    hay = f"{article_title} {chunk_text}".lower()
+    if "archaeolog" in hay:
+        return 0.0
+    return 0.28
+
+
+def _contradiction_penalty(claim_text: str, article_title: str, chunk_text: str) -> float:
+    claim = (claim_text or "").lower()
+    hay = f"{article_title} {chunk_text}".lower()
+    penalty = 0.0
+    if "without" in claim and "review" in claim:
+        contradictory = [
+            "human review",
+            "expert review",
+            "expert human review",
+            "requires human review",
+            "remain complementary to expert human review",
+            "complementary to expert human review",
+        ]
+        if any(phrase in hay for phrase in contradictory):
+            penalty += 0.35
+    if any(term in claim for term in ("directly establishes", "direct support", "solved")):
+        hedges = [
+            "limitations",
+            "limited",
+            "cautious",
+            "future directions",
+            "requires",
+            "remain complementary",
+        ]
+        if any(term in hay for term in hedges):
+            penalty += 0.12
+    return penalty
 
 
 def parse_query_terms(query: str) -> dict[str, Any]:
@@ -55,6 +148,140 @@ def parse_query_terms(query: str) -> dict[str, Any]:
         "phrases": phrases,
         "author_terms": author_terms,
         "must_terms": must_terms,
+    }
+
+
+def article_claim_match(
+    store: GraphStore,
+    citekey: str,
+    claim_text: str,
+    top_k: int = 3,
+) -> dict[str, Any]:
+    article = store.article_chunks_by_citekey(citekey)
+    if not article:
+        return {
+            "ok": False,
+            "citekey": citekey,
+            "claim_text": claim_text,
+            "error": f"Article not found for citekey: {citekey}",
+        }
+    return score_article_claim(article, claim_text, top_k=top_k)
+
+
+def article_claim_match_by_article_id(
+    store: GraphStore,
+    article_id: str,
+    claim_text: str,
+    top_k: int = 3,
+) -> dict[str, Any]:
+    article = store.article_chunks_by_id(article_id)
+    if not article:
+        return {
+            "ok": False,
+            "article_id": article_id,
+            "claim_text": claim_text,
+            "error": f"Article not found for id: {article_id}",
+        }
+    return score_article_claim(article, claim_text, top_k=top_k)
+
+
+def score_article_claim(
+    article: dict[str, Any],
+    claim_text: str,
+    top_k: int = 3,
+) -> dict[str, Any]:
+    plan = parse_query_terms(claim_text)
+    q_tokens = set(plan["tokens"])
+    q_years = set(plan["years"])
+    q_phrases = plan["phrases"]
+    article_year = article.get("article_year")
+    scored_chunks: list[dict[str, Any]] = []
+
+    for chunk in article.get("chunks") or []:
+        chunk_text = str(chunk.get("text") or "")
+        title_text = str(article.get("article_title") or "")
+        c_tokens = _token_set(chunk_text)
+        title_tokens = _token_set(title_text)
+        denom = max(1, len(q_tokens))
+        token_overlap = len(q_tokens & c_tokens) / denom if q_tokens else 0.0
+        title_overlap = len(q_tokens & title_tokens) / denom if q_tokens else 0.0
+        phrase_match = 0.0
+        if q_phrases:
+            lowered_chunk = chunk_text.lower()
+            lowered_title = title_text.lower()
+            phrase_hits = sum(1 for phrase in q_phrases if phrase in lowered_chunk or phrase in lowered_title)
+            phrase_match = phrase_hits / max(1, len(q_phrases))
+        year_match = 1.0 if (q_years and article_year in q_years) else 0.0
+        density_bonus = min(0.25, 0.04 * len(q_tokens & c_tokens))
+        reference_penalty = 0.45 if _looks_like_reference_chunk(chunk_text) else 0.0
+        critical_tokens = _critical_claim_tokens(claim_text)
+        critical_denom = max(1, len(critical_tokens))
+        critical_overlap = len(set(critical_tokens) & (c_tokens | title_tokens)) / critical_denom if critical_tokens else 0.0
+        domain_penalty = _domain_penalty(claim_text, title_text, chunk_text)
+        contradiction_penalty = _contradiction_penalty(claim_text, title_text, chunk_text)
+        support_score = (
+            (0.9 * token_overlap)
+            + (0.2 * title_overlap)
+            + (0.55 * phrase_match)
+            + (0.2 * year_match)
+            + density_bonus
+            + (0.35 * critical_overlap)
+            - reference_penalty
+            - domain_penalty
+            - contradiction_penalty
+        )
+        scored_chunks.append(
+            {
+                "chunk_id": chunk.get("id"),
+                "chunk_index": chunk.get("index"),
+                "page_start": chunk.get("page_start"),
+                "page_end": chunk.get("page_end"),
+                "chunk_text": chunk_text,
+                "support_score": round(support_score, 6),
+                "support_features": {
+                    "token_overlap": round(token_overlap, 4),
+                    "title_overlap": round(title_overlap, 4),
+                    "phrase_match": round(phrase_match, 4),
+                    "year_match": year_match,
+                    "critical_overlap": round(critical_overlap, 4),
+                    "domain_penalty": domain_penalty,
+                    "contradiction_penalty": contradiction_penalty,
+                    "reference_penalty": reference_penalty,
+                },
+            }
+        )
+
+    scored_chunks.sort(key=lambda row: row.get("support_score", 0.0), reverse=True)
+    top_chunks = scored_chunks[: max(1, int(top_k))]
+    top_score = float(top_chunks[0].get("support_score", 0.0)) if top_chunks else 0.0
+    top_features = (top_chunks[0].get("support_features") or {}) if top_chunks else {}
+    critical_overlap = float(top_features.get("critical_overlap", 0.0))
+    contradiction_penalty = float(top_features.get("contradiction_penalty", 0.0))
+
+    if top_score >= 0.95 and critical_overlap >= 0.45 and contradiction_penalty == 0.0:
+        classification = "direct_support"
+    elif top_score >= 0.45:
+        classification = "adjacent_or_partial_support"
+    else:
+        classification = "not_supported"
+
+    return {
+        "ok": True,
+        "citekey": article.get("article_citekey"),
+        "article_id": article.get("article_id"),
+        "claim_text": claim_text,
+        "classification": classification,
+        "top_support_score": round(top_score, 6),
+        "article": {
+            "article_id": article.get("article_id"),
+            "article_title": article.get("article_title"),
+            "article_year": article.get("article_year"),
+            "article_citekey": article.get("article_citekey"),
+            "article_doi": article.get("article_doi"),
+            "article_source_path": article.get("article_source_path"),
+            "authors": article.get("authors") or [],
+        },
+        "supporting_chunks": top_chunks,
     }
 
 

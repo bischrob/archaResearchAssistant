@@ -725,6 +725,102 @@ class GraphStore:
                         out["file_stem"].add(stem)
             return out
 
+    def existing_identity_hits(
+        self,
+        *,
+        dois: set[str],
+        zotero_item_keys: set[str],
+        zotero_attachment_keys: set[str],
+        title_year_keys: set[str],
+        file_stems: set[str],
+    ) -> dict[str, set[str]]:
+        """
+        Return only identity values that already exist in Neo4j for the provided candidate sets.
+        This is much cheaper than scanning all Article identities for large graphs.
+        """
+        hits = {
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": set(),
+        }
+        with self.driver.session() as session:
+            if dois:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE toLower(coalesce(a.doi, '')) IN $values
+                    RETURN toLower(a.doi) AS value
+                    """,
+                    values=sorted(dois),
+                )
+                hits["doi"] = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+
+            if zotero_item_keys:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE toLower(coalesce(a.zotero_item_key, '')) IN $values
+                    RETURN toLower(a.zotero_item_key) AS value
+                    """,
+                    values=sorted(zotero_item_keys),
+                )
+                hits["zotero_item_key"] = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+
+            if zotero_attachment_keys:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE toLower(coalesce(a.zotero_attachment_key, '')) IN $values
+                    RETURN toLower(a.zotero_attachment_key) AS value
+                    """,
+                    values=sorted(zotero_attachment_keys),
+                )
+                hits["zotero_attachment_key"] = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+
+            if title_year_keys:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE toLower(coalesce(a.title_year_key, '')) IN $values
+                    RETURN toLower(a.title_year_key) AS value
+                    """,
+                    values=sorted(title_year_keys),
+                )
+                title_hits = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+                hits["title_year_key"] = title_hits
+                hits["title_year_key_normalized"] = set(title_hits)
+
+            if file_stems:
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WHERE toLower(coalesce(a.id, '')) IN $values
+                    RETURN toLower(a.id) AS value
+                    """,
+                    values=sorted(file_stems),
+                )
+                stem_hits = {str(r.get("value") or "").strip() for r in rows if r.get("value")}
+                rows = session.run(
+                    """
+                    MATCH (a:Article)
+                    WITH toLower(replace(coalesce(a.source_path, ''), '\\\\', '/')) AS source_path
+                    WITH split(source_path, '/')[-1] AS filename
+                    WITH CASE
+                         WHEN filename ENDS WITH '.pdf' THEN substring(filename, 0, size(filename) - 4)
+                         ELSE filename
+                         END AS stem
+                    WHERE stem IN $values
+                    RETURN stem AS value
+                    """,
+                    values=sorted(file_stems),
+                )
+                stem_hits.update(str(r.get("value") or "").strip() for r in rows if r.get("value"))
+                hits["file_stem"] = stem_hits
+        return hits
+
     def article_by_citekey(self, citekey: str, chunk_limit: int = 3) -> dict | None:
         key = (citekey or "").strip()
         if not key:
@@ -784,6 +880,95 @@ class GraphStore:
                 """,
                 citekey=key,
                 chunk_limit=max(1, int(chunk_limit)),
+            ).single()
+            return dict(row) if row else None
+
+    def article_chunks_by_citekey(self, citekey: str) -> dict | None:
+        key = (citekey or "").strip()
+        if not key:
+            return None
+        with self.driver.session() as session:
+            row = session.run(
+                """
+                MATCH (a:Article)
+                WHERE toLower(coalesce(a.citekey, '')) = toLower($citekey)
+                CALL (a) {
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                    WITH c
+                    ORDER BY coalesce(c.index, 0) ASC
+                    RETURN collect(
+                        {
+                            id: c.id,
+                            index: c.index,
+                            page_start: c.page_start,
+                            page_end: c.page_end,
+                            text: coalesce(c.text, '')
+                        }
+                    ) AS chunks
+                }
+                RETURN a.id AS article_id,
+                       a.title AS article_title,
+                       a.year AS article_year,
+                       a.citekey AS article_citekey,
+                       a.doi AS article_doi,
+                       a.source_path AS article_source_path,
+                       a.journal AS article_journal,
+                       a.publisher AS article_publisher,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..15] AS authors,
+                       chunks
+                LIMIT 1
+                """,
+                citekey=key,
+            ).single()
+            return dict(row) if row else None
+
+    def article_chunks_by_id(self, article_id: str) -> dict | None:
+        key = (article_id or "").strip()
+        if not key:
+            return None
+        with self.driver.session() as session:
+            row = session.run(
+                """
+                MATCH (a:Article {id: $article_id})
+                CALL (a) {
+                    MATCH (auth:Author)-[w:WROTE]->(a)
+                    WITH auth, w ORDER BY w.position ASC
+                    RETURN collect(auth.name) AS authors
+                }
+                CALL (a) {
+                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+                    WITH c
+                    ORDER BY coalesce(c.index, 0) ASC
+                    RETURN collect(
+                        {
+                            id: c.id,
+                            index: c.index,
+                            page_start: c.page_start,
+                            page_end: c.page_end,
+                            text: coalesce(c.text, '')
+                        }
+                    ) AS chunks
+                }
+                RETURN a.id AS article_id,
+                       a.title AS article_title,
+                       a.year AS article_year,
+                       a.citekey AS article_citekey,
+                       a.doi AS article_doi,
+                       a.source_path AS article_source_path,
+                       a.journal AS article_journal,
+                       a.publisher AS article_publisher,
+                       coalesce(head(authors), 'Unknown Author') AS author,
+                       authors[0..15] AS authors,
+                       chunks
+                LIMIT 1
+                """,
+                article_id=key,
             ).single()
             return dict(row) if row else None
 

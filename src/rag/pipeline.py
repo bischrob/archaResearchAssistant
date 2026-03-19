@@ -420,6 +420,79 @@ def _get_existing_identities(settings: Settings) -> dict[str, set[str]]:
         }
 
 
+def _get_existing_identity_hits_for_candidates(
+    settings: Settings,
+    selected_pdfs: list[Path],
+    metadata_by_pdf: dict[Path, dict | None],
+) -> dict[str, set[str]]:
+    dois: set[str] = set()
+    item_keys: set[str] = set()
+    attachment_keys: set[str] = set()
+    title_year_keys: set[str] = set()
+    file_stems: set[str] = set()
+
+    for p in selected_pdfs:
+        meta = metadata_by_pdf.get(p) or {}
+        doi = _normalize_doi(meta.get("doi"))
+        if doi:
+            dois.add(doi)
+        item_key = str(meta.get("zotero_item_key") or "").strip().lower()
+        if item_key:
+            item_keys.add(item_key)
+        attachment_key = str(meta.get("zotero_attachment_key") or "").strip().lower()
+        if attachment_key:
+            attachment_keys.add(attachment_key)
+        title_year_key = _title_year_key_from_metadata(meta)
+        if title_year_key:
+            title_year_keys.add(title_year_key)
+        stem = p.stem.strip().lower()
+        if stem:
+            file_stems.add(stem)
+
+    if not any([dois, item_keys, attachment_keys, title_year_keys, file_stems]):
+        return {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": set(),
+        }
+
+    try:
+        store = GraphStore(
+            uri=settings.neo4j_uri,
+            user=settings.neo4j_user,
+            password=settings.neo4j_password,
+            embedding_model=settings.embedding_model,
+        )
+        try:
+            hits = store.existing_identity_hits(
+                dois=dois,
+                zotero_item_keys=item_keys,
+                zotero_attachment_keys=attachment_keys,
+                title_year_keys=title_year_keys,
+                file_stems=file_stems,
+            )
+        finally:
+            store.close()
+        # Preserve shape expected by _is_existing_pdf.
+        hits["article_ids"] = set()
+        return hits
+    except Exception:
+        # If DB isn't reachable, preserve no-skip fallback behavior.
+        return {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": set(),
+        }
+
+
 def _is_existing_pdf(pdf_path: Path, meta: dict | None, existing: dict[str, set[str]]) -> bool:
     doi = _normalize_doi((meta or {}).get("doi"))
     if doi and doi in existing["doi"]:
@@ -489,7 +562,7 @@ def choose_pdfs(
             metadata_by_pdf[p] = find_metadata_for_pdf(metadata_index, p.name, str(p))
 
     if skip_existing:
-        existing = _get_existing_identities(cfg)
+        existing = _get_existing_identity_hits_for_candidates(cfg, selected, metadata_by_pdf)
         selected = [p for p in selected if not _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
 
     if require_metadata:
@@ -522,7 +595,7 @@ def ingest_pdfs(
     metadata_index = _load_metadata_index_for_settings(settings)
     metadata_by_pdf = {p: find_metadata_for_pdf(metadata_index, p.name, str(p)) for p in selected_pdfs}
 
-    existing = _get_existing_identities(settings) if skip_existing else {
+    existing = _get_existing_identity_hits_for_candidates(settings, selected_pdfs, metadata_by_pdf) if skip_existing else {
         "article_ids": set(),
         "doi": set(),
         "zotero_item_key": set(),

@@ -25,7 +25,7 @@ from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.path_utils import resolve_input_path
 from src.rag.zotero_metadata import load_zotero_entries
 from src.rag.zip_pdf_source import collect_source_pdfs
-from src.rag.retrieval import contextual_retrieve
+from src.rag.retrieval import article_claim_match, article_claim_match_by_article_id, contextual_retrieve
 from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
 
 
@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.044726")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.052611")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -134,6 +134,11 @@ class QueryRequest(BaseModel):
 class ArticleLookupRequest(BaseModel):
     citekeys: list[str] = Field(default_factory=list, min_length=1, max_length=500)
     chunk_limit: int = Field(default=3, ge=1, le=20)
+
+
+class ArticleClaimMatchRequest(BaseModel):
+    claim_text: str
+    top_k: int = Field(default=3, ge=1, le=10)
 
 
 class AskRequest(BaseModel):
@@ -585,6 +590,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             jobs.set_progress("sync", progress, f"Scanning {idx}/{total_files}: {p.name}")
 
         matched = total_files - len(unmatched)
+        unmatched_set = {str(p) for p in unmatched}
         ingest_summary: dict[str, Any] | None = None
         ingest_ran = bool(req.run_ingest and not req.dry_run)
 
@@ -596,8 +602,14 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 mapped = 42.0 + (max(0.0, min(100.0, float(percent))) * 0.57)
                 jobs.set_progress("sync", mapped, f"Ingest: {message}")
 
+            # In strict metadata mode, avoid re-processing known unmatched files.
+            ingest_candidates = (
+                [p for p in pdf_files if str(p) not in unmatched_set]
+                if bool(settings.metadata_require_match)
+                else list(pdf_files)
+            )
             summary = ingest_pdfs(
-                selected_pdfs=pdf_files,
+                selected_pdfs=ingest_candidates,
                 wipe=False,
                 settings=settings,
                 should_cancel=lambda: job.cancel_event.is_set(),
@@ -969,6 +981,46 @@ def articles_by_citekeys(req: ArticleLookupRequest) -> dict:
         "missing_citekeys": missing,
         "articles": rows,
     }
+
+
+@app.post("/api/article/{citekey}/claim-match")
+def article_claim_match_endpoint(citekey: str, req: ArticleClaimMatchRequest) -> dict:
+    key = (citekey or "").strip()
+    claim = (req.claim_text or "").strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Citekey cannot be empty.")
+    if not claim:
+        raise HTTPException(status_code=400, detail="Claim text cannot be empty.")
+
+    settings = Settings()
+    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    try:
+        result = article_claim_match(store, key, claim, top_k=req.top_k)
+    finally:
+        store.close()
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail=result.get("error") or f"Article not found for citekey: {key}")
+    return result
+
+
+@app.post("/api/article-id/{article_id}/claim-match")
+def article_claim_match_by_id_endpoint(article_id: str, req: ArticleClaimMatchRequest) -> dict:
+    key = (article_id or "").strip()
+    claim = (req.claim_text or "").strip()
+    if not key:
+        raise HTTPException(status_code=400, detail="Article id cannot be empty.")
+    if not claim:
+        raise HTTPException(status_code=400, detail="Claim text cannot be empty.")
+
+    settings = Settings()
+    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    try:
+        result = article_claim_match_by_article_id(store, key, claim, top_k=req.top_k)
+    finally:
+        store.close()
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail=result.get("error") or f"Article not found for id: {key}")
+    return result
 
 
 @app.post("/api/query")
