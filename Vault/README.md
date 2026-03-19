@@ -34,6 +34,7 @@ This vault is a full project review for `/home/rjbischo/researchAssistant`, opti
 - [[00_Project/05_startup_runbook]]
 - [[00_Project/06_ancillary_content]]
 - [[00_Project/12_llm_agent_playbook]]
+- [[00_Project/13_reusability_todo_2026-03-19]]
 - [[10_Backend/01_settings_and_config_module]]
 - [[10_Backend/02_metadata_matching_module]]
 - [[10_Backend/03_pdf_processing_module]]

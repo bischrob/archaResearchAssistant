@@ -9,6 +9,72 @@ This project provides:
 - Metadata enrichment from Zotero local DB (with optional Paperpile compatibility backend)
 - Grounded LLM Q&A via OpenAI API using only retrieved RAG context and returning citations
 
+## Quickstart (New Users)
+
+Prerequisites:
+
+- Python 3.10+
+- Docker + Docker daemon running
+- `pip` with dependencies installed (`pip install -r requirements.txt`)
+
+1) Create local env config:
+
+```bash
+cp .env.example .env
+```
+
+2) Fill required values in `.env`:
+
+- `OPENAI_API_KEY`
+- `NEO4J_PASSWORD` (if changed from default, keep this consistent with Neo4j runtime)
+- `METADATA_BACKEND=zotero` (recommended)
+- `ZOTERO_DB_PATH=/path/to/zotero.sqlite`
+- `ZOTERO_STORAGE_ROOT=/path/to/Zotero/storage` (recommended)
+
+3) Run preflight checks:
+
+```bash
+make preflight
+```
+
+4) Start services + API/UI:
+
+```bash
+make start
+```
+
+Keep `make start` running in Terminal A.
+
+5) In Terminal B, run a smoke workflow against the live API:
+
+```bash
+make smoke
+```
+
+6) Run non-destructive sync/ingest examples against the running API:
+
+```bash
+make sync-example
+make ingest-preview-example
+```
+
+If you do not have Zotero configured yet:
+
+- you can still validate app lifecycle with `make smoke`
+- use `METADATA_BACKEND=paperpile` with `PAPERPILE_JSON` for metadata fallback
+
+Optional manual API walkthrough:
+
+```bash
+curl -s http://127.0.0.1:8000/api/health | python -m json.tool
+curl -s -X POST http://127.0.0.1:8000/api/sync \
+  -H 'Content-Type: application/json' \
+  -d '{"dry_run":true,"source_mode":"zotero_db","run_ingest":false}' | python -m json.tool
+curl -s -X POST http://127.0.0.1:8000/api/query \
+  -H 'Content-Type: application/json' \
+  -d '{"query":"test query","limit":3,"limit_scope":"papers","chunks_per_paper":1}' | python -m json.tool
+```
+
 ## 1) Start Neo4j
 
 ```bash
@@ -136,6 +202,12 @@ Open:
 
 - `start.sh` prints the URL. Default is `http://localhost:8000`, but it will auto-pick the next open port if `8000` is busy.
 
+Equivalent command:
+
+```bash
+make start
+```
+
 ## 3b) Zotero plugin (rapid incremental sync)
 
 This repo includes a rapid Zotero plugin scaffold at:
@@ -237,9 +309,7 @@ The GUI includes in-app instructions and buttons for:
 - contextual query
 - pre-LLM query parsing (tokens, years, phrases, author terms) with multi-channel retrieval
 - stop/cancel for sync, ingest, and query jobs
-- grounded ChatGPT Q&A with configurable RAG context size
-- export of answer reports (Markdown, CSV, PDF via pandoc)
-- a dedicated `Model Details & Diagnostics` tab with architecture notes and environment/data checks
+- diagnostics panel for runtime checks
 
 Notes:
 
@@ -268,9 +338,19 @@ PDF export dependency:
 
 - Install `pandoc` and at least one PDF engine (`xelatex`, `pdflatex`, `wkhtmltopdf`, or `weasyprint`) available in `PATH`.
 
-## 5) Diagnostics and model structure
+## 5) Testing commands
 
-Use the **Model Details & Diagnostics** tab in the web UI to inspect:
+```bash
+make test-unit      # fast local tests (no e2e marker)
+make test-e2e       # live full-stack tests (requires RUN_E2E dependencies)
+make smoke          # live API smoke workflow (health/query/diagnostics)
+```
+
+## 6) Diagnostics and model structure
+
+Use the **Diagnostics** panel in the web UI to inspect runtime checks. For deeper API/model details, use `Vault/20_WebAPI/08_api_reference.md` and `Vault/30_Frontend/` notes.
+
+Model structure overview:
 
 - pipeline architecture (source metadata -> graph model -> retrieval -> grounded LLM answer)
 - graph schema (`Article`, `Author`, `Chunk`, `Token`, `Reference`, `CITES`)
@@ -288,7 +368,7 @@ Click **Run Diagnostics** to execute runtime checks:
 
 If a check fails, review the check details shown in the table and correct the corresponding file/config/runtime dependency.
 
-## 6) CLI usage (optional)
+## 7) CLI usage (optional)
 
 Build graph:
 

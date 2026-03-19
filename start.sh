@@ -35,6 +35,11 @@ pick_open_port() {
   return 1
 }
 
+if [[ "${RUN_PREFLIGHT:-1}" == "1" ]]; then
+  echo "Running preflight checks..."
+  "${ROOT_DIR}/scripts/preflight_check.sh" "${PORT:-8000}"
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "Error: Docker is not installed or not in PATH." >&2
   exit 1
