@@ -26,6 +26,9 @@
 - JSON request/response for most endpoints.
 - Asynchronous operations return immediate job status and are polled.
 - Errors surfaced via `HTTPException` (typically 400/404/409).
+- Known-paper retrieval should prefer citekey endpoints over semantic query:
+  - `GET /api/article/{citekey}`
+  - `POST /api/articles/by-citekeys`
 
 ## Shared dependencies
 - `Settings`

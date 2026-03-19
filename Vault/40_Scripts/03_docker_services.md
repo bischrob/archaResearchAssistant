@@ -1,5 +1,7 @@
 # Docker and Services
 
+Last reviewed: 2026-03-19
+
 ## Source files
 - `docker-compose.yml`
 - `pdf2epub/docker-compose.yml`
@@ -8,7 +10,8 @@
 ## Primary compose services (`docker-compose.yml`)
 - `neo4j`: main graph DB with APOC and host-mounted volumes.
 - `neo4j-admin`: utility container for admin commands.
-- `anystyle`: Ruby container for Anystyle CLI workflows, now used by default ingest citation parsing (`CITATION_PARSER=anystyle`).
+- `anystyle`: Ruby container for Anystyle CLI workflows.
+- `anystyle-gpu`: optional GPU variant for citation parsing when `ANYSTYLE_USE_GPU=1`.
 
 ## Neo4j service details
 - Image: `neo4j:2025.02.0-community`.
@@ -27,6 +30,8 @@
 ## Operational caveats
 - Host permissions for mounted `db/*` directories can block local inspection.
 - Compose files are environment-specific; `pdf2epub` paths are machine-specific.
+- `anystyle` containers are not required for every parser mode, but hybrid default (`qwen_refsplit_anystyle`) expects Anystyle availability.
+- If Docker CLI hangs, `start.sh` can stall before uvicorn launch; direct `uvicorn webapp.main:app ...` can be used as temporary recovery.
 
 ## Related
 - [[00_Project/04_data_and_storage]]

@@ -20,6 +20,7 @@ Last reviewed: 2026-03-19
 - [[00_Project/09_qwen3_reference_curriculum_training_on_sol]]
 - [[00_Project/10_interaction_log]]
 - [[00_Project/11_qwen_reference_split_hardening_2026-03-17]]
+- [[00_Project/12_llm_agent_playbook]]
 
 ## Backend Modules
 - [[10_Backend/01_settings_and_config_module]]
@@ -41,6 +42,7 @@ Last reviewed: 2026-03-19
 - [[20_WebAPI/06_diagnostics_api]]
 - [[20_WebAPI/07_api_plugin_review_2026-03-19]]
 - [[20_WebAPI/08_api_reference]]
+- [[20_WebAPI/09_citation_lookup_quickstart]]
 
 ## Frontend
 - [[30_Frontend/01_ui_structure]]

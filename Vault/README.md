@@ -1,6 +1,6 @@
 # Research Assistant Documentation Vault
 
-Last reviewed: 2026-02-21
+Last reviewed: 2026-03-19
 
 ## Purpose
 This vault is a full project review for `/home/rjbischo/researchAssistant`, optimized for:
@@ -10,9 +10,10 @@ This vault is a full project review for `/home/rjbischo/researchAssistant`, opti
 
 ## How to use this vault
 1. Start with [[00_Project/01_project_overview]].
-2. Jump to architecture notes in `Vault/10_Backend/` and API notes in `Vault/20_WebAPI/`.
-3. Use [[60_Troubleshooting/01_symptom_to_cause_matrix]] for operational failures.
-4. Use `Vault/70_Feature_Playbooks/` before adding new features.
+2. For agent execution workflow, use [[00_Project/12_llm_agent_playbook]].
+3. Jump to architecture notes in `Vault/10_Backend/` and API notes in `Vault/20_WebAPI/`.
+4. Use [[60_Troubleshooting/01_symptom_to_cause_matrix]] for operational failures.
+5. Use `Vault/70_Feature_Playbooks/` before adding new features.
 
 ## Sections
 - Project context: `Vault/00_Project/`
@@ -32,6 +33,7 @@ This vault is a full project review for `/home/rjbischo/researchAssistant`, opti
 - [[00_Project/04_data_and_storage]]
 - [[00_Project/05_startup_runbook]]
 - [[00_Project/06_ancillary_content]]
+- [[00_Project/12_llm_agent_playbook]]
 - [[10_Backend/01_settings_and_config_module]]
 - [[10_Backend/02_metadata_matching_module]]
 - [[10_Backend/03_pdf_processing_module]]
@@ -46,6 +48,8 @@ This vault is a full project review for `/home/rjbischo/researchAssistant`, opti
 - [[20_WebAPI/04_ingest_api]]
 - [[20_WebAPI/05_query_and_ask_api]]
 - [[20_WebAPI/06_diagnostics_api]]
+- [[20_WebAPI/08_api_reference]]
+- [[20_WebAPI/09_citation_lookup_quickstart]]
 - [[30_Frontend/01_ui_structure]]
 - [[30_Frontend/02_ui_client_logic]]
 - [[40_Scripts/01_cli_scripts]]
