@@ -1,22 +1,28 @@
 :root {
-  --bg: #f4f0e6;
-  --panel: #fffdf7;
-  --ink: #1f2a2e;
-  --accent: #006b6f;
-  --accent-2: #b35c00;
-  --ok: #1f7a45;
-  --warn: #a15d00;
-  --danger: #a62222;
-  --muted: #5e676b;
-  --border: #d9d0bf;
+  --bg: #2f2f30;
+  --bg-2: #3a3a3b;
+  --panel: #444446;
+  --panel-soft: #4f4f52;
+  --ink: #f6f3ec;
+  --accent: #ef8f2f;
+  --accent-2: #a8d84a;
+  --ok: #83d36d;
+  --warn: #f0b04d;
+  --danger: #df5a5a;
+  --muted: #cec8bd;
+  --border: #6a6a6c;
 }
 
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  font-family: "Trebuchet MS", "Gill Sans", "Segoe UI", sans-serif;
   color: var(--ink);
-  background: radial-gradient(circle at 20% 10%, #ece3d0, var(--bg) 48%);
+  background:
+    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.08), transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(0, 0, 0, 0.25), transparent 45%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 6px),
+    linear-gradient(135deg, var(--bg), var(--bg-2));
 }
 
 .container {
@@ -26,14 +32,52 @@ body {
 }
 
 h1, h2 { margin: 0 0 10px; }
-header { margin-bottom: 14px; }
+header {
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(160deg, #515154, #3a3a3d);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.25);
+}
+
+.brand-line {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+h1 {
+  margin: 0;
+  font-family: "Brush Script MT", "Segoe Script", cursive;
+  font-size: clamp(2rem, 4.8vw, 3.2rem);
+  letter-spacing: 0.4px;
+  font-weight: 600;
+  color: #f9f4e8;
+}
+
+.version-badge {
+  background: var(--accent-2);
+  color: #fefefe;
+  border-radius: 999px;
+  font-weight: 700;
+  padding: 8px 12px;
+  font-size: 0.95rem;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.tagline {
+  margin: 2px 0 0;
+  color: #e0dacc;
+}
 
 .panel {
-  background: var(--panel);
+  background: linear-gradient(160deg, var(--panel), var(--panel-soft));
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 14px;
   margin-bottom: 14px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
 .tab-bar {
@@ -42,14 +86,14 @@ header { margin-bottom: 14px; }
 }
 
 .tab-btn {
-  background: #e0d7c7;
-  color: #233136;
-  border: 1px solid #ccbfa8;
+  background: #59595c;
+  color: #eee7db;
+  border: 1px solid #737376;
 }
 
 .tab-btn.active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--accent-2);
+  color: #273208;
 }
 
 .tab-content {
@@ -82,16 +126,21 @@ input, select, textarea, button {
 }
 
 textarea, input[type="text"], input:not([type]), #queryText { width: 100%; }
+input, select, textarea {
+  background: #f2eee4;
+  color: #282828;
+}
 button {
-  background: var(--accent);
+  background: linear-gradient(180deg, #f7a74c, var(--accent));
   color: white;
   cursor: pointer;
   border: none;
+  font-weight: 700;
 }
-button:hover { background: #005457; }
+button:hover { filter: brightness(1.05); }
 
 .output {
-  background: #f7f3e9;
+  background: rgba(28, 28, 30, 0.32);
   border: 1px solid var(--border);
   border-radius: 8px;
   min-height: 90px;
@@ -100,11 +149,11 @@ button:hover { background: #005457; }
 
 .result {
   border: 1px solid var(--border);
-  border-left: 4px solid var(--accent-2);
+  border-left: 4px solid var(--accent);
   border-radius: 8px;
   padding: 10px;
   margin-bottom: 10px;
-  background: #fffaf0;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .meta {
@@ -193,7 +242,7 @@ details {
 }
 
 .preview-table th {
-  background: #f1e7d3;
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .ok {
@@ -213,15 +262,15 @@ details {
 .progress-track {
   width: 100%;
   height: 10px;
-  background: #e7dcc8;
+  background: rgba(255, 255, 255, 0.2);
   border-radius: 999px;
   overflow: hidden;
-  border: 1px solid #d6c7aa;
+  border: 1px solid #838385;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #b35c00, #d9862e);
+  background: linear-gradient(90deg, var(--accent), #f6bc62);
   transition: width 0.25s ease;
 }
 
@@ -257,6 +306,13 @@ details {
   background: #f4f7fb;
   padding: 0.1rem 0.25rem;
   border-radius: 4px;
+}
+
+@media (max-width: 720px) {
+  .brand-line {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 }
 
 pre {
