@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.032848")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.033605")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
