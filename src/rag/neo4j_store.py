@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from difflib import SequenceMatcher
 import hashlib
+import time
+from difflib import SequenceMatcher
 from pathlib import Path
 import re
 from typing import Iterable
@@ -19,6 +20,14 @@ def _normalize_doi(doi: str | None) -> str:
     normalized = doi.strip().lower()
     normalized = re.sub(r"^https?://(dx\.)?doi\.org/", "", normalized)
     return normalized.strip().rstrip(".;,")
+
+
+def _normalize_identity(value: str | None) -> str:
+    return str(value or "").strip().lower()
+
+
+def _normalize_source_path(value: str | None) -> str:
+    return _normalize_identity(str(value or "").replace("\\", "/"))
 
 
 def _author_token_set(names: list[str]) -> set[str]:
@@ -55,6 +64,7 @@ class GraphStore:
     def __init__(self, uri: str, user: str, password: str, embedding_model: str | None = None) -> None:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
         self.embedder = HashingEmbedder(dimension=384)
+        self._article_identity_norms_ensured = False
 
     @property
     def embedding_dimension(self) -> int:
@@ -62,6 +72,49 @@ class GraphStore:
 
     def close(self) -> None:
         self.driver.close()
+
+    def _ensure_article_identity_norms(self) -> None:
+        if self._article_identity_norms_ensured:
+            return
+        with self.driver.session() as session:
+            session.run(
+                """
+                MATCH (a:Article)
+                SET a.doi_norm = CASE
+                        WHEN coalesce(a.doi, '') = '' THEN NULL
+                        ELSE toLower(a.doi)
+                    END,
+                    a.zotero_item_key_norm = CASE
+                        WHEN coalesce(a.zotero_item_key, '') = '' THEN NULL
+                        ELSE toLower(a.zotero_item_key)
+                    END,
+                    a.zotero_attachment_key_norm = CASE
+                        WHEN coalesce(a.zotero_attachment_key, '') = '' THEN NULL
+                        ELSE toLower(a.zotero_attachment_key)
+                    END,
+                    a.title_year_key_norm = CASE
+                        WHEN coalesce(a.title_year_key, '') = '' THEN NULL
+                        ELSE toLower(a.title_year_key)
+                    END,
+                    a.source_path_norm = CASE
+                        WHEN coalesce(a.source_path, '') = '' THEN NULL
+                        ELSE toLower(replace(a.source_path, '\\\\', '/'))
+                    END,
+                    a.source_filename_stem_norm = CASE
+                        WHEN coalesce(a.source_path, '') = '' THEN NULL
+                        ELSE CASE
+                            WHEN split(toLower(replace(a.source_path, '\\\\', '/')), '/')[-1] ENDS WITH '.pdf'
+                                THEN substring(
+                                    split(toLower(replace(a.source_path, '\\\\', '/')), '/')[-1],
+                                    0,
+                                    size(split(toLower(replace(a.source_path, '\\\\', '/')), '/')[-1]) - 4
+                                )
+                            ELSE split(toLower(replace(a.source_path, '\\\\', '/')), '/')[-1]
+                        END
+                    END
+                """
+            )
+        self._article_identity_norms_ensured = True
 
     def setup_schema(self, vector_dimensions: int) -> None:
         statements = [
@@ -86,6 +139,12 @@ class GraphStore:
             "CREATE TEXT INDEX article_zotero_item_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_item_key)",
             "CREATE TEXT INDEX article_zotero_attachment_key_text IF NOT EXISTS FOR (a:Article) ON (a.zotero_attachment_key)",
             "CREATE TEXT INDEX article_title_year_key_text IF NOT EXISTS FOR (a:Article) ON (a.title_year_key)",
+            "CREATE INDEX article_doi_norm IF NOT EXISTS FOR (a:Article) ON (a.doi_norm)",
+            "CREATE INDEX article_zotero_item_key_norm IF NOT EXISTS FOR (a:Article) ON (a.zotero_item_key_norm)",
+            "CREATE INDEX article_zotero_attachment_key_norm IF NOT EXISTS FOR (a:Article) ON (a.zotero_attachment_key_norm)",
+            "CREATE INDEX article_title_year_key_norm IF NOT EXISTS FOR (a:Article) ON (a.title_year_key_norm)",
+            "CREATE INDEX article_source_filename_stem_norm IF NOT EXISTS FOR (a:Article) ON (a.source_filename_stem_norm)",
+            "CREATE INDEX article_source_path_norm IF NOT EXISTS FOR (a:Article) ON (a.source_path_norm)",
             "CREATE TEXT INDEX article_metadata_source_text IF NOT EXISTS FOR (a:Article) ON (a.metadata_source)",
             "CREATE INDEX article_year IF NOT EXISTS FOR (a:Article) ON (a.year)",
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
@@ -95,6 +154,7 @@ class GraphStore:
         with self.driver.session() as session:
             for stmt in statements:
                 session.run(stmt, dims=vector_dimensions)
+        self._article_identity_norms_ensured = False
 
     def ingest_articles(
         self,
@@ -130,15 +190,21 @@ class GraphStore:
                 a.title_norm = $title_norm,
                 a.year = $year,
                 a.source_path = $source_path,
+                a.source_path_norm = $source_path_norm,
+                a.source_filename_stem_norm = $source_filename_stem_norm,
                 a.citekey = $citekey,
                 a.paperpile_id = $paperpile_id,
                 a.zotero_persistent_id = $zotero_persistent_id,
                 a.zotero_item_key = $zotero_item_key,
+                a.zotero_item_key_norm = $zotero_item_key_norm,
                 a.zotero_attachment_key = $zotero_attachment_key,
+                a.zotero_attachment_key_norm = $zotero_attachment_key_norm,
                 a.doi = $doi,
+                a.doi_norm = $doi_norm,
                 a.journal = $journal,
                 a.publisher = $publisher,
                 a.title_year_key = $title_year_key,
+                a.title_year_key_norm = $title_year_key_norm,
                 a.metadata_source = $metadata_source
             """,
             id=article.article_id,
@@ -146,15 +212,21 @@ class GraphStore:
             title_norm=article.normalized_title,
             year=article.year,
             source_path=article.source_path,
+            source_path_norm=_normalize_source_path(article.source_path),
+            source_filename_stem_norm=Path(article.source_path).stem.strip().lower() if article.source_path else None,
             citekey=article.citekey,
             paperpile_id=article.paperpile_id,
             zotero_persistent_id=article.zotero_persistent_id,
             zotero_item_key=article.zotero_item_key,
+            zotero_item_key_norm=_normalize_identity(article.zotero_item_key) or None,
             zotero_attachment_key=article.zotero_attachment_key,
+            zotero_attachment_key_norm=_normalize_identity(article.zotero_attachment_key) or None,
             doi=article.doi,
+            doi_norm=_normalize_doi(article.doi) or None,
             journal=article.journal,
             publisher=article.publisher,
             title_year_key=article.title_year_key,
+            title_year_key_norm=_normalize_identity(article.title_year_key) or None,
             metadata_source=article.metadata_source,
         )
 
@@ -668,6 +740,7 @@ class GraphStore:
             return {r["id"] for r in rows if r.get("id")}
 
     def existing_article_identity_sets(self) -> dict[str, set[str]]:
+        self._ensure_article_identity_norms()
         with self.driver.session() as session:
             rows = session.run(
                 """
@@ -676,11 +749,16 @@ class GraphStore:
                        a.title AS title,
                        a.year AS year,
                        a.doi AS doi,
+                       a.doi_norm AS doi_norm,
                        a.zotero_persistent_id AS zotero_persistent_id,
                        a.zotero_item_key AS zotero_item_key,
+                       a.zotero_item_key_norm AS zotero_item_key_norm,
                        a.zotero_attachment_key AS zotero_attachment_key,
+                       a.zotero_attachment_key_norm AS zotero_attachment_key_norm,
                        a.title_year_key AS title_year_key,
-                       a.source_path AS source_path
+                       a.title_year_key_norm AS title_year_key_norm,
+                       a.source_path AS source_path,
+                       a.source_filename_stem_norm AS source_filename_stem_norm
                 """
             )
             out = {
@@ -699,7 +777,7 @@ class GraphStore:
                     out["article_ids"].add(article_id)
                     out["file_stem"].add(article_id.lower())
 
-                doi = _normalize_doi(row.get("doi"))
+                doi = _normalize_doi(row.get("doi_norm") or row.get("doi"))
                 if doi:
                     out["doi"].add(doi)
 
@@ -707,17 +785,19 @@ class GraphStore:
                 if persistent_id:
                     out["zotero_persistent_id"].add(persistent_id)
 
-                item_key = (row.get("zotero_item_key") or "").strip()
+                item_key = _normalize_identity(row.get("zotero_item_key_norm") or row.get("zotero_item_key"))
                 if item_key:
-                    out["zotero_item_key"].add(item_key.lower())
+                    out["zotero_item_key"].add(item_key)
 
-                attachment_key = (row.get("zotero_attachment_key") or "").strip()
+                attachment_key = _normalize_identity(
+                    row.get("zotero_attachment_key_norm") or row.get("zotero_attachment_key")
+                )
                 if attachment_key:
-                    out["zotero_attachment_key"].add(attachment_key.lower())
+                    out["zotero_attachment_key"].add(attachment_key)
 
-                title_year_key = (row.get("title_year_key") or "").strip()
+                title_year_key = _normalize_identity(row.get("title_year_key_norm") or row.get("title_year_key"))
                 if title_year_key:
-                    out["title_year_key"].add(title_year_key.lower())
+                    out["title_year_key"].add(title_year_key)
                 normalized_title_year_key = metadata_title_year_key(
                     {
                         "title": row.get("title"),
@@ -727,11 +807,15 @@ class GraphStore:
                 if normalized_title_year_key:
                     out["title_year_key_normalized"].add(normalized_title_year_key.lower())
 
-                source_path = (row.get("source_path") or "").strip()
-                if source_path:
-                    stem = Path(source_path).stem.strip().lower()
-                    if stem:
-                        out["file_stem"].add(stem)
+                source_stem = _normalize_identity(row.get("source_filename_stem_norm"))
+                if source_stem:
+                    out["file_stem"].add(source_stem)
+                else:
+                    source_path = (row.get("source_path") or "").strip()
+                    if source_path:
+                        stem = Path(source_path).stem.strip().lower()
+                        if stem:
+                            out["file_stem"].add(stem)
             return out
 
     def existing_identity_hits(
@@ -757,13 +841,14 @@ class GraphStore:
             "title_year_key_normalized": set(),
             "file_stem": set(),
         }
+        self._ensure_article_identity_norms()
         with self.driver.session() as session:
             if dois:
                 rows = session.run(
                     """
                     MATCH (a:Article)
-                    WHERE toLower(coalesce(a.doi, '')) IN $values
-                    RETURN toLower(a.doi) AS value
+                    WHERE a.doi_norm IN $values
+                    RETURN a.doi_norm AS value
                     """,
                     values=sorted(dois),
                 )
@@ -784,8 +869,8 @@ class GraphStore:
                 rows = session.run(
                     """
                     MATCH (a:Article)
-                    WHERE toLower(coalesce(a.zotero_item_key, '')) IN $values
-                    RETURN toLower(a.zotero_item_key) AS value
+                    WHERE a.zotero_item_key_norm IN $values
+                    RETURN a.zotero_item_key_norm AS value
                     """,
                     values=sorted(zotero_item_keys),
                 )
@@ -795,8 +880,8 @@ class GraphStore:
                 rows = session.run(
                     """
                     MATCH (a:Article)
-                    WHERE toLower(coalesce(a.zotero_attachment_key, '')) IN $values
-                    RETURN toLower(a.zotero_attachment_key) AS value
+                    WHERE a.zotero_attachment_key_norm IN $values
+                    RETURN a.zotero_attachment_key_norm AS value
                     """,
                     values=sorted(zotero_attachment_keys),
                 )
@@ -806,8 +891,8 @@ class GraphStore:
                 rows = session.run(
                     """
                     MATCH (a:Article)
-                    WHERE toLower(coalesce(a.title_year_key, '')) IN $values
-                    RETURN toLower(a.title_year_key) AS value
+                    WHERE a.title_year_key_norm IN $values
+                    RETURN a.title_year_key_norm AS value
                     """,
                     values=sorted(title_year_keys),
                 )
@@ -828,14 +913,8 @@ class GraphStore:
                 rows = session.run(
                     """
                     MATCH (a:Article)
-                    WITH toLower(replace(coalesce(a.source_path, ''), '\\\\', '/')) AS source_path
-                    WITH split(source_path, '/')[-1] AS filename
-                    WITH CASE
-                         WHEN filename ENDS WITH '.pdf' THEN substring(filename, 0, size(filename) - 4)
-                         ELSE filename
-                         END AS stem
-                    WHERE stem IN $values
-                    RETURN stem AS value
+                    WHERE a.source_filename_stem_norm IN $values
+                    RETURN a.source_filename_stem_norm AS value
                     """,
                     values=sorted(file_stems),
                 )
@@ -852,6 +931,7 @@ class GraphStore:
         unresolved = 0
         ambiguous = 0
         examples: list[dict[str, str]] = []
+        started = time.perf_counter()
 
         item_keys = {
             str(row.get("zotero_item_key") or "").strip().lower()
@@ -891,13 +971,14 @@ class GraphStore:
                     ambiguous_values.add(value)
             return unique, ambiguous_values
 
+        self._ensure_article_identity_norms()
         with self.driver.session() as session:
             item_map, item_ambiguous = _unique_match_map(
                 session,
                 """
                 MATCH (a:Article)
-                WHERE toLower(coalesce(a.zotero_item_key, '')) IN $values
-                WITH toLower(a.zotero_item_key) AS value, collect(DISTINCT a.id) AS ids
+                WHERE a.zotero_item_key_norm IN $values
+                WITH a.zotero_item_key_norm AS value, collect(DISTINCT a.id) AS ids
                 RETURN value, ids
                 """,
                 item_keys,
@@ -906,8 +987,8 @@ class GraphStore:
                 session,
                 """
                 MATCH (a:Article)
-                WHERE toLower(coalesce(a.zotero_attachment_key, '')) IN $values
-                WITH toLower(a.zotero_attachment_key) AS value, collect(DISTINCT a.id) AS ids
+                WHERE a.zotero_attachment_key_norm IN $values
+                WITH a.zotero_attachment_key_norm AS value, collect(DISTINCT a.id) AS ids
                 RETURN value, ids
                 """,
                 attachment_keys,
@@ -916,8 +997,8 @@ class GraphStore:
                 session,
                 """
                 MATCH (a:Article)
-                WHERE toLower(coalesce(a.doi, '')) IN $values
-                WITH toLower(a.doi) AS value, collect(DISTINCT a.id) AS ids
+                WHERE a.doi_norm IN $values
+                WITH a.doi_norm AS value, collect(DISTINCT a.id) AS ids
                 RETURN value, ids
                 """,
                 dois,
@@ -926,8 +1007,8 @@ class GraphStore:
                 session,
                 """
                 MATCH (a:Article)
-                WHERE toLower(coalesce(a.title_year_key, '')) IN $values
-                WITH toLower(a.title_year_key) AS value, collect(DISTINCT a.id) AS ids
+                WHERE a.title_year_key_norm IN $values
+                WITH a.title_year_key_norm AS value, collect(DISTINCT a.id) AS ids
                 RETURN value, ids
                 """,
                 title_year_keys,
@@ -1010,9 +1091,17 @@ class GraphStore:
                             WHEN row.zotero_item_key = '' THEN a.zotero_item_key
                             ELSE row.zotero_item_key
                         END,
+                        a.zotero_item_key_norm = CASE
+                            WHEN row.zotero_item_key = '' THEN a.zotero_item_key_norm
+                            ELSE toLower(row.zotero_item_key)
+                        END,
                         a.zotero_attachment_key = CASE
                             WHEN row.zotero_attachment_key = '' THEN a.zotero_attachment_key
                             ELSE row.zotero_attachment_key
+                        END,
+                        a.zotero_attachment_key_norm = CASE
+                            WHEN row.zotero_attachment_key = '' THEN a.zotero_attachment_key_norm
+                            ELSE toLower(row.zotero_attachment_key)
                         END,
                         a.metadata_source = CASE
                             WHEN coalesce(a.metadata_source, '') = '' THEN 'zotero'
@@ -1026,6 +1115,7 @@ class GraphStore:
             "matched": matched,
             "unresolved": unresolved,
             "ambiguous": ambiguous,
+            "duration_seconds": round(time.perf_counter() - started, 4),
             "examples": examples,
         }
 

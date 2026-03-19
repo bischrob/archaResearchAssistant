@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.184054")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.19.192525")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -527,7 +527,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             initial_missing_count = len(missing_rows)
             jobs.set_progress("sync", 5.0, f"Anti-join complete: {len(missing_rows)} PDFs missing in Neo4j")
 
-            jobs.set_progress("sync", 5.5, "Reconciling existing Neo4j articles with Zotero identifiers")
+            jobs.set_progress("sync", 7.0, f"Reconciling {len(missing_rows)} existing Neo4j articles")
             reconcile_summary: dict[str, Any] | None = None
             if missing_rows:
                 store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
@@ -535,6 +535,15 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     reconcile_summary = store.reconcile_zotero_persistent_ids(missing_rows)
                 finally:
                     store.close()
+
+                jobs.set_progress(
+                    "sync",
+                    10.0,
+                    "Reconcile complete: "
+                    f"{int(reconcile_summary.get('matched', 0))} matched, "
+                    f"{int(reconcile_summary.get('unresolved', 0))} unresolved, "
+                    f"{int(reconcile_summary.get('ambiguous', 0))} ambiguous",
+                )
 
                 store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
                 try:
@@ -591,6 +600,9 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 source_stats["zotero_reconciled_existing"] = int(reconcile_summary.get("matched", 0))
                 source_stats["zotero_reconcile_unresolved"] = int(reconcile_summary.get("unresolved", 0))
                 source_stats["zotero_reconcile_ambiguous"] = int(reconcile_summary.get("ambiguous", 0))
+                source_stats["zotero_reconcile_duration_seconds"] = float(
+                    reconcile_summary.get("duration_seconds", 0.0) or 0.0
+                )
                 source_stats["zotero_reconcile_examples"] = list(reconcile_summary.get("examples", []))
                 source_stats["zotero_missing_in_neo4j_after_reconcile"] = len(missing_rows)
 
@@ -617,13 +629,13 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     "reconcile_summary": reconcile_summary,
                 }
 
-            jobs.set_progress("sync", 5.0, f"{len(ingest_candidates)} PDFs need ingest")
+            jobs.set_progress("sync", 10.0, f"{len(ingest_candidates)} PDFs need ingest")
             if ingest_ran:
-                jobs.set_progress("sync", 6.0, f"Starting ingest for {len(ingest_candidates)} PDFs")
+                jobs.set_progress("sync", 12.0, f"Starting ingest for {len(ingest_candidates)} PDFs")
 
                 def on_ingest_progress(percent: float, message: str) -> None:
-                    # Map ingest 0..100 to sync 5..99
-                    mapped = 5.0 + (max(0.0, min(100.0, float(percent))) * 0.94)
+                    # Map ingest 0..100 to sync 12..99 after detection + reconcile.
+                    mapped = 12.0 + (max(0.0, min(100.0, float(percent))) * 0.87)
                     jobs.set_progress("sync", mapped, f"Ingest: {message}")
 
                 summary = ingest_pdfs(
