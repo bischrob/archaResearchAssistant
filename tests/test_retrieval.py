@@ -1,4 +1,4 @@
-from src.rag.retrieval import contextual_retrieve, parse_query_terms
+from src.rag.retrieval import article_claim_match, contextual_retrieve, parse_query_terms
 
 
 class FakeStore:
@@ -170,3 +170,96 @@ def test_contextual_retrieve_paper_scope_returns_unique_papers():
     assert len({r.get("article_id") for r in rows}) == 2
     assert all(r.get("result_scope") == "paper" for r in rows)
     assert all(len(r.get("highlight_chunks") or []) <= 2 for r in rows)
+
+
+class ArticleMatchStore:
+    def article_chunks_by_citekey(self, citekey: str):
+        if citekey != "qi2025llms":
+            return None
+        return {
+            "article_id": "a1",
+            "article_title": "Large Language and Multimodal Models in Archaeological Science: A Review",
+            "article_year": 2025,
+            "article_citekey": "qi2025llms",
+            "article_doi": None,
+            "article_source_path": "/tmp/qi2025.pdf",
+            "authors": ["Qi", "Wen"],
+            "chunks": [
+                {
+                    "id": "c1",
+                    "index": 0,
+                    "page_start": 1,
+                    "page_end": 1,
+                    "text": "This review surveys large language and multimodal models in archaeological science, including remote sensing, text analysis, and artifact studies.",
+                },
+                {
+                    "id": "c2",
+                    "index": 1,
+                    "page_start": 10,
+                    "page_end": 10,
+                    "text": "References\nSmith 2020. Example title. doi:10.1000/x.\nJones 2021. Another title. doi:10.1000/y.",
+                },
+            ],
+        }
+
+
+def test_article_claim_match_prefers_supporting_content_over_reference_like_chunk():
+    result = article_claim_match(
+        ArticleMatchStore(),
+        "qi2025llms",
+        "Qi and Wen 2025 review large language and multimodal models in archaeological science",
+        top_k=2,
+    )
+    assert result["ok"] is True
+    assert result["classification"] in {"direct_support", "adjacent_or_partial_support"}
+    assert result["supporting_chunks"][0]["chunk_id"] == "c1"
+    assert result["supporting_chunks"][0]["support_score"] > result["supporting_chunks"][1]["support_score"]
+
+
+def test_article_claim_match_returns_not_supported_for_weak_match():
+    result = article_claim_match(
+        ArticleMatchStore(),
+        "qi2025llms",
+        "This source establishes Indigenous data governance in Canadian archaeology",
+        top_k=1,
+    )
+    assert result["ok"] is True
+    assert result["classification"] == "not_supported"
+
+
+class ContradictionStore:
+    def article_chunks_by_citekey(self, citekey: str):
+        if citekey != "draftnepa":
+            return None
+        return {
+            "article_id": "a2",
+            "article_title": "DraftNEPABench: A Benchmark for Drafting NEPA Document Sections with Coding Agents",
+            "article_year": 2026,
+            "article_citekey": "draftnepa",
+            "article_doi": None,
+            "article_source_path": "/tmp/draftnepa.pdf",
+            "authors": ["Acharya"],
+            "chunks": [
+                {
+                    "id": "c1",
+                    "index": 0,
+                    "page_start": 8,
+                    "page_end": 8,
+                    "text": "Overall, automated evaluation can provide useful comparative signals for long-form generation but remains complementary to expert human review in NEPA drafting tasks.",
+                }
+            ],
+        }
+
+
+def test_article_claim_match_penalizes_contradiction_and_missing_archaeology_domain():
+    result = article_claim_match(
+        ContradictionStore(),
+        "draftnepa",
+        "Archaeology already has mature evidence that coding agents can reliably draft archaeological regulatory text without substantial human review.",
+        top_k=1,
+    )
+    assert result["ok"] is True
+    assert result["classification"] == "not_supported"
+    features = result["supporting_chunks"][0]["support_features"]
+    assert features["domain_penalty"] > 0
+    assert features["contradiction_penalty"] > 0
