@@ -40,6 +40,7 @@ Last reviewed: 2026-03-19
 - [[20_WebAPI/05_query_and_ask_api]]
 - [[20_WebAPI/06_diagnostics_api]]
 - [[20_WebAPI/07_api_plugin_review_2026-03-19]]
+- [[20_WebAPI/08_api_reference]]
 
 ## Frontend
 - [[30_Frontend/01_ui_structure]]

@@ -41,3 +41,4 @@ Defined via Pydantic classes in `webapp/main.py`:
 - [[20_WebAPI/03_sync_api]]
 - [[20_WebAPI/04_ingest_api]]
 - [[20_WebAPI/05_query_and_ask_api]]
+- [[20_WebAPI/08_api_reference]]
