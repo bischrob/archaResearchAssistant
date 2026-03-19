@@ -15,6 +15,7 @@ from .metadata_provider import MetadataIndex, find_metadata_for_pdf, load_metada
 from .neo4j_store import GraphStore
 from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from .path_utils import resolve_input_path
+from .zip_pdf_source import collect_source_pdfs
 from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
 from .qwen_local import extract_citations_with_qwen
 from .qwen_structured_refs import extract_structured_chunks_and_citations
@@ -414,6 +415,7 @@ def _get_existing_identities(settings: Settings) -> dict[str, set[str]]:
             "zotero_item_key": set(),
             "zotero_attachment_key": set(),
             "title_year_key": set(),
+            "title_year_key_normalized": set(),
             "file_stem": set(),
         }
 
@@ -432,7 +434,9 @@ def _is_existing_pdf(pdf_path: Path, meta: dict | None, existing: dict[str, set[
         return True
 
     title_year_key = _title_year_key_from_metadata(meta)
-    if title_year_key and title_year_key in existing["title_year_key"]:
+    if title_year_key and (
+        title_year_key in existing["title_year_key"] or title_year_key in existing["title_year_key_normalized"]
+    ):
         return True
 
     stem = pdf_path.stem.lower()
@@ -455,17 +459,18 @@ def choose_pdfs(
 
     cfg = settings or Settings()
     resolved_source_dir = source_dir or cfg.pdf_source_dir
-    source_root = resolve_input_path(resolved_source_dir)
-    all_pdfs = sorted(
-        [p for p in source_root.rglob("*") if p.is_file() and p.suffix.lower() == ".pdf"],
-        key=lambda p: str(p).lower(),
-    )
-
     partial_n = max(1, int(partial_count))
 
     if mode == "custom":
         selected = [_resolve_custom_pdf_path(p, resolved_source_dir) for p in explicit_pdfs]
     else:
+        source_root = resolve_input_path(resolved_source_dir)
+        cache_root = resolve_input_path(cfg.zip_pdf_cache_dir)
+        all_pdfs, _source_stats = collect_source_pdfs(
+            source_root=source_root,
+            cache_root=cache_root,
+            include_zip=bool(cfg.zip_pdf_enable),
+        )
         if mode == "all":
             selected = all_pdfs
         elif mode == "batch":
@@ -523,6 +528,7 @@ def ingest_pdfs(
         "zotero_item_key": set(),
         "zotero_attachment_key": set(),
         "title_year_key": set(),
+        "title_year_key_normalized": set(),
         "file_stem": set(),
     }
     skipped_existing = [str(p) for p in selected_pdfs if _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]

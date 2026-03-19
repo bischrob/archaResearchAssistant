@@ -67,6 +67,7 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
 
     final = wait_for_status(client, "/api/sync/status")
     assert final["status"] in {"cancelled", "completed"}
+    assert "request_id" in final
 
 
 def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, client):
@@ -103,6 +104,7 @@ def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, clien
 
     final = wait_for_status(client, "/api/ingest/status")
     assert final["status"] == "completed"
+    assert final["request_id"]
     assert final["result"]["summary"]["ingested_articles"] == 1
     assert captured["wipe"] is False
     assert captured["skip_existing"] is True
@@ -459,3 +461,21 @@ def test_diagnostics_endpoint_reports_neo4j_failure(monkeypatch, tmp_path: Path,
     data = resp.json()
     assert data["ok"] is False
     assert any(c["name"] == "neo4j_connectivity" and c["ok"] is False for c in data["checks"])
+
+
+def test_api_bearer_token_is_optional_by_default(client):
+    resp = client.get("/api/sync/status")
+    assert resp.status_code == 200
+
+
+def test_api_bearer_token_enforced_when_set(monkeypatch, client):
+    monkeypatch.setenv("API_BEARER_TOKEN", "secret-token")
+
+    missing = client.get("/api/sync/status")
+    assert missing.status_code == 401
+
+    bad = client.get("/api/sync/status", headers={"Authorization": "Bearer wrong"})
+    assert bad.status_code == 403
+
+    good = client.get("/api/sync/status", headers={"Authorization": "Bearer secret-token"})
+    assert good.status_code == 200

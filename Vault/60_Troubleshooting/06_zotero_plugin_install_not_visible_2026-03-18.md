@@ -40,7 +40,13 @@
    - fix: use explicit `RAG Sync` Tools submenu labels (current repo patch) and reinstall
 8. If `Sync Now` appears to do nothing:
    - cause: action was previously log-only with no UI feedback
-   - fix: current repo patch adds a visible progress window during sync and explicit alert on failure
+   - fix: current repo patch adds a centered in-app progress overlay during sync and explicit alert on failure
+9. If status is still too vague during sync:
+   - cause: plugin was not polling `/api/sync/status` and backend sync messages were coarse
+   - fix: current repo patch now polls `/api/sync/status` continuously and backend sync now reports per-file scan messages (`Scanning <i>/<n>: <filename>`)
+10. If sync fails on inaccessible default PDF source path:
+   - cause: backend default source path did not match Zotero linked-files directory
+   - fix: sync now accepts per-request `source_dir`; plugin preference `extensions.zotero-rag-sync.sourceDir` is configurable (default `C:\Users\rjbischo\Nextcloud\zotero`)
 
 ## Implemented Repo Fix
 - Added `applications.zotero.update_url` to `plugins/zotero-rag-sync/manifest.json`.
@@ -51,9 +57,15 @@
   - `Pause/Resume`
   - `Show Diagnostics`
 - Implemented `Sync Now` execution feedback:
-  - visible progress window while calling backend `/api/sync`
+  - centered in-app progress overlay while polling backend `/api/sync/status` until terminal state
+  - live progress percent + message updates from backend status
   - error popup via `Zotero.alert(...)` on failure
   - temporary `Sync Now (Running...)` label while active
+  - completion summary with scanned/matched/unmatched counts and unmatched filename sample
+- Added configurable sync source directory:
+  - backend `/api/sync` accepts `source_dir`
+  - plugin sends `extensions.zotero-rag-sync.sourceDir`
+  - backend resolves both UNC and Windows drive-letter paths under WSL
 
 ## Related
 - [[40_Scripts/02_shell_scripts]]

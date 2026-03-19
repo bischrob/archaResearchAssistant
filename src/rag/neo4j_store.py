@@ -9,6 +9,7 @@ from typing import Iterable
 import numpy as np
 from neo4j import GraphDatabase
 
+from .metadata_provider import metadata_title_year_key
 from .pdf_processing import ArticleDoc
 
 
@@ -651,6 +652,8 @@ class GraphStore:
                 """
                 MATCH (a:Article)
                 RETURN a.id AS id,
+                       a.title AS title,
+                       a.year AS year,
                        a.doi AS doi,
                        a.zotero_item_key AS zotero_item_key,
                        a.zotero_attachment_key AS zotero_attachment_key,
@@ -664,6 +667,7 @@ class GraphStore:
                 "zotero_item_key": set(),
                 "zotero_attachment_key": set(),
                 "title_year_key": set(),
+                "title_year_key_normalized": set(),
                 "file_stem": set(),
             }
             for row in rows:
@@ -687,6 +691,14 @@ class GraphStore:
                 title_year_key = (row.get("title_year_key") or "").strip()
                 if title_year_key:
                     out["title_year_key"].add(title_year_key.lower())
+                normalized_title_year_key = metadata_title_year_key(
+                    {
+                        "title": row.get("title"),
+                        "year": row.get("year"),
+                    }
+                )
+                if normalized_title_year_key:
+                    out["title_year_key_normalized"].add(normalized_title_year_key.lower())
 
                 source_path = (row.get("source_path") or "").strip()
                 if source_path:

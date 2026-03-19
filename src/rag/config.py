@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 from dataclasses import field
+from pathlib import Path
 
 
 def _env_str(name: str, default: str) -> str:
@@ -29,6 +30,33 @@ def _env_not_false(name: str, default: bool = True) -> bool:
     if raw is None:
         return bool(default)
     return raw.strip().lower() not in {"0", "false", "no"}
+
+
+def _latest_local_qwen_adapter(default: str = "") -> str:
+    """
+    Prefer the newest local LoRA adapter directory under models/ when explicit env is not set.
+    Excludes checkpoint subdirectories.
+    """
+    try:
+        root = Path("models")
+        if not root.exists():
+            return default
+        candidates = []
+        for p in root.rglob("adapter_config.json"):
+            d = p.parent
+            if "checkpoint-" in d.name:
+                continue
+            try:
+                mtime = d.stat().st_mtime
+            except Exception:
+                continue
+            candidates.append((mtime, d))
+        if not candidates:
+            return default
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        return str(candidates[0][1].resolve())
+    except Exception:
+        return default
 
 
 @dataclass(frozen=True)
@@ -100,12 +128,19 @@ class Settings:
     qwen_query_max_new_tokens: int = field(default_factory=lambda: _env_int("QWEN3_QUERY_MAX_NEW_TOKENS", 96))
     qwen_citation_model_path: str = field(default_factory=lambda: _env_str("QWEN3_CITATION_MODEL_PATH", "").strip())
     qwen_citation_adapter_path: str = field(
-        default_factory=lambda: _env_str("QWEN3_CITATION_ADAPTER_PATH", "").strip()
+        default_factory=lambda: _env_str(
+            "QWEN3_CITATION_ADAPTER_PATH",
+            _latest_local_qwen_adapter(""),
+        ).strip()
     )
     qwen_citation_max_new_tokens: int = field(
         default_factory=lambda: _env_int("QWEN3_CITATION_MAX_NEW_TOKENS", 768)
     )
     qwen_citation_batch_size: int = field(default_factory=lambda: _env_int("QWEN3_CITATION_BATCH_SIZE", 24))
+    zip_pdf_enable: bool = field(default_factory=lambda: _env_not_false("ZIP_PDF_ENABLE", True))
+    zip_pdf_cache_dir: str = field(
+        default_factory=lambda: _env_str("ZIP_PDF_CACHE_DIR", ".cache/zotero_zip_pdf_cache").strip()
+    )
     qwen_reference_split_window_chars: int = field(
         default_factory=lambda: _env_int("QWEN3_REFERENCE_SPLIT_WINDOW_CHARS", 2600)
     )

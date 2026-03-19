@@ -32,6 +32,8 @@ Default DB env values:
 - `OPENAI_MODEL=gpt-5.1` (optional; defaults to `gpt-5.1`)
 - `CITATION_MIN_QUALITY=0.35` (optional; drops low-quality parsed references during ingest)
 - `CHUNK_STRIP_PAGE_NOISE=1` (optional; strips repeated headers/footers/page numbers before chunking)
+- `ZIP_PDF_ENABLE=1` (optional; when enabled, scans ZIP files for embedded PDFs during sync/ingest source discovery)
+- `ZIP_PDF_CACHE_DIR=.cache/zotero_zip_pdf_cache` (optional; extraction cache path for ZIP-embedded PDFs)
 - `CITATION_PARSER=qwen_refsplit_anystyle` (default; supports `anystyle`, `heuristic`, `qwen`/`qwen_lora`, and `qwen_refsplit_anystyle`)
 - `ANYSTYLE_SERVICE=anystyle` (optional; docker compose service name)
 - `ANYSTYLE_GPU_SERVICE=anystyle-gpu` (optional; docker compose service used when GPU mode is enabled)
@@ -145,13 +147,19 @@ Behavior:
 - watches **My Library** item changes
 - requires Better BibTeX to derive citekeys
 - writes `Citation Key: ...` into item `Extra`
-- calls local backend `POST /api/sync` + `POST /api/ingest` (`mode=custom`)
+- calls local backend `POST /api/sync` (which now runs sync + ingest by default)
 
 Configure plugin prefs:
 
 - `extensions.zotero-rag-sync.backendURL` (default `http://127.0.0.1:8000`)
 - `extensions.zotero-rag-sync.bearerToken` (must match `API_BEARER_TOKEN` if enabled)
+- `extensions.zotero-rag-sync.sourceMode` (`zotero_db` or `filesystem`, default `zotero_db`)
+- `extensions.zotero-rag-sync.sourceDir` (default `C:\Users\rjbischo\Nextcloud\zotero`)
 - `extensions.zotero-rag-sync.debounceSeconds` (default `15`)
+
+Qwen adapter defaulting:
+
+- If `QWEN3_CITATION_ADAPTER_PATH` is not set, runtime now auto-selects the newest local adapter under `models/**/adapter_config.json` (excluding checkpoint directories).
 
 ## 4) Enable auto-versioning on commit
 

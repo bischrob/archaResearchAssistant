@@ -59,6 +59,7 @@ Last reviewed: 2026-03-18
 - [[60_Troubleshooting/04_pdf_oxide_evaluation_2026-02-27]]
 - [[60_Troubleshooting/05_pdf_oxide_security_audit_2026-02-27]]
 - [[60_Troubleshooting/06_zotero_plugin_install_not_visible_2026-03-18]]
+- [[60_Troubleshooting/07_duplicate_detection_hardening_2026-03-18]]
 
 ## Feature Playbooks
 - [[70_Feature_Playbooks/01_add_api_endpoint]]

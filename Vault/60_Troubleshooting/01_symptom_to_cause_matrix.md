@@ -35,6 +35,11 @@
 - Cause: missing `rclone`, invalid `google.config`, remote path issues.
 - Fix: run sync script directly from shell and verify `rclone` remote config.
 
+## Sync finds 0 PDFs in Zotero linked-files directory
+- Symptom: sync completes but reports `pdfs_total=0` even though attachment files exist.
+- Cause: source directory stores attachments in `.zip` bundles instead of plain `.pdf` files.
+- Fix: ensure ZIP-aware source scan is enabled (`ZIP_PDF_ENABLE=1`) and set plugin `extensions.zotero-rag-sync.sourceDir` to the linked-files directory (e.g., `C:\Users\rjbischo\Nextcloud\zotero`).
+
 ## PDF export fails
 - Symptom: `/api/ask/export` PDF returns 400.
 - Cause: missing `pandoc` and/or PDF engine binary.
