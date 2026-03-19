@@ -42,6 +42,11 @@ Review of current test validity, harness stability, workflow coverage gaps, and 
 2. Add plugin JS tests for state machine behavior.
 - Acceptance: timeout/background/cancel terminal paths are covered.
 
+## Status
+- 2026-03-19: Added tests for sync source modes, run-ingest coverage, zero-PDF terminal completion, stop/cancel lifecycle assertions, bearer-token matrix checks, and dedupe precedence.
+- 2026-03-19: Stabilized pytest invocation with repo-root import path and explicit importlib import mode.
+- 2026-03-19: No production code changed in this pass; plugin JS lifecycle harness remains a follow-up.
+
 ## Owner
 - Test architecture owner (API/backend integration + workflow regression suite)
 

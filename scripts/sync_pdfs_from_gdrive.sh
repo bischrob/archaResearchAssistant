@@ -15,6 +15,9 @@ RCLONE_DRIVE_CHUNK_SIZE="${RCLONE_DRIVE_CHUNK_SIZE:-64M}"
 RCLONE_BUFFER_SIZE="${RCLONE_BUFFER_SIZE:-32M}"
 RCLONE_RETRIES="${RCLONE_RETRIES:-6}"
 RCLONE_LOW_LEVEL_RETRIES="${RCLONE_LOW_LEVEL_RETRIES:-20}"
+SYNC_REFRESH_CHANGED="${SYNC_REFRESH_CHANGED:-0}"
+RUN_ID="${RUN_ID:-$(date -u +%Y%m%dT%H%M%SZ)}"
+RUN_TIMESTAMP_UTC="${RUN_TIMESTAMP_UTC:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
 
 DRY_RUN_MODE="false"
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -150,24 +153,50 @@ if is_wsl; then
   fi
 fi
 
+SYNC_MANIFEST_DIR="${SYNC_MANIFEST_DIR:-${LOCAL_DIR}/.sync-manifests}"
+RUN_MANIFEST="${RUN_MANIFEST:-${SYNC_MANIFEST_DIR}/sync_${RUN_ID}_$$.manifest}"
+
 mkdir -p "${LOCAL_DIR}"
+mkdir -p "${SYNC_MANIFEST_DIR}"
 if [[ ! -w "${LOCAL_DIR}" ]]; then
   echo "Error: LOCAL_DIR is not writable: ${LOCAL_DIR}" >&2
   echo "Fix permissions (example): sudo chown -R \"$(id -u):$(id -g)\" \"${LOCAL_DIR}\"" >&2
   exit 1
 fi
 
+write_manifest() {
+  local exit_code="${1:-0}"
+  {
+    echo "run_id=${RUN_ID}"
+    echo "timestamp_utc=${RUN_TIMESTAMP_UTC}"
+    echo "remote_path=${REMOTE_PATH}"
+    echo "local_dir=${LOCAL_DIR}"
+    echo "dry_run=${DRY_RUN_MODE}"
+    echo "refresh_changed=${SYNC_REFRESH_CHANGED}"
+    echo "ignore_existing=$([[ "${SYNC_REFRESH_CHANGED}" == "1" ]] && printf 'false' || printf 'true')"
+    echo "manifest_note=Default mode skips existing local files; upstream edits that reuse a filename can remain stale until removed locally or rerun with SYNC_REFRESH_CHANGED=1."
+    echo "status=$([[ "${exit_code}" -eq 0 ]] && printf 'success' || printf 'failed')"
+    echo "exit_code=${exit_code}"
+  } > "${RUN_MANIFEST}"
+}
+trap 'write_manifest $?' EXIT
+
 echo "Syncing from: ${REMOTE_PATH}"
 echo "Syncing to:   ${LOCAL_DIR}"
 echo "Mode: copy (non-destructive, ignore existing files)"
+if [[ "${SYNC_REFRESH_CHANGED}" == "1" ]]; then
+  echo "Mode: refresh-changed (checksum comparison enabled for existing files)"
+else
+  echo "Warning: existing local files are skipped, so upstream changes to the same filename can stay stale."
+fi
 [[ "${DRY_RUN_MODE}" == "true" ]] && echo "Mode: dry-run (no changes written)"
+echo "Run manifest: ${RUN_MANIFEST}"
 
 RCLONE_CMD=(
   rclone copy
   "${REMOTE_PATH}"
   "${LOCAL_DIR}"
   --include "*.pdf"
-  --ignore-existing
   --fast-list
   --transfers "${RCLONE_TRANSFERS}"
   --checkers "${RCLONE_CHECKERS}"
@@ -179,6 +208,12 @@ RCLONE_CMD=(
   --stats-one-line
   --progress
 )
+
+if [[ "${SYNC_REFRESH_CHANGED}" == "1" ]]; then
+  RCLONE_CMD+=(--checksum)
+else
+  RCLONE_CMD+=(--ignore-existing)
+fi
 
 if [[ "${DRY_RUN_MODE}" == "true" ]]; then
   RCLONE_CMD+=(--dry-run)

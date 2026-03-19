@@ -47,6 +47,12 @@ Review of startup/run scripts, Docker/runtime config drift, backup safety, sync 
 - [ ] Sync workflows produce auditable manifests.
 - [ ] Runtime/docs parity review is part of release checklist.
 
+## Status Updates
+- `run_web_gui.sh`: deterministic non-reload mode is the default, with `UVICORN_RELOAD=1` reserved for interactive development.
+- `backup_neo4j.sh`: restart-on-failure guard is in place around the dump path.
+- SOL training sbatch scripts: shared env setup is serialized with a lock to avoid concurrent mutation.
+- `sync_pdfs_from_gdrive.sh`: manifest output and explicit stale-ignore warning are added; `SYNC_REFRESH_CHANGED=1` enables checksum-based refresh for existing files.
+
 ## Owner
 - Ops/workflow owner (startup, scripts, training pipeline)
 
