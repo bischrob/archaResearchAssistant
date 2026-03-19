@@ -1,8 +1,39 @@
+const AUTH_TOKEN_STORAGE_KEY = "ragApiBearerToken";
+
+function getAuthToken() {
+  const input = document.getElementById("apiBearerToken");
+  if (input && typeof input.value === "string") {
+    return input.value.trim();
+  }
+  return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+}
+
+function buildHeaders() {
+  const headers = { "Content-Type": "application/json" };
+  const token = getAuthToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 async function api(path, body) {
   const res = await fetch(path, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildHeaders(),
     body: JSON.stringify(body),
+  });
+  const payload = await res.json();
+  if (!res.ok) {
+    throw new Error(payload.detail || "Request failed");
+  }
+  return payload;
+}
+
+async function apiGet(path) {
+  const res = await fetch(path, {
+    method: "GET",
+    headers: buildHeaders(),
   });
   const payload = await res.json();
   if (!res.ok) {
@@ -68,12 +99,13 @@ function statusClass(status) {
 }
 
 function statusHeader(job, label) {
-  const running = job?.status === "running";
+  const status = job?.lifecycle_state || job?.status || "idle";
+  const running = status === "running" || status === "cancelling";
   return `
     <div class="status-line">
       ${running ? '<span class="spinner" aria-hidden="true"></span>' : ""}
       <strong>${label}</strong>
-      <span class="status-pill ${statusClass(job?.status)}">${escapeHtml(job?.status || "idle")}</span>
+      <span class="status-pill ${statusClass(status)}">${escapeHtml(status)}</span>
     </div>
   `;
 }
@@ -106,10 +138,10 @@ function startPolling(name, onUpdate) {
   stopPolling(name);
   pollers[name] = setInterval(async () => {
     try {
-      const res = await fetch(`/api/${name}/status`);
-      const payload = await res.json();
+      const payload = await apiGet(`/api/${name}/status`);
       onUpdate(payload);
-      if (payload.status !== "running") {
+      const state = payload.lifecycle_state || payload.status;
+      if (state !== "running" && state !== "cancelling") {
         stopPolling(name);
       }
     } catch (err) {
@@ -156,19 +188,26 @@ function renderSyncJob(job) {
     return;
   }
   const result = job.result || {};
-  const stdout = result.stdout || "";
-  const stderr = result.stderr || "";
+  const sourceStats = result.source_stats || {};
+  const ingest = result.ingest_summary || {};
+  const unmatched = result.unmatched_sample || [];
   out.innerHTML = `
     ${statusHeader(job, "PDF Sync")}
     ${progressBlock(job)}
     <div class="kv">
-      <strong>Return Code</strong><span>${escapeHtml(result.returncode ?? "-")}</span>
       <strong>Success</strong><span>${escapeHtml(result.ok ?? job.status === "completed")}</span>
+      <strong>Source Mode</strong><span>${escapeHtml(result.source_mode ?? "-")}</span>
+      <strong>PDFs Total</strong><span>${escapeHtml(result.pdfs_total ?? "-")}</span>
+      <strong>With Metadata</strong><span>${escapeHtml(result.pdfs_with_metadata ?? "-")}</span>
+      <strong>Unmatched</strong><span>${escapeHtml(result.pdfs_unmatched ?? "-")}</span>
+      <strong>Ingest Ran</strong><span>${escapeHtml(result.ingest_ran ?? false)}</span>
+      <strong>Ingested Articles</strong><span>${escapeHtml(ingest.ingested_articles ?? "-")}</span>
+      <strong>Ingest Failed PDFs</strong><span>${escapeHtml((ingest.failed_pdfs || []).length)}</span>
+      <strong>Stop State</strong><span>${escapeHtml(job.stop_state ?? "-")}</span>
     </div>
     ${job.error ? `<div class="empty">Error: ${escapeHtml(job.error)}</div>` : ""}
-    ${stdout ? `<details><summary>Stdout</summary><pre>${escapeHtml(stdout)}</pre></details>` : ""}
-    ${stderr ? `<details><summary>Stderr</summary><pre>${escapeHtml(stderr)}</pre></details>` : ""}
-    ${!stdout && !stderr && job.status !== "running" ? '<div class="empty">No output.</div>' : ""}
+    ${Object.keys(sourceStats).length ? `<details><summary>Source Stats</summary><pre>${escapeHtml(JSON.stringify(sourceStats, null, 2))}</pre></details>` : ""}
+    ${unmatched.length ? `<details><summary>Unmatched Sample (${unmatched.length})</summary><ul class="list-box">${unmatched.slice(0, 30).map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul></details>` : ""}
   `;
 }
 
@@ -511,6 +550,14 @@ document.getElementById("healthBtn").addEventListener("click", async () => {
     renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
   }
 });
+
+const apiTokenInput = document.getElementById("apiBearerToken");
+if (apiTokenInput) {
+  apiTokenInput.value = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || "";
+  apiTokenInput.addEventListener("change", () => {
+    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, apiTokenInput.value.trim());
+  });
+}
 
 document.getElementById("syncBtn").addEventListener("click", async () => {
   try {
