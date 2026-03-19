@@ -1,6 +1,6 @@
-# Research Assistant RAG
+# archaResearch Asssistant
 
-Research Assistant is a Neo4j-backed PDF ingest and retrieval system with a web UI, Zotero-aware sync, citation parsing, and grounded search workflows.
+archaResearch Asssistant is a Neo4j-backed PDF ingest and retrieval system with a web UI, Zotero-aware sync, citation parsing, and grounded search workflows.
 
 ## Start Here
 
