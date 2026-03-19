@@ -22,6 +22,9 @@ from src.rag.metadata_provider import find_metadata_for_pdf, find_unmatched_pdfs
 from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from src.rag.pipeline import choose_pdfs, ingest_pdfs
+from src.rag.path_utils import resolve_input_path
+from src.rag.zotero_metadata import load_zotero_entries
+from src.rag.zip_pdf_source import collect_source_pdfs
 from src.rag.retrieval import contextual_retrieve
 from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
 
@@ -95,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.18.220802")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.000300")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -107,6 +110,10 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 class SyncRequest(BaseModel):
     dry_run: bool = False
+    source_dir: str = Field(default_factory=_default_pdf_source_dir)
+    source_mode: str = Field(default="filesystem", pattern="^(filesystem|zotero_db)$")
+    run_ingest: bool = True
+    ingest_skip_existing: bool = True
 
 
 class IngestRequest(BaseModel):
@@ -425,9 +432,11 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
     def run(job: JobState) -> dict:
         jobs.set_progress("sync", 0.0, "Checking local source")
         settings = Settings()
-        pdf_root = Path(settings.pdf_source_dir)
-        if not pdf_root.exists():
-            raise RuntimeError(f"PDF source directory not found: {pdf_root}")
+        source_mode = (req.source_mode or "filesystem").strip().lower() or "filesystem"
+        configured_source = (req.source_dir or "").strip() or settings.pdf_source_dir
+        pdf_root = resolve_input_path(configured_source)
+        source_stats: dict[str, Any] = {}
+        pdf_files: list[Path] = []
 
         if job.cancel_event.is_set():
             jobs.set_progress("sync", 0.0, "Cancelled")
@@ -440,21 +449,172 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             jobs.set_progress("sync", 30.0, "Cancelled")
             return {"ok": False, "cancelled": True}
 
-        jobs.set_progress("sync", 65.0, "Scanning local PDFs")
-        pdf_files = iter_pdf_files(pdf_root)
-        unmatched = [p for p in pdf_files if not find_metadata_for_pdf(metadata_index, p.name, str(p))]
-        matched = len(pdf_files) - len(unmatched)
+        if source_mode == "zotero_db":
+            jobs.set_progress("sync", 45.0, "Loading Zotero attachment paths")
+            db_path_raw = (settings.zotero_db_path or "").strip()
+            if db_path_raw:
+                db_path = resolve_input_path(db_path_raw)
+            else:
+                candidates = [
+                    Path.home() / "Zotero" / "zotero.sqlite",
+                    Path("/mnt/c/Users") / os.getenv("USER", "") / "Zotero" / "zotero.sqlite",
+                ]
+                for p in Path("/mnt/c/Users").glob("*/Zotero/zotero.sqlite"):
+                    candidates.append(p)
+                db_path = next((p for p in candidates if p and p.exists()), candidates[0])
+            if not db_path.exists():
+                raise RuntimeError(
+                    f"Zotero DB not found: {db_path}. Set ZOTERO_DB_PATH to your zotero.sqlite path."
+                )
 
-        jobs.set_progress("sync", 100.0, "Local source refresh complete")
+            storage_root_raw = (settings.zotero_storage_root or "").strip()
+            storage_root = storage_root_raw or str(db_path.parent / "storage")
+            rows = load_zotero_entries(str(db_path), storage_root)
+            total_rows = len(rows)
+            resolved: list[Path] = []
+            missing_paths: list[str] = []
+            for idx, row in enumerate(rows, start=1):
+                if job.cancel_event.is_set():
+                    jobs.set_progress("sync", 0.0, "Cancelled")
+                    return {"ok": False, "cancelled": True}
+                raw = (row.get("attachment_path") or "").strip()
+                if not raw:
+                    continue
+                p = Path(raw)
+                if p.exists():
+                    resolved.append(p)
+                else:
+                    missing_paths.append(raw)
+                if total_rows > 0:
+                    progress = 45.0 + ((idx / total_rows) * 15.0)
+                    jobs.set_progress("sync", progress, f"Resolving Zotero paths {idx}/{total_rows}: {Path(raw).name}")
+
+            dedup: dict[str, Path] = {}
+            for p in resolved:
+                dedup[str(p)] = p
+            pdf_files = sorted(dedup.values(), key=lambda p: str(p).lower())
+            source_stats = {
+                "source_mode": "zotero_db",
+                "zotero_db_path": str(db_path),
+                "zotero_storage_root": storage_root,
+                "zotero_attachment_rows": total_rows,
+                "zotero_paths_found": len(pdf_files),
+                "zotero_paths_missing": len(missing_paths),
+                "zotero_missing_sample": missing_paths[:30],
+            }
+        else:
+            if not pdf_root.exists():
+                raise RuntimeError(f"PDF source directory not found: {pdf_root}")
+
+            jobs.set_progress("sync", 45.0, "Collecting PDFs and ZIP sources")
+            cache_root = resolve_input_path(settings.zip_pdf_cache_dir)
+
+            def on_zip_progress(i: int, n: int, msg: str) -> None:
+                if n <= 0:
+                    jobs.set_progress("sync", 55.0, msg)
+                    return
+                jobs.set_progress("sync", 45.0 + ((i / n) * 15.0), msg)
+
+            pdf_files, source_stats = collect_source_pdfs(
+                source_root=pdf_root,
+                cache_root=cache_root,
+                include_zip=bool(settings.zip_pdf_enable),
+                progress_cb=on_zip_progress,
+            )
+            source_stats["source_mode"] = "filesystem"
+
+        jobs.set_progress("sync", 55.0, "Scanning PDFs for metadata matches")
+        total_files = len(pdf_files)
+        unmatched: list[Path] = []
+
+        if total_files == 0:
+            jobs.set_progress("sync", 100.0, "Sync complete (no PDFs found)")
+            return {
+                "ok": True,
+                "dry_run": bool(req.dry_run),
+                "metadata_backend": metadata_index.backend,
+                "source_mode": source_mode,
+                "pdf_source_dir": str(pdf_root),
+                "pdf_source_dir_raw": configured_source,
+                "source_stats": source_stats,
+                "pdfs_total": 0,
+                "pdfs_with_metadata": 0,
+                "pdfs_unmatched": 0,
+                "unmatched_sample": [],
+                "ingest_ran": False,
+                "ingest_summary": None,
+            }
+
+        for idx, p in enumerate(pdf_files, start=1):
+            if job.cancel_event.is_set():
+                jobs.set_progress("sync", 0.0, "Cancelled")
+                return {"ok": False, "cancelled": True}
+
+            if not find_metadata_for_pdf(metadata_index, p.name, str(p)):
+                unmatched.append(p)
+
+            # Reserve 55-80% for per-file scan progress and include current filename.
+            progress = 55.0 + ((idx / total_files) * 25.0)
+            jobs.set_progress("sync", progress, f"Scanning {idx}/{total_files}: {p.name}")
+
+        matched = total_files - len(unmatched)
+        ingest_summary: dict[str, Any] | None = None
+        ingest_ran = bool(req.run_ingest and not req.dry_run)
+
+        if ingest_ran:
+            jobs.set_progress("sync", 82.0, "Starting ingest into Neo4j")
+
+            def on_ingest_progress(percent: float, message: str) -> None:
+                # Map ingest 0..100 to sync 82..99
+                mapped = 82.0 + (max(0.0, min(100.0, float(percent))) * 0.17)
+                jobs.set_progress("sync", mapped, f"Ingest: {message}")
+
+            summary = ingest_pdfs(
+                selected_pdfs=pdf_files,
+                wipe=False,
+                settings=settings,
+                should_cancel=lambda: job.cancel_event.is_set(),
+                skip_existing=bool(req.ingest_skip_existing),
+                progress_callback=on_ingest_progress,
+            )
+            ingest_summary = {
+                "ingested_articles": summary.ingested_articles,
+                "total_chunks": summary.total_chunks,
+                "total_references": summary.total_references,
+                "selected_pdfs": summary.selected_pdfs,
+                "skipped_existing_pdfs": summary.skipped_existing_pdfs,
+                "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
+                "failed_pdfs": summary.failed_pdfs,
+                "citation_override_pdfs": summary.citation_override_pdfs,
+                "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
+                "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
+                "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
+                "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
+                "anystyle_disabled_reason": summary.anystyle_disabled_reason,
+                "anystyle_failure_samples": summary.anystyle_failure_samples,
+                "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
+                "qwen_applied_pdfs": summary.qwen_applied_pdfs,
+                "qwen_empty_pdfs": summary.qwen_empty_pdfs,
+                "qwen_failed_pdfs": summary.qwen_failed_pdfs,
+                "qwen_disabled_reason": summary.qwen_disabled_reason,
+                "qwen_failure_samples": summary.qwen_failure_samples,
+            }
+
+        jobs.set_progress("sync", 100.0, "Sync complete")
         return {
             "ok": True,
             "dry_run": bool(req.dry_run),
             "metadata_backend": metadata_index.backend,
+            "source_mode": source_mode,
             "pdf_source_dir": str(pdf_root),
-            "pdfs_total": len(pdf_files),
+            "pdf_source_dir_raw": configured_source,
+            "source_stats": source_stats,
+            "pdfs_total": total_files,
             "pdfs_with_metadata": matched,
             "pdfs_unmatched": len(unmatched),
             "unmatched_sample": [str(p) for p in unmatched[:30]],
+            "ingest_ran": ingest_ran,
+            "ingest_summary": ingest_summary,
         }
 
     return jobs.start("sync", run)

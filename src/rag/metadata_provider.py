@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import re
 from typing import Any
+import unicodedata
 
 from .paperpile_metadata import find_metadata_for_pdf as paperpile_find_metadata_for_pdf
 from .paperpile_metadata import iter_pdf_files
@@ -150,7 +151,10 @@ def metadata_title_year_key(meta: dict[str, Any] | None) -> str | None:
     year = meta.get("year")
     if not title or year is None:
         return None
-    ntitle = " ".join(re.findall(r"[a-z0-9]+", title.lower())).strip()
+    # Fold accents/diacritics so equivalent titles compare as the same key.
+    folded = unicodedata.normalize("NFKD", title)
+    folded = "".join(ch for ch in folded if not unicodedata.combining(ch))
+    ntitle = " ".join(re.findall(r"[a-z0-9]+", folded.lower())).strip()
     if not ntitle:
         return None
     try:

@@ -18,5 +18,7 @@ def test_find_metadata_for_pdf_uses_path_and_filename() -> None:
 def test_metadata_title_year_key_formats() -> None:
     key = metadata_title_year_key({'title': 'My Great Paper: A Study', 'year': '2020'})
     assert key == 'my great paper a study|2020'
+    accented = metadata_title_year_key({'title': 'Fábrega-Álvarez: Pathwáys', 'year': 2022})
+    assert accented == 'fabrega alvarez pathways|2022'
     assert metadata_title_year_key({'title': '', 'year': 2020}) is None
     assert metadata_title_year_key({'title': 'abc', 'year': None}) is None

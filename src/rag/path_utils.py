@@ -7,6 +7,7 @@ from pathlib import Path
 
 
 UNC_RE = re.compile(r"^\\\\([^\\]+)\\([^\\]+)(?:\\(.*))?$")
+WIN_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/].*")
 
 
 def is_wsl() -> bool:
@@ -29,6 +30,24 @@ def _unc_parts(raw: str) -> tuple[str, str, str] | None:
 
 
 def _wslpath_unc(raw: str) -> Path | None:
+    try:
+        proc = subprocess.run(
+            ["wslpath", "-u", raw],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except Exception:
+        return None
+    if proc.returncode != 0:
+        return None
+    out = (proc.stdout or "").strip()
+    if not out:
+        return None
+    return Path(out)
+
+
+def _wslpath_any(raw: str) -> Path | None:
     try:
         proc = subprocess.run(
             ["wslpath", "-u", raw],
@@ -88,6 +107,9 @@ def resolve_input_path(raw: str) -> Path:
         return Path(text)
     if not is_wsl():
         return Path(text)
+    if WIN_DRIVE_RE.match(text):
+        p = _wslpath_any(text)
+        return p if p is not None else Path(text)
     if not text.startswith("\\\\"):
         return Path(text)
 

@@ -50,8 +50,13 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
     if not db_path.exists():
         return []
 
-    uri = f"file:{db_path}?mode=ro"
-    conn = sqlite3.connect(uri, uri=True)
+    # Prefer immutable mode so reads succeed while Zotero has the DB open.
+    uri = f"file:{db_path}?mode=ro&immutable=1"
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+    except sqlite3.OperationalError:
+        # Fallback for environments that do not support immutable query parameter.
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         rows = conn.execute(
@@ -98,21 +103,39 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
             parent_ids,
         ).fetchall()
 
-        creators_rows = conn.execute(
-            f"""
-            SELECT
-              ic.itemID AS item_id,
-              ic.orderIndex AS order_index,
-              cd.firstName AS first_name,
-              cd.lastName AS last_name
-            FROM itemCreators ic
-            JOIN creators c ON c.creatorID = ic.creatorID
-            JOIN creatorData cd ON cd.creatorDataID = c.creatorDataID
-            WHERE ic.itemID IN ({placeholders})
-            ORDER BY ic.itemID ASC, ic.orderIndex ASC
-            """,
-            parent_ids,
-        ).fetchall()
+        try:
+            # Older Zotero schemas expose names via creatorData
+            creators_rows = conn.execute(
+                f"""
+                SELECT
+                  ic.itemID AS item_id,
+                  ic.orderIndex AS order_index,
+                  cd.firstName AS first_name,
+                  cd.lastName AS last_name
+                FROM itemCreators ic
+                JOIN creators c ON c.creatorID = ic.creatorID
+                JOIN creatorData cd ON cd.creatorDataID = c.creatorDataID
+                WHERE ic.itemID IN ({placeholders})
+                ORDER BY ic.itemID ASC, ic.orderIndex ASC
+                """,
+                parent_ids,
+            ).fetchall()
+        except sqlite3.OperationalError:
+            # Zotero 8 schema stores first/last name directly on creators
+            creators_rows = conn.execute(
+                f"""
+                SELECT
+                  ic.itemID AS item_id,
+                  ic.orderIndex AS order_index,
+                  c.firstName AS first_name,
+                  c.lastName AS last_name
+                FROM itemCreators ic
+                JOIN creators c ON c.creatorID = ic.creatorID
+                WHERE ic.itemID IN ({placeholders})
+                ORDER BY ic.itemID ASC, ic.orderIndex ASC
+                """,
+                parent_ids,
+            ).fetchall()
 
         by_item: dict[int, dict] = {pid: {} for pid in parent_ids}
         for row in field_rows:
