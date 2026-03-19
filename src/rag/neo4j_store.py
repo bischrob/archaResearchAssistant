@@ -102,177 +102,186 @@ class GraphStore:
         article_progress_callback=None,
     ) -> None:
         chunk_texts = [chunk.text for article in articles for chunk in article.chunks]
-        if not chunk_texts:
-            return
-        embeddings = self.embedder.encode(chunk_texts)
+        embeddings = self.embedder.encode(chunk_texts) if chunk_texts else []
 
         emb_iter = iter(embeddings)
         with self.driver.session() as session:
             for article_idx, article in enumerate(articles, start=1):
                 if should_cancel and should_cancel():
                     raise RuntimeError("Ingest cancelled by user.")
-                session.run(
-                    """
-                    MERGE (a:Article {id: $id})
-                    SET a.title = $title,
-                        a.title_norm = $title_norm,
-                        a.year = $year,
-                        a.source_path = $source_path,
-                        a.citekey = $citekey,
-                        a.paperpile_id = $paperpile_id,
-                        a.zotero_item_key = $zotero_item_key,
-                        a.zotero_attachment_key = $zotero_attachment_key,
-                        a.doi = $doi,
-                        a.journal = $journal,
-                        a.publisher = $publisher,
-                        a.title_year_key = $title_year_key,
-                        a.metadata_source = $metadata_source
-                    """,
-                    id=article.article_id,
-                    title=article.title,
-                    title_norm=article.normalized_title,
-                    year=article.year,
-                    source_path=article.source_path,
-                    citekey=article.citekey,
-                    paperpile_id=article.paperpile_id,
-                    zotero_item_key=article.zotero_item_key,
-                    zotero_attachment_key=article.zotero_attachment_key,
-                    doi=article.doi,
-                    journal=article.journal,
-                    publisher=article.publisher,
-                    title_year_key=article.title_year_key,
-                    metadata_source=article.metadata_source,
-                )
-
-                # Refresh chunk material for this source article so re-ingest
-                # does not retain stale chunk nodes from previous parses.
-                session.run(
-                    """
-                    MATCH (a:Article {id: $article_id})
-                    OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
-                    DETACH DELETE c
-                    """,
-                    article_id=article.article_id,
-                )
-
-                for pos, author_name in enumerate(article.authors):
-                    author_name = (author_name or "").strip()
-                    if not author_name:
-                        continue
-                    session.run(
-                        """
-                        MERGE (p:Author {name_norm: $author_norm})
-                        SET p.name = $author_name
-                        WITH p
-                        MATCH (a:Article {id: $article_id})
-                        MERGE (p)-[w:WROTE]->(a)
-                        SET w.position = $position
-                        """,
-                        author_norm=author_name.lower(),
-                        author_name=author_name,
-                        article_id=article.article_id,
-                        position=pos,
-                    )
-
-                for chunk in article.chunks:
-                    if should_cancel and should_cancel():
-                        raise RuntimeError("Ingest cancelled by user.")
-                    emb = next(emb_iter)
-                    session.run(
-                        """
-                        MERGE (c:Chunk {id: $id})
-                        SET c.text = $text,
-                            c.index = $index,
-                            c.page_start = $page_start,
-                            c.page_end = $page_end,
-                            c.tokens = $tokens,
-                            c.embedding = $embedding
-                        WITH c
-                        MATCH (a:Article {id: $article_id})
-                        MERGE (c)-[:IN_ARTICLE]->(a)
-                        """,
-                        id=chunk.chunk_id,
-                        text=chunk.text,
-                        index=chunk.index,
-                        page_start=chunk.page_start,
-                        page_end=chunk.page_end,
-                        tokens=chunk.tokens,
-                        embedding=emb,
-                        article_id=article.article_id,
-                    )
-
-                    token_rows = [
-                        {"value": token, "count": count}
-                        for token, count in chunk.token_counts.items()
-                    ]
-                    if token_rows:
-                        session.run(
-                            """
-                            UNWIND $rows AS row
-                            MERGE (t:Token {value: row.value})
-                            WITH t, row
-                            MATCH (c:Chunk {id: $chunk_id})
-                            MERGE (c)-[m:MENTIONS]->(t)
-                            SET m.count = row.count
-                            """,
-                            rows=token_rows,
-                            chunk_id=chunk.chunk_id,
-                        )
-
-                # Refresh reference-related graph edges for this source article to
-                # avoid stale/duplicate references during full re-ingest runs.
-                session.run(
-                    """
-                    MATCH (a:Article {id: $article_id})
-                    OPTIONAL MATCH (a)-[out:CITES]->(:Article)
-                    DELETE out
-                    WITH a
-                    OPTIONAL MATCH (a)-[:CITES_REFERENCE]->(r:Reference)
-                    WHERE r.id STARTS WITH $ref_prefix
-                    DETACH DELETE r
-                    """,
-                    article_id=article.article_id,
-                    ref_prefix=f"{article.article_id}::ref::",
-                )
-
-                for citation in article.citations:
-                    if should_cancel and should_cancel():
-                        raise RuntimeError("Ingest cancelled by user.")
-                    session.run(
-                        """
-                        MERGE (r:Reference {id: $id})
-                        SET r.raw_text = $raw_text,
-                            r.year = $year,
-                            r.title_guess = $title_guess,
-                            r.title_norm = $title_norm,
-                            r.author_tokens = $author_tokens,
-                            r.doi = $doi,
-                            r.source = $source,
-                            r.type_guess = $type_guess,
-                            r.quality_score = $quality_score
-                        WITH r
-                        MATCH (a:Article {id: $article_id})
-                        MERGE (a)-[:CITES_REFERENCE]->(r)
-                        """,
-                        id=citation.citation_id,
-                        raw_text=citation.raw_text,
-                        year=citation.year,
-                        title_guess=citation.title_guess,
-                        title_norm=citation.normalized_title,
-                        author_tokens=citation.author_tokens or [],
-                        doi=citation.doi,
-                        source=citation.source,
-                        type_guess=citation.type_guess,
-                        quality_score=citation.quality_score,
-                        article_id=article.article_id,
-                    )
-
+                article_embeddings = [next(emb_iter) for _ in article.chunks]
+                session.execute_write(self._ingest_article_tx, article, article_embeddings, should_cancel)
                 if article_progress_callback:
                     article_progress_callback(article_idx, len(articles), f"Uploaded {article.article_id}")
 
         if should_cancel and should_cancel():
             raise RuntimeError("Ingest cancelled by user.")
         self._link_article_citations(articles)
+
+    @staticmethod
+    def _ingest_article_tx(tx, article: ArticleDoc, article_embeddings: list[list[float]], should_cancel=None) -> None:
+        if should_cancel and should_cancel():
+            raise RuntimeError("Ingest cancelled by user.")
+        tx.run(
+            """
+            MERGE (a:Article {id: $id})
+            SET a.title = $title,
+                a.title_norm = $title_norm,
+                a.year = $year,
+                a.source_path = $source_path,
+                a.citekey = $citekey,
+                a.paperpile_id = $paperpile_id,
+                a.zotero_item_key = $zotero_item_key,
+                a.zotero_attachment_key = $zotero_attachment_key,
+                a.doi = $doi,
+                a.journal = $journal,
+                a.publisher = $publisher,
+                a.title_year_key = $title_year_key,
+                a.metadata_source = $metadata_source
+            """,
+            id=article.article_id,
+            title=article.title,
+            title_norm=article.normalized_title,
+            year=article.year,
+            source_path=article.source_path,
+            citekey=article.citekey,
+            paperpile_id=article.paperpile_id,
+            zotero_item_key=article.zotero_item_key,
+            zotero_attachment_key=article.zotero_attachment_key,
+            doi=article.doi,
+            journal=article.journal,
+            publisher=article.publisher,
+            title_year_key=article.title_year_key,
+            metadata_source=article.metadata_source,
+        )
+
+        # Refresh chunk and authorship relationships for this article in one tx.
+        tx.run(
+            """
+            MATCH (a:Article {id: $article_id})
+            OPTIONAL MATCH (a)<-[:IN_ARTICLE]-(c:Chunk)
+            DETACH DELETE c
+            """,
+            article_id=article.article_id,
+        )
+        tx.run(
+            """
+            MATCH (a:Article {id: $article_id})
+            OPTIONAL MATCH (:Author)-[w:WROTE]->(a)
+            DELETE w
+            """,
+            article_id=article.article_id,
+        )
+
+        for pos, author_name in enumerate(article.authors):
+            author_name = (author_name or "").strip()
+            if not author_name:
+                continue
+            tx.run(
+                """
+                MERGE (p:Author {name_norm: $author_norm})
+                SET p.name = $author_name
+                WITH p
+                MATCH (a:Article {id: $article_id})
+                MERGE (p)-[w:WROTE]->(a)
+                SET w.position = $position
+                """,
+                author_norm=author_name.lower(),
+                author_name=author_name,
+                article_id=article.article_id,
+                position=pos,
+            )
+
+        if should_cancel and should_cancel():
+            raise RuntimeError("Ingest cancelled by user.")
+
+        for chunk, emb in zip(article.chunks, article_embeddings):
+            tx.run(
+                """
+                MERGE (c:Chunk {id: $id})
+                SET c.text = $text,
+                    c.index = $index,
+                    c.page_start = $page_start,
+                    c.page_end = $page_end,
+                    c.tokens = $tokens,
+                    c.embedding = $embedding
+                WITH c
+                MATCH (a:Article {id: $article_id})
+                MERGE (c)-[:IN_ARTICLE]->(a)
+                """,
+                id=chunk.chunk_id,
+                text=chunk.text,
+                index=chunk.index,
+                page_start=chunk.page_start,
+                page_end=chunk.page_end,
+                tokens=chunk.tokens,
+                embedding=emb,
+                article_id=article.article_id,
+            )
+
+            token_rows = [{"value": token, "count": count} for token, count in chunk.token_counts.items()]
+            if token_rows:
+                tx.run(
+                    """
+                    UNWIND $rows AS row
+                    MERGE (t:Token {value: row.value})
+                    WITH t, row
+                    MATCH (c:Chunk {id: $chunk_id})
+                    MERGE (c)-[m:MENTIONS]->(t)
+                    SET m.count = row.count
+                    """,
+                    rows=token_rows,
+                    chunk_id=chunk.chunk_id,
+                )
+
+        # Refresh reference-related graph edges for this source article to
+        # avoid stale/duplicate references during full re-ingest runs.
+        tx.run(
+            """
+            MATCH (a:Article {id: $article_id})
+            OPTIONAL MATCH (a)-[out:CITES]->(:Article)
+            DELETE out
+            WITH a
+            OPTIONAL MATCH (a)-[:CITES_REFERENCE]->(r:Reference)
+            WHERE r.id STARTS WITH $ref_prefix
+            DETACH DELETE r
+            """,
+            article_id=article.article_id,
+            ref_prefix=f"{article.article_id}::ref::",
+        )
+
+        if should_cancel and should_cancel():
+            raise RuntimeError("Ingest cancelled by user.")
+
+        for citation in article.citations:
+            tx.run(
+                """
+                MERGE (r:Reference {id: $id})
+                SET r.raw_text = $raw_text,
+                    r.year = $year,
+                    r.title_guess = $title_guess,
+                    r.title_norm = $title_norm,
+                    r.author_tokens = $author_tokens,
+                    r.doi = $doi,
+                    r.source = $source,
+                    r.type_guess = $type_guess,
+                    r.quality_score = $quality_score
+                WITH r
+                MATCH (a:Article {id: $article_id})
+                MERGE (a)-[:CITES_REFERENCE]->(r)
+                """,
+                id=citation.citation_id,
+                raw_text=citation.raw_text,
+                year=citation.year,
+                title_guess=citation.title_guess,
+                title_norm=citation.normalized_title,
+                author_tokens=citation.author_tokens or [],
+                doi=citation.doi,
+                source=citation.source,
+                type_guess=citation.type_guess,
+                quality_score=citation.quality_score,
+                article_id=article.article_id,
+            )
 
     def _link_article_citations(self, articles: Iterable[ArticleDoc]) -> None:
         by_title = {a.article_id: a for a in articles}
@@ -281,7 +290,7 @@ class GraphStore:
                 "doi": _normalize_doi(article.doi),
                 "author_tokens": _author_token_set(article.authors or ([article.author] if article.author else [])),
                 "year": article.year,
-                "title_norm": article.normalized_title,
+                "title_norm": article.normalized_title or "",
             }
             for article_id, article in by_title.items()
         }
@@ -370,7 +379,10 @@ class GraphStore:
                 pair = (source.article_id, target.article_id)
                 if pair in seen_pairs:
                     continue
-                author_hit = target.author.lower() in source_text
+                target_author_norm = (target.author or "").strip().lower()
+                if not target_author_norm:
+                    continue
+                author_hit = target_author_norm in source_text
                 year_hit = str(target.year) in source_text
                 if author_hit and year_hit:
                     seen_pairs.add(pair)
@@ -388,12 +400,18 @@ class GraphStore:
         for source in articles:
             if source.year is None:
                 continue
+            source_author_norm = (source.author or "").strip().lower()
+            if not source_author_norm:
+                continue
             for target in articles:
                 if target.year is None:
                     continue
                 if source.article_id == target.article_id:
                     continue
-                if source.author.lower() != target.author.lower():
+                target_author_norm = (target.author or "").strip().lower()
+                if not target_author_norm:
+                    continue
+                if source_author_norm != target_author_norm:
                     continue
                 if source.year <= target.year:
                     continue

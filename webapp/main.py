@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.023252")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.024507")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -161,6 +161,9 @@ class IngestPreviewRequest(BaseModel):
 class JobState:
     name: str
     status: str = "idle"
+    terminal_reason: str | None = None
+    cancel_requested: bool = False
+    stop_state: str | None = None
     request_id: str | None = None
     started_at: float | None = None
     finished_at: float | None = None
@@ -189,6 +192,9 @@ class JobManager:
             if job.status == "running":
                 raise HTTPException(status_code=409, detail=f"{name} job is already running.")
             job.status = "running"
+            job.terminal_reason = None
+            job.cancel_requested = False
+            job.stop_state = None
             job.request_id = str(uuid.uuid4())
             job.started_at = time.time()
             job.finished_at = None
@@ -205,16 +211,20 @@ class JobManager:
                     with self._lock:
                         if job.cancel_event.is_set():
                             job.status = "cancelled"
+                            job.terminal_reason = "cancelled"
                         else:
                             job.status = "completed"
+                            job.terminal_reason = "completed"
                         job.result = result
                         job.finished_at = time.time()
                 except Exception as exc:
                     with self._lock:
                         if job.cancel_event.is_set():
                             job.status = "cancelled"
+                            job.terminal_reason = "cancelled"
                         else:
                             job.status = "failed"
+                            job.terminal_reason = "failed"
                         job.error = str(exc)
                         job.finished_at = time.time()
 
@@ -226,19 +236,34 @@ class JobManager:
         with self._lock:
             job = self._jobs[name]
             if job.status != "running":
-                pass
+                if job.status == "idle":
+                    job.stop_state = "noop_idle"
+                else:
+                    job.stop_state = "noop_terminal"
             else:
-                job.cancel_event.set()
-                if job.proc and job.proc.poll() is None:
-                    job.proc.terminate()
+                if job.cancel_requested:
+                    job.stop_state = "noop_cancelling"
+                else:
+                    job.cancel_event.set()
+                    job.cancel_requested = True
+                    job.stop_state = "accepted"
+                    if job.proc and job.proc.poll() is None:
+                        job.proc.terminate()
         return self.status(name)
 
     def status(self, name: str) -> dict[str, Any]:
         with self._lock:
             job = self._jobs[name]
+            lifecycle_state = job.status
+            if job.status == "running" and job.cancel_requested:
+                lifecycle_state = "cancelling"
             return {
                 "name": job.name,
                 "status": job.status,
+                "lifecycle_state": lifecycle_state,
+                "terminal_reason": job.terminal_reason,
+                "cancel_requested": job.cancel_requested,
+                "stop_state": job.stop_state,
                 "request_id": job.request_id,
                 "started_at": job.started_at,
                 "finished_at": job.finished_at,
@@ -814,7 +839,8 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
 
 
 @app.post("/api/ingest/preview")
-def ingest_preview(req: IngestPreviewRequest) -> dict:
+def ingest_preview(req: IngestPreviewRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     try:
         mode = "batch" if req.mode == "test3" else req.mode
         settings = Settings()
@@ -945,7 +971,8 @@ def articles_by_citekeys(req: ArticleLookupRequest) -> dict:
 
 
 @app.post("/api/query")
-def query(req: QueryRequest) -> dict:
+def query(req: QueryRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     if not req.query.strip():
         raise HTTPException(status_code=400, detail="Query cannot be empty.")
 
@@ -1069,10 +1096,12 @@ def ask_export(req: AskExportRequest):
 
 
 @app.get("/api/query/status")
-def query_status() -> dict:
+def query_status(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.status("query")
 
 
 @app.post("/api/query/stop")
-def query_stop() -> dict:
+def query_stop(authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
     return jobs.stop("query")
