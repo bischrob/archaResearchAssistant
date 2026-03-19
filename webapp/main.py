@@ -63,7 +63,7 @@ def load_paperpile_index(path: str) -> dict:
 
 def _load_metadata_index_for_settings(settings: Settings):
     backend = (settings.metadata_backend or "").strip().lower()
-    if backend == "paperpile" or not (settings.zotero_db_path or "").strip():
+    if backend == "paperpile":
         legacy = load_paperpile_index(settings.paperpile_json)
         from src.rag.metadata_provider import MetadataIndex
 
@@ -98,7 +98,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.000300")
+app = FastAPI(title="Research Assistant RAG UI", version="2026.03.19.023252")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -442,15 +442,16 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             jobs.set_progress("sync", 0.0, "Cancelled")
             return {"ok": False, "cancelled": True}
 
-        jobs.set_progress("sync", 30.0, "Loading metadata index")
+        # Keep preprocessing in the first 10% of sync progress.
+        jobs.set_progress("sync", 4.0, "Loading metadata index")
         metadata_index = _load_metadata_index_for_settings(settings)
 
         if job.cancel_event.is_set():
-            jobs.set_progress("sync", 30.0, "Cancelled")
+            jobs.set_progress("sync", 4.0, "Cancelled")
             return {"ok": False, "cancelled": True}
 
         if source_mode == "zotero_db":
-            jobs.set_progress("sync", 45.0, "Loading Zotero attachment paths")
+            jobs.set_progress("sync", 6.0, "Loading Zotero attachment paths")
             db_path_raw = (settings.zotero_db_path or "").strip()
             if db_path_raw:
                 db_path = resolve_input_path(db_path_raw)
@@ -486,7 +487,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 else:
                     missing_paths.append(raw)
                 if total_rows > 0:
-                    progress = 45.0 + ((idx / total_rows) * 15.0)
+                    progress = 6.0 + ((idx / total_rows) * 4.0)
                     jobs.set_progress("sync", progress, f"Resolving Zotero paths {idx}/{total_rows}: {Path(raw).name}")
 
             dedup: dict[str, Path] = {}
@@ -506,14 +507,14 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             if not pdf_root.exists():
                 raise RuntimeError(f"PDF source directory not found: {pdf_root}")
 
-            jobs.set_progress("sync", 45.0, "Collecting PDFs and ZIP sources")
+            jobs.set_progress("sync", 6.0, "Collecting PDFs and ZIP sources")
             cache_root = resolve_input_path(settings.zip_pdf_cache_dir)
 
             def on_zip_progress(i: int, n: int, msg: str) -> None:
                 if n <= 0:
-                    jobs.set_progress("sync", 55.0, msg)
+                    jobs.set_progress("sync", 10.0, msg)
                     return
-                jobs.set_progress("sync", 45.0 + ((i / n) * 15.0), msg)
+                jobs.set_progress("sync", 6.0 + ((i / n) * 4.0), msg)
 
             pdf_files, source_stats = collect_source_pdfs(
                 source_root=pdf_root,
@@ -523,7 +524,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             )
             source_stats["source_mode"] = "filesystem"
 
-        jobs.set_progress("sync", 55.0, "Scanning PDFs for metadata matches")
+        jobs.set_progress("sync", 10.0, "Scanning PDFs for metadata matches")
         total_files = len(pdf_files)
         unmatched: list[Path] = []
 
@@ -553,8 +554,8 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             if not find_metadata_for_pdf(metadata_index, p.name, str(p)):
                 unmatched.append(p)
 
-            # Reserve 55-80% for per-file scan progress and include current filename.
-            progress = 55.0 + ((idx / total_files) * 25.0)
+            # Reserve 10-40% for per-file scan progress and include current filename.
+            progress = 10.0 + ((idx / total_files) * 30.0)
             jobs.set_progress("sync", progress, f"Scanning {idx}/{total_files}: {p.name}")
 
         matched = total_files - len(unmatched)
@@ -562,11 +563,11 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
         ingest_ran = bool(req.run_ingest and not req.dry_run)
 
         if ingest_ran:
-            jobs.set_progress("sync", 82.0, "Starting ingest into Neo4j")
+            jobs.set_progress("sync", 42.0, "Starting ingest into Neo4j")
 
             def on_ingest_progress(percent: float, message: str) -> None:
-                # Map ingest 0..100 to sync 82..99
-                mapped = 82.0 + (max(0.0, min(100.0, float(percent))) * 0.17)
+                # Map ingest 0..100 to sync 42..99
+                mapped = 42.0 + (max(0.0, min(100.0, float(percent))) * 0.57)
                 jobs.set_progress("sync", mapped, f"Ingest: {message}")
 
             summary = ingest_pdfs(

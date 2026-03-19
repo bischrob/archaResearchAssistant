@@ -17,7 +17,8 @@ var RAGSync = {
   prefSourceDir: 'extensions.zotero-rag-sync.sourceDir',
   prefPaused: 'extensions.zotero-rag-sync.paused',
   syncPollIntervalMS: 700,
-  syncPollTimeoutMS: 10 * 60 * 1000,
+  syncPollTimeoutMS: 60 * 60 * 1000,
+  overlayDismissed: false,
 
   log(msg) {
     Zotero.debug('RAG Sync: ' + String(msg || ''));
@@ -102,6 +103,7 @@ var RAGSync = {
 
   openProgressWindow(phaseText) {
     this.closeProgressWindow();
+    this.overlayDismissed = false;
     const win = this.getMainWindow();
     if (!win || !win.document) {
       return null;
@@ -170,6 +172,33 @@ var RAGSync = {
     detail.setAttribute('style', 'margin-top:10px;white-space:pre-wrap;font-size:12px;color:#4b5563;');
     panel.appendChild(detail);
 
+    const controls = doc.createElement('div');
+    controls.setAttribute('style', 'margin-top:12px;display:flex;justify-content:flex-end;gap:8px;');
+
+    const bgBtn = doc.createElement('button');
+    bgBtn.textContent = 'Run in Background';
+    bgBtn.setAttribute(
+      'style',
+      'padding:5px 10px;border:1px solid #9aa0a6;background:#f3f4f6;color:#111827;border-radius:6px;cursor:pointer;'
+    );
+    bgBtn.addEventListener('click', () => {
+      this.overlayDismissed = true;
+      this.closeProgressWindow();
+    });
+    controls.appendChild(bgBtn);
+
+    const cancelBtn = doc.createElement('button');
+    cancelBtn.textContent = 'Cancel Sync';
+    cancelBtn.setAttribute(
+      'style',
+      'padding:5px 10px;border:1px solid #b91c1c;background:#dc2626;color:#ffffff;border-radius:6px;cursor:pointer;'
+    );
+    cancelBtn.addEventListener('click', () => {
+      void this.requestSyncStop();
+    });
+    controls.appendChild(cancelBtn);
+    panel.appendChild(controls);
+
     root.appendChild(panel);
     (doc.body || doc.documentElement).appendChild(root);
 
@@ -229,6 +258,27 @@ var RAGSync = {
       clearTimeout(this.progressWindow.closeTimer);
     }
     this.progressWindow.closeTimer = setTimeout(() => this.closeProgressWindow(), ms);
+  },
+
+  async requestSyncStop() {
+    try {
+      const req = await this.postJSON('/api/sync/stop', {});
+      const payload = this.parseResponseJSON(req);
+      const msg = String(payload.progress_message || 'Cancellation requested.');
+      if (!this.overlayDismissed) {
+        this.updateProgressWindow(Number(payload.progress_percent || 0), 'Cancelling sync...');
+        this.markProgressError();
+        this.addProgressDetail(msg, true);
+      }
+      this.log('Sync cancel requested');
+    } catch (err) {
+      const message = String(err && err.message ? err.message : err);
+      if (!this.overlayDismissed) {
+        this.addProgressDetail(`Cancel failed: ${message}`, true);
+      }
+      this.alert('RAG Sync', `Cancel failed: ${message}`);
+      this.log(`Sync cancel failed: ${message}`);
+    }
   },
 
   buildAuthHeaders() {
@@ -350,9 +400,16 @@ var RAGSync = {
         const status = await this.getJSON('/api/sync/status');
         const pct = Number(status.progress_percent || 0);
         const msg = String(status.progress_message || status.status || 'Working...');
-        this.updateProgressWindow(pct, msg);
+        if (!this.overlayDismissed) {
+          this.updateProgressWindow(pct, msg);
+        }
 
-        if (status.status === 'completed' || status.status === 'failed' || status.status === 'cancelled') {
+        if (
+          status.status === 'completed' ||
+          status.status === 'failed' ||
+          status.status === 'cancelled' ||
+          status.status === 'idle'
+        ) {
           terminalStatus = status;
           break;
         }
@@ -360,30 +417,59 @@ var RAGSync = {
       }
 
       if (!terminalStatus) {
+        // Long sync/ingest runs can exceed client-side polling timeout.
+        // Treat this as background continuation (not a failure) if backend is still running.
+        let liveStatus = null;
+        try {
+          liveStatus = await this.getJSON('/api/sync/status');
+        } catch (_err) {
+          liveStatus = null;
+        }
+        if (liveStatus && String(liveStatus.status || '') === 'running') {
+          const pct = Number(liveStatus.progress_percent || 0);
+          const message = String(
+            liveStatus.progress_message ||
+            'Sync is still running in the background. Use Show Diagnostics to check progress.'
+          );
+          if (!this.overlayDismissed) {
+            this.updateProgressWindow(pct, 'Sync continues in background');
+            this.addProgressDetail(message);
+            this.startProgressCloseTimer(5000);
+          }
+          this.setLastSync('running', message, null);
+          this.log(`Sync still running after polling timeout: ${message}`);
+          return;
+        }
         throw new Error('Timed out waiting for /api/sync/status to reach terminal state.');
       }
 
-      if (terminalStatus.status === 'completed') {
+      if (terminalStatus.status === 'completed' || terminalStatus.status === 'idle') {
         const summary = this.summarizeSyncResult(terminalStatus.result);
-        this.updateProgressWindow(100, 'Sync completed');
-        this.addProgressDetail(summary);
-        this.startProgressCloseTimer(6000);
+        if (!this.overlayDismissed) {
+          this.updateProgressWindow(100, 'Sync completed');
+          this.addProgressDetail(summary);
+          this.startProgressCloseTimer(6000);
+        }
         this.setLastSync('completed', summary, terminalStatus.finished_at);
         this.log(summary);
       } else if (terminalStatus.status === 'cancelled') {
         const message = String(terminalStatus.progress_message || 'Sync cancelled.');
-        this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync cancelled');
-        this.markProgressError();
-        this.addProgressDetail(message, true);
-        this.startProgressCloseTimer(8000);
+        if (!this.overlayDismissed) {
+          this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync cancelled');
+          this.markProgressError();
+          this.addProgressDetail(message, true);
+          this.startProgressCloseTimer(8000);
+        }
         this.setLastSync('cancelled', message, terminalStatus.finished_at);
         this.alert('RAG Sync Cancelled', message);
       } else {
         const message = String(terminalStatus.error || terminalStatus.progress_message || 'Sync failed.');
-        this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync failed');
-        this.markProgressError();
-        this.addProgressDetail(message, true);
-        this.startProgressCloseTimer(10000);
+        if (!this.overlayDismissed) {
+          this.updateProgressWindow(terminalStatus.progress_percent || 0, 'Sync failed');
+          this.markProgressError();
+          this.addProgressDetail(message, true);
+          this.startProgressCloseTimer(10000);
+        }
         this.setLastSync('failed', message, terminalStatus.finished_at);
         this.alert('RAG Sync Error', message);
         this.log(`Sync request failed: ${message}`);

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import re
 from typing import Any
 import unicodedata
 
+from .path_utils import resolve_input_path
 from .paperpile_metadata import find_metadata_for_pdf as paperpile_find_metadata_for_pdf
 from .paperpile_metadata import iter_pdf_files
 from .paperpile_metadata import load_paperpile_index
@@ -101,12 +103,51 @@ def _paperpile_entries(path: str) -> list[dict[str, Any]]:
     return out
 
 
+def _discover_zotero_db_path() -> str:
+    candidates: list[Path] = [Path.home() / "Zotero" / "zotero.sqlite"]
+    user = os.getenv("USER", "").strip()
+    if user:
+        candidates.append(Path("/mnt/c/Users") / user / "Zotero" / "zotero.sqlite")
+    try:
+        candidates.extend(sorted(Path("/mnt/c/Users").glob("*/Zotero/zotero.sqlite")))
+    except Exception:
+        pass
+    for p in candidates:
+        try:
+            if p.exists():
+                return str(p)
+        except Exception:
+            continue
+    return ""
+
+
+def _resolved_zotero_paths(settings) -> tuple[str, str]:
+    raw_db = (settings.zotero_db_path or "").strip()
+    if raw_db:
+        db = str(resolve_input_path(raw_db))
+    else:
+        db = _discover_zotero_db_path()
+
+    raw_storage = (settings.zotero_storage_root or "").strip()
+    if raw_storage:
+        storage = str(resolve_input_path(raw_storage))
+    elif db:
+        storage = str(Path(db).parent / "storage")
+    else:
+        storage = ""
+    return db, storage
+
+
 def load_metadata_index(settings, backend_override: str | None = None) -> MetadataIndex:
     backend = (backend_override or settings.metadata_backend or "zotero").strip().lower()
     if backend == "paperpile":
         return _build_index("paperpile", _paperpile_entries(settings.paperpile_json))
 
-    entries = load_zotero_entries(settings.zotero_db_path, settings.zotero_storage_root)
+    db_path, storage_root = _resolved_zotero_paths(settings)
+    if not db_path:
+        # Preserve prior behavior when no Zotero DB is available.
+        return _build_index("paperpile", _paperpile_entries(settings.paperpile_json))
+    entries = load_zotero_entries(db_path, storage_root)
     return _build_index("zotero", entries)
 
 
