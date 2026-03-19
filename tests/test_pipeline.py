@@ -39,6 +39,16 @@ def test_choose_pdfs_all_includes_all_pdf_files(tmp_path: Path) -> None:
     assert selected == [p2, p1]
 
 
+def test_choose_pdfs_all_empty_dir_raises_clear_error(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="No PDFs found to ingest"):
+        pipeline.choose_pdfs(
+            mode="all",
+            source_dir=str(tmp_path),
+            skip_existing=False,
+            require_metadata=False,
+        )
+
+
 def test_choose_pdfs_custom_missing_raises(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         pipeline.choose_pdfs(
@@ -163,7 +173,7 @@ def test_ingest_pdfs_skips_bad_articles_and_returns_failures(monkeypatch, tmp_pa
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1, p2, p3],
         wipe=True,
-        settings=Settings(citation_parser="heuristic"),
+        settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -192,7 +202,7 @@ def test_ingest_pdfs_raises_if_all_fail(monkeypatch, tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="No readable PDFs were ingested"):
         pipeline.ingest_pdfs(
             selected_pdfs=[p1],
-            settings=Settings(citation_parser="heuristic"),
+            settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
             skip_existing=False,
         )
 
@@ -204,11 +214,25 @@ def test_ingest_pdfs_returns_zero_when_no_metadata_matches(monkeypatch, tmp_path
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="heuristic"),
+        settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
         skip_existing=False,
     )
     assert summary.ingested_articles == 0
     assert summary.skipped_no_metadata_pdfs == [str(p1)]
+
+
+def test_ingest_pdfs_empty_selection_returns_zero_summary() -> None:
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[],
+        settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
+        skip_existing=False,
+    )
+
+    assert summary.ingested_articles == 0
+    assert summary.total_chunks == 0
+    assert summary.total_references == 0
+    assert summary.selected_pdfs == []
+    assert summary.failed_pdfs == []
 
 
 def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> None:
@@ -297,7 +321,7 @@ def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> 
     }
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="heuristic"),
+        settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
         skip_existing=False,
         citation_overrides=overrides,
     )
@@ -397,7 +421,7 @@ def test_ingest_pdfs_uses_anystyle_when_enabled(monkeypatch, tmp_path: Path) -> 
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="anystyle"),
+        settings=Settings(citation_parser="anystyle", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -492,7 +516,7 @@ def test_ingest_pdfs_falls_back_when_anystyle_fails(monkeypatch, tmp_path: Path)
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="anystyle"),
+        settings=Settings(citation_parser="anystyle", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -595,7 +619,7 @@ def test_ingest_pdfs_uses_qwen_when_enabled(monkeypatch, tmp_path: Path) -> None
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen"),
+        settings=Settings(citation_parser="qwen", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -688,7 +712,7 @@ def test_ingest_pdfs_falls_back_when_qwen_fails(monkeypatch, tmp_path: Path) -> 
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen"),
+        settings=Settings(citation_parser="qwen", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -805,7 +829,7 @@ def test_ingest_pdfs_uses_qwen_anystyle_structured_mode(monkeypatch, tmp_path: P
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen_refsplit_anystyle"),
+        settings=Settings(citation_parser="qwen_refsplit_anystyle", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -900,7 +924,7 @@ def test_ingest_pdfs_falls_back_when_qwen_anystyle_structured_fails(monkeypatch,
 
     summary = pipeline.ingest_pdfs(
         selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen_split_anystyle"),
+        settings=Settings(citation_parser="qwen_split_anystyle", metadata_backend="paperpile"),
         skip_existing=False,
     )
 
@@ -920,7 +944,19 @@ def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, t
         p.write_bytes(b"%PDF-1.7\nfake")
         files.append(p)
 
-    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"f1", "f2"})
+    monkeypatch.setattr(
+        pipeline,
+        "_get_existing_identities",
+        lambda settings: {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": {"f1", "f2"},
+        },
+    )
     selected = pipeline.choose_pdfs(
         mode="test3",
         source_dir=str(tmp_path),
@@ -939,7 +975,19 @@ def test_choose_pdfs_test3_respects_partial_count_after_existing_skip(monkeypatc
         p.write_bytes(b"%PDF-1.7\nfake")
         files.append(p)
 
-    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"f1", "f2", "f3"})
+    monkeypatch.setattr(
+        pipeline,
+        "_get_existing_identities",
+        lambda settings: {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": {"f1", "f2", "f3"},
+        },
+    )
     selected = pipeline.choose_pdfs(
         mode="test3",
         source_dir=str(tmp_path),
@@ -958,7 +1006,19 @@ def test_choose_pdfs_override_includes_existing(monkeypatch, tmp_path: Path) -> 
     p1.write_bytes(b"%PDF-1.7\nfake")
     p2.write_bytes(b"%PDF-1.7\nfake")
 
-    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: {"a", "b"})
+    monkeypatch.setattr(
+        pipeline,
+        "_get_existing_identities",
+        lambda settings: {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": {"a", "b"},
+        },
+    )
     selected = pipeline.choose_pdfs(
         mode="test3",
         source_dir=str(tmp_path),
@@ -976,8 +1036,25 @@ def test_choose_pdfs_skips_files_without_metadata_by_default(monkeypatch, tmp_pa
     p1.write_bytes(b"%PDF-1.7\nfake")
     p2.write_bytes(b"%PDF-1.7\nfake")
 
-    monkeypatch.setattr(pipeline, "_get_existing_article_ids", lambda settings: set())
+    monkeypatch.setattr(
+        pipeline,
+        "_get_existing_identities",
+        lambda settings: {
+            "article_ids": set(),
+            "doi": set(),
+            "zotero_item_key": set(),
+            "zotero_attachment_key": set(),
+            "title_year_key": set(),
+            "title_year_key_normalized": set(),
+            "file_stem": set(),
+        },
+    )
     monkeypatch.setattr(pipeline, "load_paperpile_index", lambda _path: {"m1.pdf": {"title": "Only One"}})
 
-    selected = pipeline.choose_pdfs(mode="all", source_dir=str(tmp_path), skip_existing=False, settings=Settings())
+    selected = pipeline.choose_pdfs(
+        mode="all",
+        source_dir=str(tmp_path),
+        skip_existing=False,
+        settings=Settings(metadata_backend="paperpile"),
+    )
     assert selected == [p1]

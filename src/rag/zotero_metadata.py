@@ -45,6 +45,17 @@ def _resolve_attachment_path(raw_path: str | None, attachment_key: str, storage_
     return str(resolve_input_path(path_raw))
 
 
+def _attachment_is_pdf(path_raw: str | None, content_type: str | None = None) -> bool:
+    raw = (path_raw or "").strip()
+    if not raw:
+        return (content_type or "").strip().lower() == "application/pdf"
+    lowered = raw.lower()
+    if lowered.startswith("storage:"):
+        rel = lowered.split(":", 1)[1].strip().lstrip("/\\")
+        return bool(rel) and rel.endswith(".pdf")
+    return lowered.endswith(".pdf")
+
+
 def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) -> list[dict]:
     db_path = Path(zotero_db_path)
     if not db_path.exists():
@@ -75,8 +86,8 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
               AND (
                 lower(coalesce(ai.contentType, '')) = 'application/pdf'
                 OR lower(coalesce(ai.path, '')) LIKE '%.pdf%'
-                OR lower(coalesce(ai.path, '')) LIKE 'storage:%'
               )
+            ORDER BY ai.parentItemID ASC, ai.itemID ASC
             """
         ).fetchall()
 
@@ -152,6 +163,10 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
         out: list[dict] = []
         for row in rows:
             parent_item_id = int(row["parent_item_id"])
+            path_raw = (row["attachment_path_raw"] or "").strip() or None
+            content_type = row["content_type"]
+            if not _attachment_is_pdf(path_raw, content_type):
+                continue
             field_map = by_item.get(parent_item_id, {})
             title = (field_map.get("title") or "").strip() or None
             doi = (field_map.get("DOI") or "").strip() or None
@@ -161,7 +176,6 @@ def load_zotero_entries(zotero_db_path: str, storage_root: str | None = None) ->
 
             attachment_key = (row["attachment_key"] or "").strip() or None
             parent_key = (row["parent_key"] or "").strip() or None
-            path_raw = (row["attachment_path_raw"] or "").strip() or None
             source_path = _resolve_attachment_path(path_raw, attachment_key or "", storage_root)
 
             out.append(

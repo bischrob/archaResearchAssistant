@@ -161,6 +161,12 @@ def find_metadata_for_pdf(index: MetadataIndex, filename: str, path_hint: str | 
             return out
         return None
 
+    pkey = _norm_path(path_hint)
+    if pkey:
+        path_match = index.by_path_normalized.get(pkey)
+        if path_match:
+            return dict(path_match)
+
     base = Path(filename).name.lower()
     direct = index.by_basename.get(base)
     if direct:
@@ -171,12 +177,6 @@ def find_metadata_for_pdf(index: MetadataIndex, filename: str, path_hint: str | 
         norm = index.by_normalized.get(nkey)
         if norm:
             return dict(norm)
-
-    pkey = _norm_path(path_hint)
-    if pkey:
-        path_match = index.by_path_normalized.get(pkey)
-        if path_match:
-            return dict(path_match)
 
     return None
 

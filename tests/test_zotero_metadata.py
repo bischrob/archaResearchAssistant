@@ -31,8 +31,12 @@ def _build_zotero_db(path: Path) -> None:
 
         conn.execute("INSERT INTO items(itemID, key) VALUES (1, 'PARENT1')")
         conn.execute("INSERT INTO items(itemID, key) VALUES (2, 'ATTACH1')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (3, 'ATTACH2')")
         conn.execute(
             "INSERT INTO itemAttachments(itemID, parentItemID, path, contentType) VALUES (2, 1, 'storage:paper.pdf', 'application/pdf')"
+        )
+        conn.execute(
+            "INSERT INTO itemAttachments(itemID, parentItemID, path, contentType) VALUES (3, 1, 'storage:manifest', 'application/pdf')"
         )
 
         conn.execute("INSERT INTO fields(fieldID, fieldName) VALUES (1, 'title')")
@@ -77,3 +81,12 @@ def test_load_zotero_entries_reads_basic_metadata(tmp_path: Path) -> None:
     assert row['zotero_attachment_key'] == 'ATTACH1'
     assert row['authors'] == ['Jane Doe']
     assert row['attachment_path'].endswith('storage/ATTACH1/paper.pdf')
+
+
+def test_load_zotero_entries_excludes_non_pdf_storage_artifacts(tmp_path: Path) -> None:
+    db_path = tmp_path / 'zotero.sqlite'
+    _build_zotero_db(db_path)
+
+    entries = load_zotero_entries(str(db_path), storage_root=str(tmp_path / 'storage'))
+    assert len(entries) == 1
+    assert entries[0]['attachment_path_raw'] == 'storage:paper.pdf'

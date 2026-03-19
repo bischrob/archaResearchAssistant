@@ -34,6 +34,7 @@ MAMBA_ENV_NAME="${MAMBA_ENV_NAME:-catmapper-qwen3-ref}"
 MAMBA_ENV_PATH="${MAMBA_ENV_PATH:-${HOME}/.conda/envs/${MAMBA_ENV_NAME}}"
 PYTHON_BIN="${PYTHON_BIN:-${MAMBA_ENV_PATH}/bin/python}"
 ENV_READY_MARKER="${MAMBA_ENV_PATH}/.catmapper_qwen3_ref_env_ready"
+ENV_SETUP_LOCK="${MAMBA_ENV_PATH}/.setup.lock"
 PYTHON_SHIM_DIR="${PROJECT_ROOT}/python_bootstrap"
 TRAIN_SCRIPT="${PROJECT_ROOT}/scripts/train_qwen_reference_lora.py"
 
@@ -98,10 +99,36 @@ fi
 module purge || true
 module load "${MAMBA_MODULE}"
 
-if [[ ! -x "${PYTHON_BIN}" ]]; then
-  echo "[INFO] Creating mamba environment at ${MAMBA_ENV_PATH}"
-  mamba create -y -p "${MAMBA_ENV_PATH}" python=3.11 pip
-fi
+mkdir -p "$(dirname "${ENV_SETUP_LOCK}")"
+(
+  flock -w 1200 9 || {
+    echo "[ERROR] Could not acquire env setup lock: ${ENV_SETUP_LOCK}" >&2
+    exit 1
+  }
+
+  if [[ ! -x "${PYTHON_BIN}" ]]; then
+    echo "[INFO] Creating mamba environment at ${MAMBA_ENV_PATH}"
+    mamba create -y -p "${MAMBA_ENV_PATH}" python=3.11 pip
+  fi
+
+  # shellcheck disable=SC1091
+  source activate "${MAMBA_ENV_PATH}"
+
+  if [[ ! -f "${ENV_READY_MARKER}" ]]; then
+    echo "[INFO] Installing Python dependencies into ${MAMBA_ENV_PATH}"
+    python -m pip install --upgrade pip
+    python -m pip install \
+      "torch>=2.6,<2.8" \
+      "transformers>=4.51,<4.58" \
+      "datasets>=3.4,<4" \
+      "accelerate>=1.4,<1.11" \
+      "trl>=0.20,<0.21" \
+      "peft>=0.15,<0.18" \
+      "sentencepiece>=0.2,<0.3" \
+      "protobuf>=5.29,<7"
+    touch "${ENV_READY_MARKER}"
+  fi
+) 9>"${ENV_SETUP_LOCK}"
 
 # shellcheck disable=SC1091
 source activate "${MAMBA_ENV_PATH}"
@@ -110,21 +137,6 @@ if [[ -d "${PYTHON_SHIM_DIR}" ]]; then
   export PYTHONPATH="${PYTHON_SHIM_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 fi
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-4}"
-
-if [[ ! -f "${ENV_READY_MARKER}" ]]; then
-  echo "[INFO] Installing Python dependencies into ${MAMBA_ENV_PATH}"
-  python -m pip install --upgrade pip
-  python -m pip install \
-    "torch>=2.6,<2.8" \
-    "transformers>=4.51,<4.58" \
-    "datasets>=3.4,<4" \
-    "accelerate>=1.4,<1.11" \
-    "trl>=0.20,<0.21" \
-    "peft>=0.15,<0.18" \
-    "sentencepiece>=0.2,<0.3" \
-    "protobuf>=5.29,<7"
-  touch "${ENV_READY_MARKER}"
-fi
 
 mkdir -p "${OUTPUT_DIR}"
 
