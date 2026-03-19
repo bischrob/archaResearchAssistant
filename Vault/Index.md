@@ -1,6 +1,6 @@
 # Vault Index
 
-Last reviewed: 2026-03-18
+Last reviewed: 2026-03-19
 
 ## Start Here
 - [[README]]
@@ -30,6 +30,7 @@ Last reviewed: 2026-03-18
 - [[10_Backend/06_retrieval_module]]
 - [[10_Backend/07_llm_grounding_module]]
 - [[10_Backend/08_answer_audit_export_module]]
+- [[10_Backend/09_backend_review_2026-03-19]]
 
 ## Web API
 - [[20_WebAPI/01_api_surface]]
@@ -38,6 +39,7 @@ Last reviewed: 2026-03-18
 - [[20_WebAPI/04_ingest_api]]
 - [[20_WebAPI/05_query_and_ask_api]]
 - [[20_WebAPI/06_diagnostics_api]]
+- [[20_WebAPI/07_api_plugin_review_2026-03-19]]
 
 ## Frontend
 - [[30_Frontend/01_ui_structure]]
@@ -47,10 +49,12 @@ Last reviewed: 2026-03-18
 - [[40_Scripts/01_cli_scripts]]
 - [[40_Scripts/02_shell_scripts]]
 - [[40_Scripts/03_docker_services]]
+- [[40_Scripts/04_ops_workflow_review_2026-03-19]]
 
 ## Testing
 - [[50_Testing/01_test_overview]]
 - [[50_Testing/02_current_test_status_2026-02-21]]
+- [[50_Testing/03_test_reliability_review_2026-03-19]]
 
 ## Troubleshooting
 - [[60_Troubleshooting/01_symptom_to_cause_matrix]]
@@ -60,6 +64,7 @@ Last reviewed: 2026-03-18
 - [[60_Troubleshooting/05_pdf_oxide_security_audit_2026-02-27]]
 - [[60_Troubleshooting/06_zotero_plugin_install_not_visible_2026-03-18]]
 - [[60_Troubleshooting/07_duplicate_detection_hardening_2026-03-18]]
+- [[60_Troubleshooting/08_codebase_workflow_review_2026-03-19]]
 
 ## Feature Playbooks
 - [[70_Feature_Playbooks/01_add_api_endpoint]]

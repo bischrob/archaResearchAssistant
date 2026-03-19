@@ -30,7 +30,7 @@ def load_paperpile_index(path: str) -> dict:
 
 def _load_metadata_index_for_settings(settings: Settings) -> MetadataIndex:
     backend = (settings.metadata_backend or "").strip().lower()
-    if backend == "paperpile" or not (settings.zotero_db_path or "").strip():
+    if backend == "paperpile":
         legacy = load_paperpile_index(settings.paperpile_json)
         return MetadataIndex(
             backend="paperpile",

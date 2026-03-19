@@ -54,6 +54,8 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
         metadata_backend = "paperpile"
         paperpile_json = "Paperpile.json"
         zotero_db_path = ""
+        zip_pdf_cache_dir = str(tmp_path / "zip_cache")
+        zip_pdf_enable = False
 
     monkeypatch.setattr(webmain, "Settings", FakeSettings)
     monkeypatch.setattr(webmain, "load_paperpile_index", lambda _path: {"a.pdf": {"title": "A"}})
@@ -191,6 +193,7 @@ def test_ingest_status_failed(monkeypatch, client):
 def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
     p = tmp_path / "demo.pdf"
     p.write_text("x")
+    monkeypatch.setenv("METADATA_BACKEND", "paperpile")
     choose_calls = []
     monkeypatch.setattr(
         webmain,
