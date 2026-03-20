@@ -24,6 +24,19 @@ HEADING_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9'&/-]*")
 REFERENCE_START_RE = re.compile(r"^(?:\[\d+\]\s*|\d+\.\s+)?[A-Z][A-Za-z .,'&-]+(?:\(|,)?\s*(?:19|20)\d{2}\b")
 LEADING_REF_MARKER_RE = re.compile(r"^\s*(?:\[\d+\]|\d+[.)])\s+")
 MERGED_MARKER_RE = re.compile(r"\[(\d+)\]\s")
+TOC_DOTTED_RE = re.compile(r"\.{2,}\s*\d+\s*$")
+PURE_PAGE_NUMBER_RE = re.compile(r"^\s*\d+\s*$")
+TOC_HEADING_RE = re.compile(r"^\s*(contents|table of contents)\s*$", re.I)
+FRONT_MATTER_HEADING_RE = re.compile(
+    r"^\s*(title page|contents|table of contents|acknowledg(?:e)?ments?|list of tables|list of figures|copyright|figures?|tables?)\s*$",
+    re.I,
+)
+PREFACE_HEADING_RE = re.compile(r"^\s*preface\s*$", re.I)
+APPENDIX_HEADING_RE = re.compile(r"^\s*(appendix|appendixes|appendix\s+[a-z0-9ivxlc]+(?:[.:].*)?|appendix\s+[a-z0-9ivxlc]+\b.*)$", re.I)
+BACK_MATTER_HEADING_RE = re.compile(
+    r"^\s*(appendix|appendixes|list of tables|list of figures|tables?|figures?)\b",
+    re.I,
+)
 NOISE_REFERENCE_RE = re.compile(
     r"(attention visualizations|<eos>|<pad>|^\s*references\s*$|^figure\s+\d+)",
     re.IGNORECASE,
@@ -39,6 +52,7 @@ SECTION_SYSTEM_PROMPT = (
     "Return JSON only with this schema: "
     '{"headings":[{"line_idx":12,"kind":"body","heading":"Methods"}],"reference_start_line":340}. '
     "Only include true section starts. "
+    "Use kind values from {front_matter,preface,body,references,appendix}. "
     "Use kind='references' for bibliography/reference sections. "
     "If no reference start is visible, set reference_start_line to null."
 )
@@ -59,6 +73,13 @@ class StructuredExtraction:
     chunks: list[Chunk]
     citations: list[Citation]
     reference_strings: list[str]
+
+
+@dataclass
+class SectionSpan:
+    start_line: int
+    end_line: int
+    kind: str
 
 
 def _extract_page_text(pdf_path: Path) -> list[tuple[int, str]]:
@@ -244,6 +265,195 @@ def _titlecase_ratio(text: str) -> float:
     return titleish / max(1, len(words))
 
 
+def _normalize_noise_key(text: str) -> str:
+    clean = " ".join((text or "").split()).strip().lower()
+    clean = re.sub(r"\b\d+\b", "", clean)
+    clean = re.sub(r"[^a-z]+", " ", clean)
+    return " ".join(clean.split())
+
+
+def _is_probable_toc_line(text: str) -> bool:
+    clean = " ".join((text or "").split()).strip()
+    if not clean:
+        return False
+    if TOC_DOTTED_RE.search(clean):
+        return True
+    if clean.endswith(".") and len(clean.split()) <= 6:
+        return True
+    return False
+
+
+def _toc_window(lines: list[str]) -> tuple[int, int] | None:
+    for idx, raw in enumerate(lines):
+        clean = " ".join((raw or "").split()).strip()
+        if not TOC_HEADING_RE.match(clean):
+            continue
+        end = idx
+        sparse = 0
+        toc_hits = 0
+        for probe in range(idx + 1, min(len(lines), idx + 120)):
+            row = " ".join((lines[probe] or "").split()).strip()
+            if not row:
+                sparse += 1
+                if sparse > 10 and (probe - idx) > 20:
+                    break
+                continue
+            sparse = 0
+            if _is_probable_toc_line(row):
+                end = probe
+                toc_hits += 1
+                continue
+            if len(row.split()) <= 7 and _titlecase_ratio(row) >= 0.60:
+                end = probe
+                continue
+            if len(row.split()) <= 10 and row.isupper():
+                end = probe
+                continue
+            if toc_hits >= 2:
+                break
+            if (probe - end) > 12:
+                break
+        if end > idx:
+            return idx, end
+    return None
+
+
+def _clean_toc_entry(text: str) -> str:
+    clean = " ".join((text or "").split()).strip()
+    clean = re.sub(r"\.{2,}\s*\d+\s*$", "", clean).strip()
+    clean = re.sub(r"\s+\d+\s*$", "", clean).strip()
+    return clean
+
+
+def _extract_toc_entries(lines: list[str]) -> list[str]:
+    window = _toc_window(lines)
+    if window is None:
+        return []
+    start, end = window
+    entries: list[str] = []
+    carry: list[str] = []
+    for idx in range(start + 1, end + 1):
+        row = " ".join((lines[idx] or "").split()).strip()
+        if not row or PURE_PAGE_NUMBER_RE.fullmatch(row):
+            continue
+        if TOC_DOTTED_RE.search(row):
+            clean = _clean_toc_entry(" ".join(carry + [row]))
+            carry = []
+            if clean and not TOC_HEADING_RE.match(clean):
+                entries.append(clean)
+            continue
+        if len(row.split()) <= 14 and (_titlecase_ratio(row) >= 0.60 or row.isupper()):
+            carry.append(row)
+            continue
+        carry = []
+    out: list[str] = []
+    seen: set[str] = set()
+    for entry in entries:
+        key = _normalize_lookup_key(entry)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(entry)
+    return out
+
+
+def _find_toc_entry_later_match(lines: list[str], entry: str) -> int | None:
+    needle = _normalize_lookup_key(entry)
+    if not needle:
+        return None
+    window = _toc_window(lines)
+    toc_end = window[1] if window else -1
+    for idx in range(toc_end + 1, len(lines)):
+        row = " ".join((lines[idx] or "").split()).strip()
+        if not row:
+            continue
+        row_key = _normalize_lookup_key(row)
+        if not row_key:
+            continue
+        if needle == row_key or needle in row_key or row_key in needle:
+            return idx
+    return None
+
+
+def _toc_mapped_heading_candidates(lines: list[str]) -> list[tuple[int, str]]:
+    out: list[tuple[int, str]] = []
+    seen: set[int] = set()
+    for entry in _extract_toc_entries(lines):
+        idx = _find_toc_entry_later_match(lines, entry)
+        if idx is None or idx in seen:
+            continue
+        seen.add(idx)
+        out.append((idx, entry[:120]))
+    return sorted(out, key=lambda x: x[0])
+
+
+def _toc_mapped_heading_index(lines: list[str]) -> dict[str, int]:
+    out: dict[str, int] = {}
+    for idx, heading in _toc_mapped_heading_candidates(lines):
+        key = _normalize_lookup_key(heading)
+        if key and key not in out:
+            out[key] = idx
+    return out
+
+
+def _toc_mapped_reference_starts(lines: list[str]) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for idx, heading in _toc_mapped_heading_candidates(lines):
+        if not REFERENCE_HEADING_RE.match(_clean_toc_entry(heading)):
+            continue
+        if idx in seen:
+            continue
+        seen.add(idx)
+        out.append(idx)
+    return sorted(out)
+
+
+def _is_toc_reference_heading(lines: list[str], idx: int) -> bool:
+    start = max(0, idx - 4)
+    end = min(len(lines), idx + 6)
+    window = [" ".join((lines[pos] or "").split()).strip() for pos in range(start, end)]
+    toc_like = 0
+    short_numeric = 0
+    prose_like = 0
+    for row in window:
+        if not row:
+            continue
+        if _is_probable_toc_line(row):
+            toc_like += 1
+        if PURE_PAGE_NUMBER_RE.fullmatch(row):
+            short_numeric += 1
+        if len(row.split()) >= 8 and not TOC_DOTTED_RE.search(row):
+            prose_like += 1
+    return (toc_like + short_numeric) >= 4 and prose_like == 0
+
+
+def _repeated_heading_noise_indices(lines: list[str]) -> set[int]:
+    by_key: dict[str, list[int]] = {}
+    for idx, raw in enumerate(lines):
+        clean = " ".join((raw or "").split()).strip()
+        key = _normalize_noise_key(clean)
+        if not key:
+            continue
+        words = key.split()
+        if len(words) == 0 or len(words) > 6:
+            continue
+        alpha_chars = sum(1 for ch in clean if ch.isalpha())
+        upper_chars = sum(1 for ch in clean if ch.isupper())
+        titleish = _titlecase_ratio(clean)
+        if alpha_chars and ((upper_chars / alpha_chars) >= 0.55 or titleish >= 0.70):
+            by_key.setdefault(key, []).append(idx)
+
+    noise: set[int] = set()
+    for hits in by_key.values():
+        if len(hits) < 3:
+            continue
+        # Keep the earliest occurrence as the most likely real section start and suppress later repeats.
+        for idx in hits[1:]:
+            noise.add(idx)
+    return noise
+
+
 def _is_heading_candidate(line: str) -> bool:
     clean = " ".join((line or "").split()).strip()
     if not clean:
@@ -267,9 +477,26 @@ def _is_heading_candidate(line: str) -> bool:
 
 def _heading_candidates(lines: list[str], max_candidates: int = 160) -> list[tuple[int, str]]:
     out: list[tuple[int, str]] = []
+    toc_window = _toc_window(lines)
+    toc_mapped = _toc_mapped_heading_index(lines)
+    repeated_noise = _repeated_heading_noise_indices(lines)
     for idx, raw in enumerate(lines):
+        if toc_window is not None and toc_window[0] < idx <= toc_window[1]:
+            continue
+        if idx in repeated_noise:
+            continue
+        key = _normalize_lookup_key(raw)
+        mapped_idx = toc_mapped.get(key)
+        if mapped_idx is not None and idx < mapped_idx:
+            continue
         if _is_heading_candidate(raw):
             out.append((idx, " ".join(raw.split())[:120]))
+    out.extend(_toc_mapped_heading_candidates(lines))
+    if out:
+        dedup: dict[int, str] = {}
+        for idx, text in out:
+            dedup.setdefault(idx, text)
+        out = sorted(dedup.items(), key=lambda x: x[0])
     if not out:
         out = [(0, "Document Start")]
     if out[0][0] != 0:
@@ -292,9 +519,25 @@ def _heading_candidates(lines: list[str], max_candidates: int = 160) -> list[tup
 
 def _heuristic_reference_start(lines: list[str]) -> int | None:
     for idx, raw in enumerate(lines):
-        if REFERENCE_HEADING_RE.match(" ".join((raw or "").split()).strip()):
+        clean = " ".join((raw or "").split()).strip()
+        if REFERENCE_HEADING_RE.match(clean) and not _is_toc_reference_heading(lines, idx):
             return idx
     return None
+
+
+def _heuristic_reference_starts(lines: list[str]) -> list[int]:
+    out: list[int] = []
+    seen: set[int] = set()
+    for idx in _toc_mapped_reference_starts(lines):
+        if idx not in seen:
+            seen.add(idx)
+            out.append(idx)
+    for idx, raw in enumerate(lines):
+        clean = " ".join((raw or "").split()).strip()
+        if REFERENCE_HEADING_RE.match(clean) and not _is_toc_reference_heading(lines, idx) and idx not in seen:
+            seen.add(idx)
+            out.append(idx)
+    return out
 
 
 def _parse_int(value: object) -> int | None:
@@ -344,7 +587,7 @@ def detect_section_plan_with_qwen(lines: list[str], *, settings: Settings | None
         parsed = None
 
     heading_indices: set[int] = {0}
-    ref_start: int | None = None
+    ref_starts: set[int] = set()
 
     if isinstance(parsed, dict):
         rows = parsed.get("headings") or parsed.get("sections") or []
@@ -358,25 +601,58 @@ def detect_section_plan_with_qwen(lines: list[str], *, settings: Settings | None
                 heading_indices.add(idx)
                 kind = str(row.get("kind") or "").strip().lower()
                 if kind == "references":
-                    if ref_start is None or idx < ref_start:
-                        ref_start = idx
+                    ref_starts.add(idx)
         ref_candidate = _parse_int(
             parsed.get("reference_start_line")
             or parsed.get("references_start_line")
             or parsed.get("reference_start")
         )
         if ref_candidate is not None and 0 <= ref_candidate < len(lines):
-            ref_start = ref_candidate if ref_start is None else min(ref_start, ref_candidate)
+            ref_starts.add(ref_candidate)
 
-    heuristic_ref = _heuristic_reference_start(lines)
-    if ref_start is None:
-        ref_start = heuristic_ref
-    elif heuristic_ref is not None:
-        ref_start = min(ref_start, heuristic_ref)
+    for idx in _heuristic_reference_starts(lines):
+        ref_starts.add(idx)
+
+    ref_start = min(ref_starts) if ref_starts else None
     if ref_start is not None:
         heading_indices.add(ref_start)
 
     return sorted(heading_indices), ref_start
+
+
+def detect_section_plan_details_with_qwen(
+    lines: list[str],
+    *,
+    settings: Settings | None = None,
+    min_section_lines: int = 24,
+) -> tuple[list[dict[str, object]], list[SectionSpan], list[int]]:
+    heading_indices, reference_start = detect_section_plan_with_qwen(lines, settings=settings)
+    sections = _build_typed_sections(
+        lines,
+        heading_indices=heading_indices,
+        reference_starts=_heuristic_reference_starts(lines),
+        reference_start=reference_start,
+        min_section_lines=min_section_lines,
+    )
+    headings: list[dict[str, object]] = []
+    seen: set[int] = set()
+    for section in sections:
+        if section.start_line in seen:
+            continue
+        seen.add(section.start_line)
+        label = " ".join((lines[section.start_line] or "").split()).strip()[:120] if lines else ""
+        if not label:
+            if section.kind == "front_matter":
+                label = "Front Matter"
+            elif section.kind == "preface":
+                label = "Preface"
+            elif section.kind == "references":
+                label = "References"
+            else:
+                label = "Document Start"
+        headings.append({"line_idx": section.start_line, "kind": section.kind, "heading": label})
+    ref_blocks = [section.start_line for section in sections if section.kind == "references"]
+    return headings, sections, ref_blocks
 
 
 def _build_sections(total_lines: int, heading_indices: list[int], reference_start: int | None) -> list[tuple[int, int, str]]:
@@ -391,6 +667,111 @@ def _build_sections(total_lines: int, heading_indices: list[int], reference_star
         kind = "references" if (reference_start is not None and start >= reference_start) else "body"
         sections.append((start, end, kind))
     return sections
+
+
+def _classify_start_kind(lines: list[str], start: int, reference_starts: set[int], first_content_start: int) -> str:
+    clean = " ".join((lines[start] or "").split()).strip()
+    if start in reference_starts:
+        return "references"
+    if start < first_content_start:
+        return "front_matter"
+    if PREFACE_HEADING_RE.match(clean):
+        return "preface"
+    if APPENDIX_HEADING_RE.match(clean):
+        return "appendix"
+    return "body"
+
+
+def _find_first_content_start(lines: list[str], starts: list[int], reference_starts: set[int]) -> int:
+    for start in starts:
+        clean = " ".join((lines[start] or "").split()).strip()
+        if PREFACE_HEADING_RE.match(clean):
+            return start
+    for start in starts:
+        clean = " ".join((lines[start] or "").split()).strip()
+        if start in reference_starts:
+            return start
+        if PREFACE_HEADING_RE.match(clean):
+            return start
+        if FRONT_MATTER_HEADING_RE.match(clean):
+            continue
+        if APPENDIX_HEADING_RE.match(clean):
+            continue
+        if _is_probable_toc_line(clean) or PURE_PAGE_NUMBER_RE.fullmatch(clean):
+            continue
+        return start
+    return 0
+
+
+def _resolve_reference_boundaries(lines: list[str], starts: list[int], ref_set: set[int]) -> list[tuple[int, int]]:
+    if not ref_set:
+        return []
+    ordered = sorted(starts)
+    out: list[tuple[int, int]] = []
+    for pos, start in enumerate(ordered):
+        if start not in ref_set:
+            continue
+        end = len(lines) - 1
+        for nxt in ordered[pos + 1 :]:
+            clean = " ".join((lines[nxt] or "").split()).strip()
+            if nxt in ref_set:
+                end = nxt - 1
+                break
+            if APPENDIX_HEADING_RE.match(clean) or BACK_MATTER_HEADING_RE.match(clean):
+                end = nxt - 1
+                break
+        if end >= start:
+            out.append((start, end))
+    return out
+
+
+def _merge_short_sections(sections: list[SectionSpan], min_section_lines: int) -> list[SectionSpan]:
+    if not sections:
+        return sections
+    merged: list[SectionSpan] = []
+    for section in sections:
+        length = section.end_line - section.start_line + 1
+        should_merge = False
+        if merged and section.kind == merged[-1].kind:
+            if section.kind == "front_matter":
+                should_merge = True
+            elif section.kind in {"body", "preface"} and length < min_section_lines:
+                should_merge = True
+        if should_merge:
+            prev = merged[-1]
+            merged[-1] = SectionSpan(start_line=prev.start_line, end_line=section.end_line, kind=prev.kind)
+            continue
+        merged.append(section)
+    return merged
+
+
+def _build_typed_sections(
+    lines: list[str],
+    *,
+    heading_indices: list[int],
+    reference_starts: list[int],
+    reference_start: int | None,
+    min_section_lines: int = 24,
+) -> list[SectionSpan]:
+    total_lines = len(lines)
+    if total_lines <= 0:
+        return []
+    ref_set = {idx for idx in reference_starts if 0 <= idx < total_lines}
+    if reference_start is not None and 0 <= reference_start < total_lines:
+        ref_set.add(reference_start)
+    starts = sorted({x for x in heading_indices if 0 <= x < total_lines} | ref_set | {0})
+    first_content_start = _find_first_content_start(lines, starts, ref_set)
+    ref_bounds = {s: e for s, e in _resolve_reference_boundaries(lines, starts, ref_set)}
+    sections: list[SectionSpan] = []
+    for idx, start in enumerate(starts):
+        end = (starts[idx + 1] - 1) if (idx + 1) < len(starts) else (total_lines - 1)
+        if end < start:
+            continue
+        kind = _classify_start_kind(lines, start, ref_set, first_content_start)
+        if kind == "references":
+            end = min(end, ref_bounds.get(start, end))
+        sections.append(SectionSpan(start_line=start, end_line=end, kind=kind))
+    return _merge_short_sections(sections, min_section_lines=min_section_lines)
 
 
 def _word_spans(length: int, size: int, overlap: int) -> list[tuple[int, int]]:
@@ -420,7 +801,7 @@ def _build_body_chunks(
     chunks: list[Chunk] = []
     chunk_idx = 0
     for start, end, kind in sections:
-        if kind != "body":
+        if kind not in {"body", "preface", "appendix"}:
             continue
         words_with_page: list[tuple[str, int]] = []
         for page_num, line in lines_with_page[start : end + 1]:
@@ -657,21 +1038,20 @@ def extract_structured_chunks_and_citations(
         return StructuredExtraction(chunks=[], citations=[], reference_strings=[])
 
     lines = [line for _, line in lines_with_page]
-    heading_indices, reference_start = detect_section_plan_with_qwen(lines, settings=settings)
-    sections = _build_sections(len(lines), heading_indices=heading_indices, reference_start=reference_start)
+    headings, sections, _ = detect_section_plan_details_with_qwen(lines, settings=settings)
     chunks = _build_body_chunks(
         article_id=article_id,
         lines_with_page=lines_with_page,
-        sections=sections,
+        sections=[(x.start_line, x.end_line, x.kind) for x in sections],
         chunk_size_words=chunk_size_words,
         chunk_overlap_words=chunk_overlap_words,
     )
 
     reference_chunks: list[str] = []
-    for start, end, kind in sections:
-        if kind != "references":
+    for section in sections:
+        if section.kind != "references":
             continue
-        block = "\n".join(lines[start : end + 1]).strip()
+        block = "\n".join(lines[section.start_line : section.end_line + 1]).strip()
         if block:
             reference_chunks.append(block)
 

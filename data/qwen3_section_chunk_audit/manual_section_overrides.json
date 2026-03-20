@@ -1,0 +1,90 @@
+{
+  "lucas2004-ArchaeologyOfTime": {
+    "reference_start_line": 685,
+    "reference_blocks": [{"start_line": 685, "end_line": 964}],
+    "section_chunks": [
+      {"start_line": 0, "end_line": 185, "kind": "front_matter"},
+      {"start_line": 186, "end_line": 242, "kind": "preface"},
+      {"start_line": 243, "end_line": 303, "kind": "body"},
+      {"start_line": 304, "end_line": 684, "kind": "body"},
+      {"start_line": 685, "end_line": 964, "kind": "references"}
+    ]
+  },
+  "climate-TroyAnthonyKnight": {
+    "reference_start_line": 1218,
+    "reference_blocks": [
+      {"start_line": 1218, "end_line": 1370},
+      {"start_line": 3007, "end_line": 3205},
+      {"start_line": 4565, "end_line": 4750}
+    ],
+    "section_chunks": [
+      {"start_line": 0, "end_line": 213, "kind": "front_matter"},
+      {"start_line": 214, "end_line": 246, "kind": "body"},
+      {"start_line": 247, "end_line": 434, "kind": "body"},
+      {"start_line": 435, "end_line": 675, "kind": "body"},
+      {"start_line": 676, "end_line": 1217, "kind": "body"},
+      {"start_line": 1218, "end_line": 1370, "kind": "references"},
+      {"start_line": 1371, "end_line": 2132, "kind": "body"},
+      {"start_line": 2133, "end_line": 3006, "kind": "body"},
+      {"start_line": 3007, "end_line": 3205, "kind": "references"},
+      {"start_line": 3206, "end_line": 3893, "kind": "body"},
+      {"start_line": 3894, "end_line": 4564, "kind": "body"},
+      {"start_line": 4565, "end_line": 4750, "kind": "references"}
+    ]
+  },
+  "borck2017-IdentityIsAnInfiniteNow-InsteadOfBecomingGallina": {
+    "reference_start_line": 733,
+    "reference_blocks": [{"start_line": 733, "end_line": 1249}],
+    "section_chunks": [
+      {"start_line": 0, "end_line": 60, "kind": "front_matter"},
+      {"start_line": 61, "end_line": 94, "kind": "body"},
+      {"start_line": 95, "end_line": 105, "kind": "body"},
+      {"start_line": 106, "end_line": 182, "kind": "body"},
+      {"start_line": 183, "end_line": 200, "kind": "body"},
+      {"start_line": 201, "end_line": 237, "kind": "body"},
+      {"start_line": 238, "end_line": 611, "kind": "body"},
+      {"start_line": 612, "end_line": 723, "kind": "body"},
+      {"start_line": 724, "end_line": 732, "kind": "body"},
+      {"start_line": 733, "end_line": 1249, "kind": "references"}
+    ]
+  },
+  "hora-cook2018-ResourceCompetitionUintaBasinFremont": {
+    "reference_start_line": 1921,
+    "reference_blocks": [{"start_line": 1921, "end_line": 2311}],
+    "section_chunks": [
+      {"start_line": 0, "end_line": 266, "kind": "front_matter"},
+      {"start_line": 267, "end_line": 307, "kind": "body"},
+      {"start_line": 308, "end_line": 321, "kind": "body"},
+      {"start_line": 322, "end_line": 408, "kind": "body"},
+      {"start_line": 409, "end_line": 458, "kind": "body"},
+      {"start_line": 459, "end_line": 499, "kind": "body"},
+      {"start_line": 500, "end_line": 606, "kind": "body"},
+      {"start_line": 607, "end_line": 716, "kind": "body"},
+      {"start_line": 717, "end_line": 931, "kind": "body"},
+      {"start_line": 932, "end_line": 1093, "kind": "body"},
+      {"start_line": 1094, "end_line": 1288, "kind": "body"},
+      {"start_line": 1289, "end_line": 1366, "kind": "body"},
+      {"start_line": 1367, "end_line": 1393, "kind": "body"},
+      {"start_line": 1394, "end_line": 1487, "kind": "body"},
+      {"start_line": 1488, "end_line": 1641, "kind": "body"},
+      {"start_line": 1642, "end_line": 1790, "kind": "body"},
+      {"start_line": 1791, "end_line": 1861, "kind": "body"},
+      {"start_line": 1862, "end_line": 1920, "kind": "body"},
+      {"start_line": 1921, "end_line": 2311, "kind": "references"},
+      {"start_line": 2312, "end_line": 2363, "kind": "appendix"}
+    ]
+  },
+  "wilczek2015-UnsupervisedModel-basedClusteringTypologicalClassificationOfMiddleBronzeAgeFlangedAxes": {
+    "reference_start_line": 968,
+    "reference_blocks": [{"start_line": 968, "end_line": 1128}],
+    "section_chunks": [
+      {"start_line": 0, "end_line": 50, "kind": "front_matter"},
+      {"start_line": 51, "end_line": 135, "kind": "body"},
+      {"start_line": 136, "end_line": 395, "kind": "body"},
+      {"start_line": 396, "end_line": 756, "kind": "body"},
+      {"start_line": 757, "end_line": 954, "kind": "body"},
+      {"start_line": 955, "end_line": 967, "kind": "body"},
+      {"start_line": 968, "end_line": 1128, "kind": "references"}
+    ]
+  }
+}
