@@ -836,6 +836,17 @@ def _build_body_chunks(
     return chunks
 
 
+def _looks_like_author_year_start(line: str) -> bool:
+    clean = (line or "").strip()
+    if not clean:
+        return False
+    if not re.search(r"\b(?:19|20)\d{2}\b", clean):
+        return False
+    if not re.match(r"^[A-Z][A-Za-z'`-]+,\s+", clean):
+        return False
+    return True
+
+
 def _heuristic_reference_split(reference_text: str) -> list[str]:
     lines = [re.sub(r"\s+", " ", x).strip() for x in (reference_text or "").splitlines() if x and x.strip()]
     if not lines:
@@ -843,7 +854,8 @@ def _heuristic_reference_split(reference_text: str) -> list[str]:
     blocks: list[str] = []
     current: list[str] = []
     for line in lines:
-        if REFERENCE_START_RE.match(line) and current:
+        starts_new = REFERENCE_START_RE.match(line) or _looks_like_author_year_start(line)
+        if starts_new and current:
             blocks.append(" ".join(current).strip())
             current = [line]
         else:
@@ -949,10 +961,25 @@ def _looks_invalid_split(rows: list[str], source_block: str) -> bool:
     noise_rows = sum(1 for row in rows if NOISE_REFERENCE_RE.search(row))
     if noise_rows > 0:
         return True
+    suspicious = sum(
+        1
+        for row in rows
+        if ("references" in row.lower() or "figure" in row.lower())
+        and not re.search(r"\b(?:19|20)\d{2}\b", row)
+    )
+    if suspicious > 0:
+        return True
     marker_hits = len(re.findall(r"\[\d+\]\s", source_block or ""))
     if marker_hits >= 8 and len(rows) <= max(2, marker_hits // 6):
         return True
     return False
+
+
+def split_reference_strings_heuristic(reference_text: str) -> list[str]:
+    numbered = _sanitize_reference_rows(_split_numbered_rows(reference_text))
+    if len(MERGED_MARKER_RE.findall(reference_text or "")) > 0 and numbered:
+        return numbered
+    return _sanitize_reference_rows(_heuristic_reference_split(reference_text))
 
 
 def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings | None = None) -> list[str]:
@@ -1020,6 +1047,13 @@ def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings
     return _sanitize_reference_rows(out)
 
 
+def split_reference_strings_for_anystyle(reference_text: str, *, settings: Settings | None = None) -> list[str]:
+    heuristic = split_reference_strings_heuristic(reference_text)
+    if not _looks_invalid_split(heuristic, reference_text):
+        return heuristic
+    return split_reference_strings_with_qwen(reference_text, settings=settings)
+
+
 def extract_structured_chunks_and_citations(
     *,
     pdf_path: Path,
@@ -1057,7 +1091,7 @@ def extract_structured_chunks_and_citations(
 
     reference_strings: list[str] = []
     for block in reference_chunks:
-        reference_strings.extend(split_reference_strings_with_qwen(block, settings=settings))
+        reference_strings.extend(split_reference_strings_for_anystyle(block, settings=settings))
 
     citations = parse_reference_strings_with_anystyle_docker(
         reference_strings,
