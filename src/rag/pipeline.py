@@ -82,6 +82,14 @@ def _cache_key(pdf_path: Path, settings: Settings, metadata: dict | None) -> str
             str(settings.chunk_size_words),
             str(settings.chunk_overlap_words),
             str(int(settings.chunk_strip_page_noise)),
+            settings.text_acquisition_policy,
+            settings.text_quality_check_backend,
+            settings.paddleocr_text_dir,
+            settings.paddleocr_text_fallback_dir,
+            str(int(settings.paddleocr_auto_generate_missing_text)),
+            settings.paddleocr_auto_lang,
+            settings.paddleocr_auto_device,
+            str(settings.paddleocr_auto_render_dpi),
             md,
         ]
     )
@@ -316,6 +324,13 @@ def _deserialize_article(obj: dict) -> ArticleDoc:
         publisher=obj.get("publisher"),
         title_year_key=obj.get("title_year_key"),
         metadata_source=obj.get("metadata_source"),
+        text_acquisition_method=obj.get("text_acquisition_method"),
+        text_acquisition_fallback_used=bool(obj.get("text_acquisition_fallback_used", False)),
+        text_quality_check_backend=obj.get("text_quality_check_backend"),
+        native_text_malformed=bool(obj.get("native_text_malformed", False)),
+        native_text_malformed_reason=obj.get("native_text_malformed_reason"),
+        native_text_char_count=obj.get("native_text_char_count"),
+        paddleocr_text_path=obj.get("paddleocr_text_path"),
         source_path=obj["source_path"],
         chunks=chunks,
         citations=citations,
@@ -329,13 +344,25 @@ def _load_article_cached(pdf_path: Path, settings: Settings, metadata: dict | No
         with cache_file.open("rb") as f:
             return _deserialize_article(pickle.load(f))
 
-    article = load_article(
-        pdf_path=pdf_path,
-        chunk_size_words=settings.chunk_size_words,
-        chunk_overlap_words=settings.chunk_overlap_words,
-        metadata=metadata,
-        strip_page_noise=settings.chunk_strip_page_noise,
-    )
+    try:
+        article = load_article(
+            pdf_path=pdf_path,
+            chunk_size_words=settings.chunk_size_words,
+            chunk_overlap_words=settings.chunk_overlap_words,
+            metadata=metadata,
+            strip_page_noise=settings.chunk_strip_page_noise,
+            settings=settings,
+        )
+    except TypeError as exc:
+        if "unexpected keyword argument 'settings'" not in str(exc):
+            raise
+        article = load_article(
+            pdf_path=pdf_path,
+            chunk_size_words=settings.chunk_size_words,
+            chunk_overlap_words=settings.chunk_overlap_words,
+            metadata=metadata,
+            strip_page_noise=settings.chunk_strip_page_noise,
+        )
     with cache_file.open("wb") as f:
         pickle.dump(asdict(article), f)
     return article

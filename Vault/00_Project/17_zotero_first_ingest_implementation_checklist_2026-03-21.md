@@ -44,17 +44,17 @@ Translate the broader Zotero → Neo4j architecture into an implementation seque
 ## Phase 3 — OCR/native text acquisition
 
 ### 3.1 Build formal text-acquisition decisioning
-- [ ] Attempt native PDF text extraction first.
-- [ ] Score text quality.
-- [ ] Trigger PaddleOCR when text is missing or poor.
-- [ ] Support `native_pdf`, `paddleocr`, and `hybrid` acquisition modes.
+- [x] Attempt native PDF text extraction first.
+- [x] Score text quality.
+- [x] Trigger PaddleOCR when text is missing or poor.
+- [x] Support explicit native/default and fallback/hybrid acquisition modes (currently `native_pdf`, `native_pdf_plus_paddleocr_fallback`, and `native_pdf_malformed_no_ocr_available`).
 
 ### 3.2 Preserve OCR provenance
-- [ ] text source
+- [x] text source
 - [ ] OCR engine/model version
 - [ ] date processed
 - [ ] confidence summary
-- [ ] cached page text path
+- [x] cached page text path
 
 ## Phase 4 — Section-aware document segmentation
 

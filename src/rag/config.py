@@ -119,6 +119,14 @@ class Settings:
     citation_parser: str = field(
         default_factory=lambda: _env_str("CITATION_PARSER", "qwen_refsplit_anystyle").strip().lower()
     )
+    text_acquisition_policy: str = field(
+        default_factory=lambda: _env_str(
+            "TEXT_ACQUISITION_POLICY", "native_pdf_then_paddle_if_malformed"
+        ).strip().lower()
+    )
+    text_quality_check_backend: str = field(
+        default_factory=lambda: _env_str("TEXT_QUALITY_CHECK_BACKEND", "heuristic_placeholder").strip().lower()
+    )
     paddleocr_text_dir: str = field(default_factory=lambda: _env_str("PADDLEOCR_TEXT_DIR", "ocr/paddleocr/text").strip())
     paddleocr_text_fallback_dir: str = field(
         default_factory=lambda: _env_str("PADDLEOCR_TEXT_FALLBACK_DIR", "data/ocr/paddleocr/text").strip()

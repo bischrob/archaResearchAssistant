@@ -235,6 +235,95 @@ def test_ingest_pdfs_empty_selection_returns_zero_summary() -> None:
     assert summary.failed_pdfs == []
 
 
+def test_ingest_pdfs_preserves_text_acquisition_provenance(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / "ocr.pdf"
+    p1.write_text("x")
+
+    def fake_load_article(
+        pdf_path: Path,
+        chunk_size_words: int,
+        chunk_overlap_words: int,
+        metadata=None,
+        strip_page_noise: bool = True,
+    ):
+        return ArticleDoc(
+            article_id=pdf_path.stem,
+            title=pdf_path.stem,
+            normalized_title=pdf_path.stem,
+            year=2024,
+            author="Author",
+            authors=["Author"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path=str(pdf_path),
+            text_acquisition_method="native_pdf_plus_paddleocr_fallback",
+            text_acquisition_fallback_used=True,
+            text_quality_check_backend="heuristic_placeholder",
+            native_text_malformed=True,
+            native_text_malformed_reason="native_text_too_short",
+            native_text_char_count=12,
+            paddleocr_text_path="/tmp/ocr.txt",
+            chunks=[
+                Chunk(
+                    chunk_id=f"{pdf_path.stem}::0",
+                    index=0,
+                    text="text",
+                    tokens=["text"],
+                    token_counts={"text": 1},
+                    page_start=1,
+                    page_end=1,
+                )
+            ],
+            citations=[],
+        )
+
+    seen = {}
+
+    class FakeStore:
+        embedding_dimension = 384
+
+        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
+            self.args = (uri, user, password, embedding_model)
+
+        def setup_schema(self, vector_dimensions: int):
+            assert vector_dimensions == 384
+
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
+            assert len(articles) == 1
+            seen["method"] = articles[0].text_acquisition_method
+            seen["fallback"] = articles[0].text_acquisition_fallback_used
+            seen["malformed"] = articles[0].native_text_malformed
+            seen["ocr_path"] = articles[0].paddleocr_text_path
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
+    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
+    monkeypatch.setattr(
+        pipeline,
+        "load_paperpile_index",
+        lambda _path: {"ocr.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
+    )
+
+    summary = pipeline.ingest_pdfs(
+        selected_pdfs=[p1],
+        settings=Settings(citation_parser="heuristic", metadata_backend="paperpile"),
+        skip_existing=False,
+    )
+
+    assert summary.ingested_articles == 1
+    assert seen == {
+        "method": "native_pdf_plus_paddleocr_fallback",
+        "fallback": True,
+        "malformed": True,
+        "ocr_path": "/tmp/ocr.txt",
+    }
+
+
 def test_ingest_pdfs_applies_citation_overrides(monkeypatch, tmp_path: Path) -> None:
     p1 = tmp_path / "ok.pdf"
     p1.write_text("x")

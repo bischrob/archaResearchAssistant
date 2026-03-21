@@ -202,6 +202,8 @@ class GraphStore:
             "CREATE INDEX article_source_filename_stem_norm IF NOT EXISTS FOR (a:Article) ON (a.source_filename_stem_norm)",
             "CREATE INDEX article_source_path_norm IF NOT EXISTS FOR (a:Article) ON (a.source_path_norm)",
             "CREATE TEXT INDEX article_metadata_source_text IF NOT EXISTS FOR (a:Article) ON (a.metadata_source)",
+            "CREATE TEXT INDEX article_text_acquisition_method_text IF NOT EXISTS FOR (a:Article) ON (a.text_acquisition_method)",
+            "CREATE INDEX article_native_text_malformed IF NOT EXISTS FOR (a:Article) ON (a.native_text_malformed)",
             "CREATE INDEX article_year IF NOT EXISTS FOR (a:Article) ON (a.year)",
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
             "CREATE TEXT INDEX reference_doi_text IF NOT EXISTS FOR (r:Reference) ON (r.doi)",
@@ -257,7 +259,14 @@ class GraphStore:
                 a.publisher = $publisher,
                 a.title_year_key = $title_year_key,
                 a.title_year_key_norm = $title_year_key_norm,
-                a.metadata_source = $metadata_source
+                a.metadata_source = $metadata_source,
+                a.text_acquisition_method = $text_acquisition_method,
+                a.text_acquisition_fallback_used = $text_acquisition_fallback_used,
+                a.text_quality_check_backend = $text_quality_check_backend,
+                a.native_text_malformed = $native_text_malformed,
+                a.native_text_malformed_reason = $native_text_malformed_reason,
+                a.native_text_char_count = $native_text_char_count,
+                a.paddleocr_text_path = $paddleocr_text_path
             """,
             id=article.article_id,
             title=article.title,
@@ -280,6 +289,13 @@ class GraphStore:
             title_year_key=article.title_year_key,
             title_year_key_norm=_normalize_identity(article.title_year_key) or None,
             metadata_source=article.metadata_source,
+            text_acquisition_method=article.text_acquisition_method,
+            text_acquisition_fallback_used=article.text_acquisition_fallback_used,
+            text_quality_check_backend=article.text_quality_check_backend,
+            native_text_malformed=article.native_text_malformed,
+            native_text_malformed_reason=article.native_text_malformed_reason,
+            native_text_char_count=article.native_text_char_count,
+            paddleocr_text_path=article.paddleocr_text_path,
         )
 
         tx.run(

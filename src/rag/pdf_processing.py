@@ -8,6 +8,9 @@ from typing import Iterable
 
 import fitz
 
+from .config import Settings
+from .text_acquisition import acquire_pdf_text
+
 
 TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9'-]*")
 HEADING_RE = re.compile(r"^\s*(references|bibliography|works cited|literature cited)\s*$", re.IGNORECASE)
@@ -76,6 +79,13 @@ class ArticleDoc:
     zotero_attachment_key: str | None = None
     title_year_key: str | None = None
     metadata_source: str | None = None
+    text_acquisition_method: str | None = None
+    text_acquisition_fallback_used: bool = False
+    text_quality_check_backend: str | None = None
+    native_text_malformed: bool = False
+    native_text_malformed_reason: str | None = None
+    native_text_char_count: int | None = None
+    paddleocr_text_path: str | None = None
 
 
 def normalize_title(text: str) -> str:
@@ -307,6 +317,7 @@ def load_article(
     chunk_overlap_words: int,
     metadata: dict | None = None,
     strip_page_noise: bool = True,
+    settings: Settings | None = None,
 ) -> ArticleDoc:
     fallback_author, fallback_year, fallback_title = parse_filename_metadata(pdf_path)
     metadata = metadata or {}
@@ -316,8 +327,14 @@ def load_article(
     primary_author = authors[0] if authors else fallback_author
     article_id = pdf_path.stem
 
+    settings = settings or Settings()
+    acquisition = acquire_pdf_text(
+        pdf_path,
+        settings=settings,
+        strip_page_noise=strip_page_noise,
+    )
     page_text = _extract_page_text(pdf_path)
-    lines_with_page = build_lines_with_page(page_text, strip_page_noise=strip_page_noise)
+    lines_with_page = acquisition.lines_with_page
 
     lines = [line for _, line in lines_with_page]
     split_idx, main_lines, ref_lines = _split_main_and_references(lines)
@@ -385,6 +402,13 @@ def load_article(
         publisher=metadata.get("publisher"),
         title_year_key=metadata.get("title_year_key"),
         metadata_source=metadata.get("metadata_source"),
+        text_acquisition_method=acquisition.method,
+        text_acquisition_fallback_used=acquisition.fallback_used,
+        text_quality_check_backend=acquisition.native_text_report.backend,
+        native_text_malformed=acquisition.native_text_report.is_malformed,
+        native_text_malformed_reason=acquisition.native_text_report.reason,
+        native_text_char_count=acquisition.native_text_report.char_count,
+        paddleocr_text_path=acquisition.ocr_text_path,
         source_path=str(pdf_path),
         chunks=chunks,
         citations=citations,
