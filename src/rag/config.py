@@ -70,9 +70,13 @@ class Settings:
     neo4j_uri: str = field(default_factory=lambda: _env_str("NEO4J_URI", "bolt://localhost:7687"))
     neo4j_user: str = field(default_factory=lambda: _env_str("NEO4J_USER", "neo4j"))
     neo4j_password: str = field(default_factory=lambda: _env_str("NEO4J_PASSWORD", "archaResearchAssistant"))
+    embedding_provider: str = field(default_factory=lambda: _env_str("EMBEDDING_PROVIDER", "auto").strip().lower())
     embedding_model: str = field(
         default_factory=lambda: _env_str("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     )
+    embedding_device: str = field(default_factory=lambda: _env_str("EMBEDDING_DEVICE", "cpu").strip().lower())
+    embedding_batch_size: int = field(default_factory=lambda: _env_int("EMBEDDING_BATCH_SIZE", 8))
+    embedding_normalize: bool = field(default_factory=lambda: _env_not_false("EMBEDDING_NORMALIZE", True))
     paperpile_json: str = field(default_factory=lambda: _env_str("PAPERPILE_JSON", "Paperpile.json"))
     metadata_backend: str = field(default_factory=lambda: _env_str("METADATA_BACKEND", "zotero").strip().lower())
     metadata_require_match: bool = field(default_factory=lambda: _env_not_false("METADATA_REQUIRE_MATCH", True))

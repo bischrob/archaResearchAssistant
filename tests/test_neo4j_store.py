@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.rag.neo4j_store import GraphStore
+import numpy as np
+import pytest
+
+from src.rag.neo4j_store import GraphStore, SentenceTransformerEmbedder
 from src.rag.pdf_processing import ArticleDoc, Chunk
 
 
@@ -128,5 +131,59 @@ def test_link_article_citations_handles_missing_authors(monkeypatch):
             chunks=[],
         )
         store._link_article_citations([source, target])
+    finally:
+        store.close()
+
+
+def test_graph_store_uses_sentence_transformers_when_requested(monkeypatch):
+    fake_driver = _FakeDriver()
+
+    class _FakeSentenceTransformer:
+        def __init__(self, model_name, device=None):
+            self.model_name = model_name
+            self.device = device
+            self.calls = []
+
+        def get_sentence_embedding_dimension(self):
+            return 3
+
+        def encode(self, texts, batch_size=0, show_progress_bar=False, convert_to_numpy=True, normalize_embeddings=True):
+            self.calls.append(
+                {
+                    "texts": list(texts),
+                    "batch_size": batch_size,
+                    "show_progress_bar": show_progress_bar,
+                    "convert_to_numpy": convert_to_numpy,
+                    "normalize_embeddings": normalize_embeddings,
+                }
+            )
+            return np.array([[1.0, 0.0, 0.0] for _ in texts], dtype=np.float32)
+
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", _FakeSentenceTransformer)
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "sentence_transformers")
+    monkeypatch.setenv("EMBEDDING_BATCH_SIZE", "2")
+    monkeypatch.setenv("EMBEDDING_DEVICE", "cpu")
+
+    store = GraphStore("bolt://unused", "neo4j", "pass", embedding_model="sentence-transformers/all-MiniLM-L6-v2")
+    try:
+        assert isinstance(store.embedder, SentenceTransformerEmbedder)
+        assert store.embedding_dimension == 3
+        vectors = store.embedder.encode(["alpha", "beta"])
+        assert len(vectors) == 2
+        assert len(vectors[0]) == 3
+        assert store.embedder.model.calls[0]["batch_size"] == 2
+    finally:
+        store.close()
+
+
+@pytest.mark.parametrize("provider,model_name", [("hash", "sentence-transformers/all-MiniLM-L6-v2"), ("auto", "hash")])
+def test_graph_store_can_still_force_hash_embedder(monkeypatch, provider, model_name):
+    fake_driver = _FakeDriver()
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
+    store = GraphStore("bolt://unused", "neo4j", "pass", embedding_model=model_name)
+    try:
+        assert store.embedding_dimension == 384
     finally:
         store.close()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import time
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -12,6 +13,11 @@ from neo4j import GraphDatabase
 
 from .metadata_provider import metadata_title_year_key
 from .pdf_processing import ArticleDoc
+
+try:
+    from sentence_transformers import SentenceTransformer
+except Exception:  # pragma: no cover - optional import fallback
+    SentenceTransformer = None
 
 
 def _normalize_doi(doi: str | None) -> str:
@@ -60,11 +66,75 @@ class HashingEmbedder:
         return [self._encode_one(t) for t in texts]
 
 
+class SentenceTransformerEmbedder:
+    def __init__(
+        self,
+        model_name: str,
+        *,
+        device: str = "cpu",
+        batch_size: int = 8,
+        normalize_embeddings: bool = True,
+    ) -> None:
+        if SentenceTransformer is None:
+            raise RuntimeError(
+                "sentence-transformers is not available; install dependencies or switch EMBEDDING_PROVIDER=hash"
+            )
+        resolved_device = (device or "cpu").strip().lower()
+        if resolved_device == "auto":
+            resolved_device = "cuda" if os.getenv("CUDA_VISIBLE_DEVICES", "").strip() not in {"", "-1"} else "cpu"
+        self.model_name = model_name
+        self.device = resolved_device
+        self.batch_size = max(1, int(batch_size))
+        self.normalize_embeddings = bool(normalize_embeddings)
+        self.model = SentenceTransformer(model_name, device=resolved_device)
+        self.dimension = int(self.model.get_sentence_embedding_dimension())
+
+    def _prepare_texts(self, texts: list[str]) -> list[str]:
+        prepared = []
+        for text in texts:
+            clean = (text or "").strip()
+            prepared.append(clean or " ")
+        return prepared
+
+    def encode(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+        prepared = self._prepare_texts(texts)
+        vectors = self.model.encode(
+            prepared,
+            batch_size=self.batch_size,
+            show_progress_bar=False,
+            convert_to_numpy=True,
+            normalize_embeddings=self.normalize_embeddings,
+        )
+        return vectors.astype(np.float32).tolist()
+
+
 class GraphStore:
     def __init__(self, uri: str, user: str, password: str, embedding_model: str | None = None) -> None:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        self.embedder = HashingEmbedder(dimension=384)
+        self.embedder = self._build_embedder(embedding_model)
         self._article_identity_norms_ensured = False
+
+    @staticmethod
+    def _build_embedder(embedding_model: str | None):
+        model_name = (embedding_model or "").strip()
+        provider = os.getenv("EMBEDDING_PROVIDER", "auto").strip().lower() or "auto"
+        if provider == "hash" or model_name.lower() in {"hash", "hashing", "hashingembedder"}:
+            return HashingEmbedder(dimension=384)
+
+        if provider in {"auto", "sentence_transformers", "sentence-transformers", "st"}:
+            resolved_model = model_name or "sentence-transformers/all-MiniLM-L6-v2"
+            return SentenceTransformerEmbedder(
+                resolved_model,
+                device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+                batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "8")),
+                normalize_embeddings=(
+                    os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() not in {"0", "false", "no"}
+                ),
+            )
+
+        raise ValueError(f"Unsupported embedding provider: {provider}")
 
     @property
     def embedding_dimension(self) -> int:
@@ -162,15 +232,11 @@ class GraphStore:
         should_cancel=None,
         article_progress_callback=None,
     ) -> None:
-        chunk_texts = [chunk.text for article in articles for chunk in article.chunks]
-        embeddings = self.embedder.encode(chunk_texts) if chunk_texts else []
-
-        emb_iter = iter(embeddings)
         with self.driver.session() as session:
             for article_idx, article in enumerate(articles, start=1):
                 if should_cancel and should_cancel():
                     raise RuntimeError("Ingest cancelled by user.")
-                article_embeddings = [next(emb_iter) for _ in article.chunks]
+                article_embeddings = self.embedder.encode([chunk.text for chunk in article.chunks]) if article.chunks else []
                 session.execute_write(self._ingest_article_tx, article, article_embeddings, should_cancel)
                 if article_progress_callback:
                     article_progress_callback(article_idx, len(articles), f"Uploaded {article.article_id}")
@@ -230,7 +296,6 @@ class GraphStore:
             metadata_source=article.metadata_source,
         )
 
-        # Refresh chunk and authorship relationships for this article in one tx.
         tx.run(
             """
             MATCH (a:Article {id: $article_id})
@@ -309,8 +374,6 @@ class GraphStore:
                     chunk_id=chunk.chunk_id,
                 )
 
-        # Refresh reference-related graph edges for this source article to
-        # avoid stale/duplicate references during full re-ingest runs.
         tx.run(
             """
             MATCH (a:Article {id: $article_id})
@@ -1165,6 +1228,7 @@ class GraphStore:
                        a.year AS article_year,
                        a.citekey AS article_citekey,
                        a.doi AS article_doi,
+
                        a.source_path AS article_source_path,
                        a.journal AS article_journal,
                        a.publisher AS article_publisher,
