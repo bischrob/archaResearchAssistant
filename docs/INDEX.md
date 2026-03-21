@@ -17,7 +17,7 @@ Start here based on your role.
 
 - [README](../README.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
-- Text ingest now defaults to native PDF extraction first, with a conservative malformed-text gate before PaddleOCR fallback.
+- Text ingest now defaults to native PDF extraction first, with a conservative malformed-text gate before PaddleOCR fallback. OCR fallback provenance now carries engine/model/version (best effort), OCR timestamp, and a heuristic OCR quality summary into cache and Neo4j Article storage.
 
 ## Research user
 

@@ -266,6 +266,11 @@ def test_ingest_pdfs_preserves_text_acquisition_provenance(monkeypatch, tmp_path
             native_text_malformed_reason="native_text_too_short",
             native_text_char_count=12,
             paddleocr_text_path="/tmp/ocr.txt",
+            ocr_engine="paddleocr",
+            ocr_model="PaddleOCR[classic]:lang=en,device=cpu",
+            ocr_version="3.0.0",
+            ocr_processed_at="2026-03-21T22:00:00Z",
+            ocr_quality_summary="heuristic:existing_sidecar;lines=2;pages=1;chars=40;tokens=6;alpha_ratio=0.850;suspect_ratio=0.000;native_reason=native_text_too_short",
             chunks=[
                 Chunk(
                     chunk_id=f"{pdf_path.stem}::0",
@@ -297,6 +302,10 @@ def test_ingest_pdfs_preserves_text_acquisition_provenance(monkeypatch, tmp_path
             seen["fallback"] = articles[0].text_acquisition_fallback_used
             seen["malformed"] = articles[0].native_text_malformed
             seen["ocr_path"] = articles[0].paddleocr_text_path
+            seen["ocr_engine"] = articles[0].ocr_engine
+            seen["ocr_model"] = articles[0].ocr_model
+            seen["ocr_processed_at"] = articles[0].ocr_processed_at
+            seen["ocr_quality_summary"] = articles[0].ocr_quality_summary
 
         def close(self):
             pass
@@ -321,6 +330,10 @@ def test_ingest_pdfs_preserves_text_acquisition_provenance(monkeypatch, tmp_path
         "fallback": True,
         "malformed": True,
         "ocr_path": "/tmp/ocr.txt",
+        "ocr_engine": "paddleocr",
+        "ocr_model": "PaddleOCR[classic]:lang=en,device=cpu",
+        "ocr_processed_at": "2026-03-21T22:00:00Z",
+        "ocr_quality_summary": "heuristic:existing_sidecar;lines=2;pages=1;chars=40;tokens=6;alpha_ratio=0.850;suspect_ratio=0.000;native_reason=native_text_too_short",
     }
 
 

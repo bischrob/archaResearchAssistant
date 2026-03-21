@@ -34,9 +34,11 @@ class _FakeSentenceTransformer:
 @dataclass
 class _FakeTx:
     queries: list[str] = field(default_factory=list)
+    kwargs_rows: list[dict] = field(default_factory=list)
 
-    def run(self, query: str, **_kwargs):
+    def run(self, query: str, **kwargs):
         self.queries.append(query)
+        self.kwargs_rows.append(kwargs)
         return []
 
 
@@ -44,6 +46,7 @@ class _FakeSession:
     def __init__(self):
         self.execute_calls = 0
         self.tx_queries: list[str] = []
+        self.tx_kwargs: list[dict] = []
 
     def __enter__(self):
         return self
@@ -56,6 +59,7 @@ class _FakeSession:
         tx = _FakeTx()
         out = fn(tx, *args)
         self.tx_queries.extend(tx.queries)
+        self.tx_kwargs.extend(tx.kwargs_rows)
         return out
 
     def run(self, _query: str, **_kwargs):
@@ -214,3 +218,50 @@ def test_graph_store_rejects_hash_embedder_configuration(monkeypatch, provider, 
     monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
     with pytest.raises(ValueError, match=expected_message):
         GraphStore("bolt://unused", "neo4j", "pass", embedding_model=model_name)
+
+
+def test_ingest_article_tx_persists_ocr_provenance(monkeypatch):
+    fake_driver = _FakeDriver()
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", _FakeSentenceTransformer)
+    store = GraphStore("bolt://unused", "neo4j", "pass")
+    try:
+        article = ArticleDoc(
+            article_id="ocr1",
+            title="OCR Title",
+            normalized_title="ocr title",
+            year=2024,
+            author="Alice",
+            authors=["Alice"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path="/tmp/ocr1.pdf",
+            text_acquisition_method="native_pdf_plus_paddleocr_fallback",
+            text_acquisition_fallback_used=True,
+            text_quality_check_backend="heuristic_placeholder",
+            native_text_malformed=True,
+            native_text_malformed_reason="native_text_too_short",
+            native_text_char_count=17,
+            paddleocr_text_path="/tmp/ocr1.txt",
+            ocr_engine="paddleocr",
+            ocr_model="PaddleOCR[classic]:lang=en,device=cpu",
+            ocr_version="3.0.0",
+            ocr_processed_at="2026-03-21T22:00:00Z",
+            ocr_quality_summary="heuristic:existing_sidecar;lines=2;pages=1;chars=40;tokens=6;alpha_ratio=0.850;suspect_ratio=0.000;native_reason=native_text_too_short",
+            chunks=[],
+            citations=[],
+        )
+        store.ingest_articles([article])
+    finally:
+        store.close()
+
+    session = fake_driver.sessions[0]
+    article_write = next(kwargs for query, kwargs in zip(session.tx_queries, session.tx_kwargs) if "MERGE (a:Article {id: $id})" in query)
+    assert article_write["ocr_engine"] == "paddleocr"
+    assert article_write["ocr_model"] == "PaddleOCR[classic]:lang=en,device=cpu"
+    assert article_write["ocr_version"] == "3.0.0"
+    assert article_write["ocr_processed_at"] == "2026-03-21T22:00:00Z"
+    assert "native_reason=native_text_too_short" in article_write["ocr_quality_summary"]

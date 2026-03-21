@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import tempfile
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 
 import fitz
@@ -34,6 +35,66 @@ class TextAcquisitionResult:
     fallback_used: bool
     native_text_report: TextQualityReport
     ocr_text_path: str | None = None
+    ocr_engine: str | None = None
+    ocr_model: str | None = None
+    ocr_version: str | None = None
+    ocr_processed_at: str | None = None
+    ocr_quality_summary: str | None = None
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _path_mtime_iso(path: Path | None) -> str | None:
+    if path is None:
+        return None
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).replace(microsecond=0).isoformat().replace(
+            "+00:00", "Z"
+        )
+    except Exception:
+        return None
+
+
+def _detect_paddleocr_version() -> str | None:
+    try:
+        import paddleocr  # type: ignore
+
+        version = getattr(paddleocr, "__version__", None)
+        if version:
+            return str(version)
+    except Exception:
+        return None
+    return None
+
+
+def _build_paddleocr_identity(settings: Settings) -> tuple[str, str | None, str | None]:
+    engine = "paddleocr"
+    model = f"PaddleOCR[classic]:lang={settings.paddleocr_auto_lang},device={settings.paddleocr_auto_device}"
+    return engine, model, _detect_paddleocr_version()
+
+
+def _summarize_ocr_quality(
+    lines_with_page: list[tuple[int, str]],
+    *,
+    native_report: TextQualityReport,
+    provenance_source: str,
+) -> str:
+    text = "\n".join(line for _, line in lines_with_page if line).strip()
+    char_count = len(text)
+    token_count = len(TOKEN_RE.findall(text))
+    suspect_count = len(SUSPECT_CHAR_RE.findall(text))
+    alpha_count = sum(1 for ch in text if ch.isalpha())
+    alpha_ratio = (alpha_count / char_count) if char_count else 0.0
+    suspect_ratio = (suspect_count / char_count) if char_count else 0.0
+    line_count = sum(1 for _, line in lines_with_page if line.strip())
+    page_count = len({page for page, line in lines_with_page if line.strip()})
+    return (
+        f"heuristic:{provenance_source};lines={line_count};pages={page_count};chars={char_count};tokens={token_count};"
+        f"alpha_ratio={alpha_ratio:.3f};suspect_ratio={suspect_ratio:.3f};"
+        f"native_reason={native_report.reason or 'unknown'}"
+    )
 
 
 def extract_native_pdf_lines(pdf_path: Path, *, strip_page_noise: bool = True) -> list[tuple[int, str]]:
@@ -134,13 +195,18 @@ def _extract_lines_from_paddle_page_payload(payload: object) -> list[str]:
     return lines
 
 
-def generate_ocr_text_sidecar(pdf_path: Path, settings: Settings) -> Path | None:
+def generate_ocr_text_sidecar(
+    pdf_path: Path,
+    settings: Settings,
+) -> tuple[Path | None, str | None, str | None, str | None, str | None]:
     if not settings.paddleocr_auto_generate_missing_text:
-        return None
+        return None, None, None, None, None
+    engine, model, version = _build_paddleocr_identity(settings)
+    processed_at = _utc_now_iso()
     try:
         pipeline = _build_paddleocr_pipeline(settings.paddleocr_auto_lang, settings.paddleocr_auto_device)
     except Exception:
-        return None
+        return None, engine, model, version, processed_at
 
     dpi = max(96, int(settings.paddleocr_auto_render_dpi))
     scale = dpi / 72.0
@@ -158,18 +224,18 @@ def generate_ocr_text_sidecar(pdf_path: Path, settings: Settings) -> Path | None
                         if line:
                             collected.append(line)
     except Exception:
-        return None
+        return None, engine, model, version, processed_at
 
     body = "\n".join(collected).strip()
     if not body:
-        return None
+        return None, engine, model, version, processed_at
 
     roots = _candidate_ocr_dirs(settings)
     target_root = roots[0] if roots else Path("ocr/paddleocr/text").resolve()
     target_root.mkdir(parents=True, exist_ok=True)
     out_path = target_root / f"{pdf_path.stem}.txt"
     out_path.write_text(body + "\n", encoding="utf-8")
-    return out_path
+    return out_path, engine, model, version, processed_at
 
 
 def assess_text_quality(lines_with_page: list[tuple[int, str]], *, total_page_count: int, backend: str) -> TextQualityReport:
@@ -235,8 +301,18 @@ def acquire_pdf_text(pdf_path: Path, *, settings: Settings, strip_page_noise: bo
         )
 
     ocr_path = locate_ocr_text(pdf_path, settings)
+    ocr_engine = None
+    ocr_model = None
+    ocr_version = None
+    ocr_processed_at = None
+    quality_source = None
     if ocr_path is None:
-        ocr_path = generate_ocr_text_sidecar(pdf_path, settings)
+        ocr_path, ocr_engine, ocr_model, ocr_version, ocr_processed_at = generate_ocr_text_sidecar(pdf_path, settings)
+        quality_source = "generated_sidecar"
+    else:
+        ocr_engine, ocr_model, ocr_version = _build_paddleocr_identity(settings)
+        ocr_processed_at = _path_mtime_iso(ocr_path)
+        quality_source = "existing_sidecar"
     if ocr_path is not None:
         ocr_lines = load_ocr_lines(ocr_path)
         if ocr_lines:
@@ -246,6 +322,15 @@ def acquire_pdf_text(pdf_path: Path, *, settings: Settings, strip_page_noise: bo
                 fallback_used=True,
                 native_text_report=native_report,
                 ocr_text_path=str(ocr_path),
+                ocr_engine=ocr_engine,
+                ocr_model=ocr_model,
+                ocr_version=ocr_version,
+                ocr_processed_at=ocr_processed_at or _path_mtime_iso(ocr_path),
+                ocr_quality_summary=_summarize_ocr_quality(
+                    ocr_lines,
+                    native_report=native_report,
+                    provenance_source=quality_source or "existing_sidecar",
+                ),
             )
 
     return TextAcquisitionResult(

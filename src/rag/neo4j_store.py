@@ -266,7 +266,12 @@ class GraphStore:
                 a.native_text_malformed = $native_text_malformed,
                 a.native_text_malformed_reason = $native_text_malformed_reason,
                 a.native_text_char_count = $native_text_char_count,
-                a.paddleocr_text_path = $paddleocr_text_path
+                a.paddleocr_text_path = $paddleocr_text_path,
+                a.ocr_engine = $ocr_engine,
+                a.ocr_model = $ocr_model,
+                a.ocr_version = $ocr_version,
+                a.ocr_processed_at = $ocr_processed_at,
+                a.ocr_quality_summary = $ocr_quality_summary
             """,
             id=article.article_id,
             title=article.title,
@@ -296,6 +301,11 @@ class GraphStore:
             native_text_malformed_reason=article.native_text_malformed_reason,
             native_text_char_count=article.native_text_char_count,
             paddleocr_text_path=article.paddleocr_text_path,
+            ocr_engine=article.ocr_engine,
+            ocr_model=article.ocr_model,
+            ocr_version=article.ocr_version,
+            ocr_processed_at=article.ocr_processed_at,
+            ocr_quality_summary=article.ocr_quality_summary,
         )
 
         tx.run(

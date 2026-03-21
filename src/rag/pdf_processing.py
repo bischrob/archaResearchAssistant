@@ -86,6 +86,11 @@ class ArticleDoc:
     native_text_malformed_reason: str | None = None
     native_text_char_count: int | None = None
     paddleocr_text_path: str | None = None
+    ocr_engine: str | None = None
+    ocr_model: str | None = None
+    ocr_version: str | None = None
+    ocr_processed_at: str | None = None
+    ocr_quality_summary: str | None = None
 
 
 def normalize_title(text: str) -> str:
@@ -409,6 +414,11 @@ def load_article(
         native_text_malformed_reason=acquisition.native_text_report.reason,
         native_text_char_count=acquisition.native_text_report.char_count,
         paddleocr_text_path=acquisition.ocr_text_path,
+        ocr_engine=acquisition.ocr_engine,
+        ocr_model=acquisition.ocr_model,
+        ocr_version=acquisition.ocr_version,
+        ocr_processed_at=acquisition.ocr_processed_at,
+        ocr_quality_summary=acquisition.ocr_quality_summary,
         source_path=str(pdf_path),
         chunks=chunks,
         citations=citations,

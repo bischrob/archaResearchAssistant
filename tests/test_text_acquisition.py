@@ -55,4 +55,9 @@ def test_acquire_pdf_text_falls_back_to_paddleocr_when_native_text_is_bad(monkey
     assert result.method == "native_pdf_plus_paddleocr_fallback"
     assert result.fallback_used is True
     assert result.ocr_text_path == str(ocr_path)
+    assert result.ocr_engine == "paddleocr"
+    assert result.ocr_model is not None
+    assert result.ocr_processed_at is not None
+    assert result.ocr_quality_summary is not None
+    assert "native_reason=native_text_too_short" in result.ocr_quality_summary
     assert [line for _, line in result.lines_with_page] == ["Recovered OCR line one", "Recovered OCR line two"]
