@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.181714")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.220421")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -498,6 +498,20 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             rows = load_zotero_entries(str(db_path), storage_root)
             total_rows = len(rows)
             jobs.set_progress("sync", 3.0, f"Loaded {total_rows} Zotero PDF attachment rows")
+
+            if bool(settings.zotero_require_persistent_id):
+                missing_pid_rows = [r for r in rows if not str(r.get("zotero_persistent_id") or "").strip()]
+                if missing_pid_rows:
+                    sample = ", ".join(
+                        str(r.get("attachment_path") or r.get("attachment_path_raw") or r.get("title") or "<unknown>")
+                        for r in missing_pid_rows[:10]
+                    )
+                    extra = "" if len(missing_pid_rows) <= 10 else f" (+{len(missing_pid_rows) - 10} more)"
+                    raise RuntimeError(
+                        "Zotero-first sync requires zotero_persistent_id for every PDF attachment row, but "
+                        f"{len(missing_pid_rows)} row(s) were missing it. Fix Zotero parent/attachment linkage first. "
+                        f"Examples: {sample}{extra}"
+                    )
 
             jobs.set_progress("sync", 4.0, "Reading existing Zotero identifiers from Neo4j")
             store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)

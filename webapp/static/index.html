@@ -67,7 +67,7 @@
 
       <div id="docsSetup" class="tab-content active markdown-body">
         <p><strong>OpenAI API key:</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file.</p>
-        <p><strong>Zotero:</strong> set <code>ZOTERO_DB_PATH</code> and usually <code>ZOTERO_STORAGE_ROOT</code>.</p>
+        <p><strong>Zotero:</strong> set <code>ZOTERO_DB_PATH</code>, usually <code>ZOTERO_STORAGE_ROOT</code>, and keep <code>ZOTERO_REQUIRE_PERSISTENT_ID=1</code> so ingest fails if Zotero rows are missing stable IDs.</p>
         <p><strong>Zotero WebDAV fallback:</strong> if local Zotero storage is not reachable, set <code>ZOTERO_WEBDAV_URL</code>, <code>ZOTERO_WEBDAV_USERNAME</code>, <code>ZOTERO_WEBDAV_PASSWORD</code>, and optionally <code>ZOTERO_WEBDAV_CACHE_DIR</code> in <code>.env</code>.</p>
         <p><strong>Linked-file mappings:</strong> if Zotero uses linked Windows or UNC paths, set <code>ZOTERO_LINKED_PATH_MAP_JSON</code> to map those prefixes to reachable local paths.</p>
         <p><strong>Zotero plugin migration step:</strong> if your library still uses linked PDFs, run <code>Tools &gt; RAG Sync &gt; Normalize Linked PDFs To Stored Attachments</code> in Zotero before relying on WebDAV-backed sync.</p>

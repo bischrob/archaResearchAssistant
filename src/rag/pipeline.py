@@ -397,6 +397,34 @@ def _prepare_metadata_for_ingest(meta: dict | None) -> dict:
     return out
 
 
+def _require_zotero_persistent_ids(
+    settings: Settings,
+    metadata_by_pdf: dict[Path, dict | None],
+    *,
+    scope_label: str,
+) -> None:
+    if (settings.metadata_backend or "").strip().lower() != "zotero":
+        return
+    if not bool(settings.zotero_require_persistent_id):
+        return
+
+    missing: list[str] = []
+    for pdf_path, meta in metadata_by_pdf.items():
+        if not meta:
+            continue
+        persistent_id = str((meta or {}).get("zotero_persistent_id") or "").strip()
+        if not persistent_id:
+            missing.append(str(pdf_path))
+
+    if missing:
+        preview = ", ".join(Path(p).name for p in missing[:10])
+        extra = "" if len(missing) <= 10 else f" (+{len(missing) - 10} more)"
+        raise ValueError(
+            f"{scope_label} requires Zotero persistent IDs, but {len(missing)} PDF(s) matched Zotero metadata without "
+            f"zotero_persistent_id. Fix the Zotero metadata/attachment linkage before ingest. Affected files: {preview}{extra}"
+        )
+
+
 def _get_existing_identities(settings: Settings) -> dict[str, set[str]]:
     try:
         store = GraphStore(
@@ -574,6 +602,7 @@ def choose_pdfs(
     if metadata_index is not None:
         for p in selected:
             metadata_by_pdf[p] = find_metadata_for_pdf(metadata_index, p.name, str(p))
+        _require_zotero_persistent_ids(cfg, metadata_by_pdf, scope_label="PDF selection")
 
     if skip_existing:
         existing = _get_existing_identity_hits_for_candidates(cfg, selected, metadata_by_pdf)
@@ -608,6 +637,7 @@ def ingest_pdfs(
     parser_mode = _citation_parser_mode(settings)
     metadata_index = _load_metadata_index_for_settings(settings)
     metadata_by_pdf = {p: find_metadata_for_pdf(metadata_index, p.name, str(p)) for p in selected_pdfs}
+    _require_zotero_persistent_ids(settings, metadata_by_pdf, scope_label="Ingest")
 
     existing = _get_existing_identity_hits_for_candidates(settings, selected_pdfs, metadata_by_pdf) if skip_existing else {
         "article_ids": set(),

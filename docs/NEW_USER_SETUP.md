@@ -33,6 +33,7 @@ Set at minimum:
 
 - `OPENAI_API_KEY=<your key>`
 - `METADATA_BACKEND=zotero`
+- `ZOTERO_REQUIRE_PERSISTENT_ID=1`
 - `ZOTERO_DB_PATH=<path to zotero.sqlite>`
 - `ZOTERO_STORAGE_ROOT=<path to Zotero storage>`
 - Optional WebDAV fallback for Zotero-managed attachments:

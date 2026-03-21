@@ -82,6 +82,9 @@ class Settings:
     paperpile_json: str = field(default_factory=lambda: _env_str("PAPERPILE_JSON", "Paperpile.json"))
     metadata_backend: str = field(default_factory=lambda: _env_str("METADATA_BACKEND", "zotero").strip().lower())
     metadata_require_match: bool = field(default_factory=lambda: _env_not_false("METADATA_REQUIRE_MATCH", True))
+    zotero_require_persistent_id: bool = field(
+        default_factory=lambda: _env_not_false("ZOTERO_REQUIRE_PERSISTENT_ID", True)
+    )
     zotero_db_path: str = field(
         default_factory=lambda: _env_str(
             "ZOTERO_DB_PATH",
