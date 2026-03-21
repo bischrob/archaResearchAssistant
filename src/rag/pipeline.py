@@ -566,6 +566,7 @@ def choose_pdfs(
     require_metadata: bool = True,
     settings: Settings | None = None,
     partial_count: int = 3,
+    source_mode: str = "zotero_db",
 ) -> list[Path]:
     mode = mode.lower().strip()
     if mode == "test3":
@@ -575,9 +576,54 @@ def choose_pdfs(
     cfg = settings or Settings()
     resolved_source_dir = source_dir or cfg.pdf_source_dir
     partial_n = max(1, int(partial_count))
+    source_mode = (source_mode or "zotero_db").strip().lower() or "zotero_db"
 
     if mode == "custom":
         selected = [_resolve_custom_pdf_path(p, resolved_source_dir) for p in explicit_pdfs]
+    elif source_mode == "zotero_db":
+        db_path_raw = (cfg.zotero_db_path or "").strip()
+        if db_path_raw:
+            db_path = resolve_input_path(db_path_raw)
+        else:
+            raise ValueError("Zotero-first ingest requires ZOTERO_DB_PATH to be configured.")
+        if not db_path.exists():
+            raise FileNotFoundError(f"Zotero DB not found: {db_path}")
+        storage_root_raw = (cfg.zotero_storage_root or "").strip()
+        storage_root = storage_root_raw or str(db_path.parent / "storage")
+        rows = load_zotero_entries(str(db_path), storage_root)
+        if bool(cfg.zotero_require_persistent_id):
+            missing_pid_rows = [r for r in rows if not str(r.get("zotero_persistent_id") or "").strip()]
+            if missing_pid_rows:
+                sample = ", ".join(
+                    str(r.get("attachment_path") or r.get("attachment_path_raw") or r.get("title") or "<unknown>")
+                    for r in missing_pid_rows[:10]
+                )
+                extra = "" if len(missing_pid_rows) <= 10 else f" (+{len(missing_pid_rows) - 10} more)"
+                raise ValueError(
+                    "Zotero-first ingest requires zotero_persistent_id for every PDF attachment row, but "
+                    f"{len(missing_pid_rows)} row(s) were missing it. Fix Zotero parent/attachment linkage first. "
+                    f"Examples: {sample}{extra}"
+                )
+        resolver = ZoteroAttachmentResolver(cfg)
+        try:
+            resolved_candidates: list[Path] = []
+            for row in rows:
+                resolution = resolver.resolve(row)
+                if resolution.path is not None:
+                    resolved_candidates.append(resolution.path)
+        finally:
+            resolver.close()
+        dedup: dict[str, Path] = {}
+        for p in resolved_candidates:
+            dedup[str(p)] = p
+        all_pdfs = sorted(dedup.values(), key=lambda p: str(p).lower())
+        if mode == "all":
+            selected = all_pdfs
+        elif mode == "batch":
+            readable = [p for p in all_pdfs if _has_pdf_header(p)]
+            selected = readable
+        else:
+            raise ValueError("Unsupported mode. Use 'batch', 'all', or 'custom'.")
     else:
         source_root = resolve_input_path(resolved_source_dir)
         cache_root = resolve_input_path(cfg.zip_pdf_cache_dir)

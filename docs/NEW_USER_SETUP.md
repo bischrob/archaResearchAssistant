@@ -112,6 +112,8 @@ If your Zotero library still uses linked PDF attachments:
 3. Let Zotero complete its normal file sync to WebDAV.
 4. Then run `Sync + Ingest` again from the web UI or Zotero plugin.
 
+The intended default ingest entrypoint is now Zotero-backed (`source_mode = zotero_db`), not generic filesystem discovery.
+
 Progress overlay behavior in the plugin:
 
 - While running: `Run in Background` and `Cancel Sync`

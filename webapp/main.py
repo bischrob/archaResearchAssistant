@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.220421")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.220919")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -119,6 +119,7 @@ class SyncRequest(BaseModel):
 
 class IngestRequest(BaseModel):
     mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
+    source_mode: str = Field(default="zotero_db", pattern="^(filesystem|zotero_db)$")
     source_dir: str = Field(default_factory=_default_pdf_source_dir)
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
@@ -993,6 +994,7 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                 agg["qwen_failure_samples"].extend(summary.qwen_failure_samples)
             partial_summary = {
                 "mode": mode,
+                "source_mode": req.source_mode,
                 "batch_size": batch_size,
                 "batch_total": total_batches,
                 "batch_results": list(all_batch_summaries),
@@ -1070,6 +1072,7 @@ def ingest_preview(req: IngestPreviewRequest, authorization: str | None = Header
         settings = Settings()
         resolved = choose_pdfs(
             mode=mode,
+            source_mode=req.source_mode,
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,

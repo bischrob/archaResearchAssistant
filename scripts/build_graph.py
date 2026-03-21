@@ -52,6 +52,7 @@ def main() -> None:
     settings = Settings()
     pdfs = choose_pdfs(
         mode=args.mode,
+        source_mode=args.source_mode,
         source_dir=args.pdf_dir,
         explicit_pdfs=args.pdf,
         skip_existing=not args.override_existing,
