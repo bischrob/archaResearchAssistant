@@ -67,3 +67,14 @@ Disk expectations:
 - If it is not set, runtime may auto-select the newest local adapter found under `models/` when available.
 - If you do not want local Qwen citation parsing, use the OpenAI-only and/or Anystyle-supported flows instead.
 - Training scripts under `scripts/` also default to `Qwen3-4B-Instruct-2507`, so changing the base model should be treated as a compatibility decision, not a cosmetic one.
+
+## Embeddings
+
+The ingest/search stack now requires **real sentence-transformer embeddings**.
+
+Recommended default:
+
+- `EMBEDDING_PROVIDER=sentence_transformers`
+- `EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2`
+
+Hash-placeholder embeddings are intentionally disabled so environment problems fail loudly instead of silently degrading retrieval quality.

@@ -60,11 +60,19 @@ Recommended source:
 ## Quickstart
 
 ```bash
+conda env create -f environment.yml
+conda activate researchassistant
 cp .env.example .env
 make preflight
 make start
 make smoke
 ```
+
+Notes:
+
+- The supported local Python target is currently **Python 3.11**.
+- `requirements.txt` is configured to use the PyTorch CUDA 12.4 wheel index.
+- The ingest pipeline now requires **real sentence-transformer embeddings**; hash-placeholder embeddings are disabled.
 
 For full setup, including Zotero, LoRA, and Anystyle:
 

@@ -1,3 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cu124
+
 accelerate==1.5.2
 acres==0.3.0
 aiofiles==24.1.0
@@ -99,7 +101,7 @@ spacy==3.8.4
 spacy-legacy==3.0.12
 spacy-loggers==1.0.5
 srsly==2.5.1
-starlette==0.46.1
+starlette==0.45.3
 sympy==1.13.1
 thinc==8.3.4
 threadpoolctl==3.6.0

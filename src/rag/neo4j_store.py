@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import os
 import time
 from difflib import SequenceMatcher
@@ -45,27 +44,6 @@ def _author_token_set(names: list[str]) -> set[str]:
     return out
 
 
-class HashingEmbedder:
-    def __init__(self, dimension: int = 384) -> None:
-        self.dimension = dimension
-        self._token_re = re.compile(r"[a-z0-9]+")
-
-    def _encode_one(self, text: str) -> list[float]:
-        vec = np.zeros(self.dimension, dtype=np.float32)
-        for token in self._token_re.findall(text.lower()):
-            digest = hashlib.blake2b(token.encode("utf-8"), digest_size=8).digest()
-            idx = int.from_bytes(digest[:4], "little") % self.dimension
-            sign = 1.0 if (digest[4] % 2 == 0) else -1.0
-            vec[idx] += sign
-        norm = float(np.linalg.norm(vec))
-        if norm > 0:
-            vec /= norm
-        return vec.tolist()
-
-    def encode(self, texts: list[str]) -> list[list[float]]:
-        return [self._encode_one(t) for t in texts]
-
-
 class SentenceTransformerEmbedder:
     def __init__(
         self,
@@ -77,7 +55,8 @@ class SentenceTransformerEmbedder:
     ) -> None:
         if SentenceTransformer is None:
             raise RuntimeError(
-                "sentence-transformers is not available; install dependencies or switch EMBEDDING_PROVIDER=hash"
+                "sentence-transformers is required for embeddings but is not available in the active environment. "
+                "Install the project dependencies in the supported conda environment and retry."
             )
         resolved_device = (device or "cpu").strip().lower()
         if resolved_device == "auto":
@@ -119,22 +98,29 @@ class GraphStore:
     @staticmethod
     def _build_embedder(embedding_model: str | None):
         model_name = (embedding_model or "").strip()
-        provider = os.getenv("EMBEDDING_PROVIDER", "auto").strip().lower() or "auto"
-        if provider == "hash" or model_name.lower() in {"hash", "hashing", "hashingembedder"}:
-            return HashingEmbedder(dimension=384)
+        provider = os.getenv("EMBEDDING_PROVIDER", "sentence_transformers").strip().lower() or "sentence_transformers"
 
-        if provider in {"auto", "sentence_transformers", "sentence-transformers", "st"}:
-            resolved_model = model_name or "sentence-transformers/all-MiniLM-L6-v2"
-            return SentenceTransformerEmbedder(
-                resolved_model,
-                device=os.getenv("EMBEDDING_DEVICE", "cpu"),
-                batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "8")),
-                normalize_embeddings=(
-                    os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() not in {"0", "false", "no"}
-                ),
+        if provider not in {"auto", "sentence_transformers", "sentence-transformers", "st"}:
+            raise ValueError(
+                "Unsupported embedding provider: "
+                f"{provider}. This project now requires real sentence-transformer embeddings; hash placeholders are disabled."
             )
 
-        raise ValueError(f"Unsupported embedding provider: {provider}")
+        resolved_model = model_name or "sentence-transformers/all-MiniLM-L6-v2"
+        if resolved_model.lower() in {"hash", "hashing", "hashingembedder"}:
+            raise ValueError(
+                "Hash-based placeholder embeddings are no longer supported. "
+                "Set EMBEDDING_MODEL to a real sentence-transformers model."
+            )
+
+        return SentenceTransformerEmbedder(
+            resolved_model,
+            device=os.getenv("EMBEDDING_DEVICE", "cpu"),
+            batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "8")),
+            normalize_embeddings=(
+                os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() not in {"0", "false", "no"}
+            ),
+        )
 
     @property
     def embedding_dimension(self) -> int:

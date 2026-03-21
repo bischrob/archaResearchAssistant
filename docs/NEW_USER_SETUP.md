@@ -12,9 +12,16 @@ Related docs:
 
 ## 1) Prerequisites
 
-- Python 3.10+
+- Conda (Miniconda or Anaconda)
 - Docker with daemon running
-- `pip install -r requirements.txt`
+- Python 3.11 via the repo environment file
+
+Create the supported environment:
+
+```bash
+conda env create -f environment.yml
+conda activate researchassistant
+```
 
 ## 2) Configure `.env`
 

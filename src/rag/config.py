@@ -70,7 +70,9 @@ class Settings:
     neo4j_uri: str = field(default_factory=lambda: _env_str("NEO4J_URI", "bolt://localhost:7687"))
     neo4j_user: str = field(default_factory=lambda: _env_str("NEO4J_USER", "neo4j"))
     neo4j_password: str = field(default_factory=lambda: _env_str("NEO4J_PASSWORD", "archaResearchAssistant"))
-    embedding_provider: str = field(default_factory=lambda: _env_str("EMBEDDING_PROVIDER", "auto").strip().lower())
+    embedding_provider: str = field(
+        default_factory=lambda: _env_str("EMBEDDING_PROVIDER", "sentence_transformers").strip().lower()
+    )
     embedding_model: str = field(
         default_factory=lambda: _env_str("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
     )
