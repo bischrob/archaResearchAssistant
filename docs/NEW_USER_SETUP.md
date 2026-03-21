@@ -113,6 +113,7 @@ If your Zotero library still uses linked PDF attachments:
 4. Then run `Sync + Ingest` again from the web UI or Zotero plugin.
 
 The intended default ingest entrypoint is now Zotero-backed (`source_mode = zotero_db`), not generic filesystem discovery.
+The attachment acquisition layer now resolves PDFs through one path in this order: local Zotero storage, attachment overrides, WebDAV cache/fetch for `storage:` attachments, linked-path mappings, then unresolved-path diagnostics.
 
 Progress overlay behavior in the plugin:
 

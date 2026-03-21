@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.220919")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.222302")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -581,9 +581,11 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
 
             ingest_candidates: list[Path] = []
+            ingest_candidate_provenance: list[dict[str, Any]] = []
             path_issue_counts: dict[str, int] = {}
             path_issue_samples: dict[str, list[str]] = {}
             resolver_counts: dict[str, int] = {}
+            acquisition_source_counts: dict[str, int] = {}
             resolver = ZoteroAttachmentResolver(settings)
             try:
                 for idx, row in enumerate(missing_rows, start=1):

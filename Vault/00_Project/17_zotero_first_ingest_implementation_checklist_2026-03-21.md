@@ -27,12 +27,12 @@ Translate the broader Zotero → Neo4j architecture into an implementation seque
 ## Phase 2 — Attachment acquisition abstraction
 
 ### 2.1 Create a single attachment resolver
-- [ ] Resolve attachment bytes or local file paths through one abstraction layer.
-- [ ] Support:
-  - [ ] local Zotero attachment paths
-  - [ ] WebDAV-backed retrieval
-  - [ ] cached local working copies
-- [ ] Preserve provenance fields for every attachment fetch.
+- [x] Resolve attachment bytes or local file paths through one abstraction layer.
+- [x] Support:
+  - [x] local Zotero attachment paths
+  - [x] WebDAV-backed retrieval
+  - [x] cached local working copies
+- [x] Preserve provenance fields for every attachment fetch.
 
 ### 2.2 Add attachment-state diagnostics
 - [ ] Missing attachment

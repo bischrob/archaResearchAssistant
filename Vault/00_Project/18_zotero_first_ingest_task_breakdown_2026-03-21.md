@@ -64,6 +64,8 @@ Convert the Zotero-first ingest checklist into concrete implementation tasks for
 ### Task B1 — Create a dedicated attachment resolution module
 **Goal:** one place to get a PDF attachment for ingest.
 
+**Status update (2026-03-21):** largely implemented. `src/rag/zotero_attachment_resolver.py` now acts as the shared acquisition layer and returns acquisition provenance distinguishing override/local storage/linked-path/WebDAV cache/WebDAV fetch/unresolved cases.
+
 **Suggested new file:**
 - `src/rag/zotero_attachment_resolver.py`
 
@@ -348,3 +350,4 @@ If starting immediately, touch these first:
 6. new `src/rag/section_segmentation.py`
 7. `webapp/main.py`
 8. docs/Vault notes for runtime/config and ingest workflow
+low
