@@ -16,9 +16,10 @@ from .neo4j_store import GraphStore
 from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
 from .path_utils import resolve_input_path
 from .zip_pdf_source import collect_source_pdfs
-from .pdf_processing import ArticleDoc, Chunk, Citation, filter_citations, load_article
+from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filter_citations, load_article
 from .qwen_local import extract_citations_with_qwen
-from .qwen_structured_refs import extract_structured_chunks_and_citations
+from .qwen_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
+from .keyword_extraction import extract_keywords
 
 DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
 
@@ -228,7 +229,7 @@ def _load_qwen_structured_anystyle_cached(
     pdf_path: Path,
     article_id: str,
     settings: Settings,
-) -> tuple[list[Chunk], list[Citation]]:
+) -> StructuredExtraction:
     key = _qwen_structured_cache_key(pdf_path, settings)
     cache_file = _qwen_structured_cache_dir() / f"{key}.json"
     if cache_file.exists():
@@ -237,8 +238,9 @@ def _load_qwen_structured_anystyle_cached(
         if isinstance(payload, dict):
             chunk_items = payload.get("chunks")
             citation_items = payload.get("citations")
-            if isinstance(chunk_items, list) and isinstance(citation_items, list):
-                return [Chunk(**x) for x in chunk_items], _deserialize_citations(citation_items)
+            section_items = payload.get("sections")
+            if isinstance(chunk_items, list) and isinstance(citation_items, list) and isinstance(section_items, list):
+                return StructuredExtraction(chunks=[Chunk(**x) for x in chunk_items], citations=_deserialize_citations(citation_items), reference_strings=[], sections=[Section(**x) for x in section_items])
 
     structured = extract_structured_chunks_and_citations(
         pdf_path=pdf_path,
@@ -254,11 +256,12 @@ def _load_qwen_structured_anystyle_cached(
                 "chunks": [asdict(c) for c in structured.chunks],
                 "citations": [asdict(c) for c in structured.citations],
                 "reference_strings_count": len(structured.reference_strings),
+                "sections": [asdict(s) for s in structured.sections],
             },
             f,
             ensure_ascii=False,
         )
-    return structured.chunks, structured.citations
+    return structured
 
 
 def _citation_parser_mode(settings: Settings) -> str:
@@ -307,6 +310,8 @@ def _is_global_qwen_failure(msg: str) -> bool:
 def _deserialize_article(obj: dict) -> ArticleDoc:
     chunks = [Chunk(**c) for c in obj.get("chunks", [])]
     citations = [Citation(**c) for c in obj.get("citations", [])]
+    sections = [Section(**s) for s in obj.get("sections", [])]
+    keywords = [Keyword(**k) for k in obj.get("keywords", [])]
     return ArticleDoc(
         article_id=obj["article_id"],
         title=obj["title"],
@@ -339,6 +344,10 @@ def _deserialize_article(obj: dict) -> ArticleDoc:
         source_path=obj["source_path"],
         chunks=chunks,
         citations=citations,
+        sections=sections,
+        keywords=keywords,
+        keyword_extraction_method=obj.get("keyword_extraction_method"),
+        keyword_extraction_audit=obj.get("keyword_extraction_audit"),
     )
 
 
@@ -824,15 +833,16 @@ def ingest_pdfs(
                 qwen_attempted += 1
                 anystyle_attempted += 1
                 try:
-                    structured_chunks, structured_citations = _load_qwen_structured_anystyle_cached(
+                    structured = _load_qwen_structured_anystyle_cached(
                         pdf_path=p,
                         article_id=article.article_id,
                         settings=settings,
                     )
-                    if structured_chunks:
-                        article.chunks = structured_chunks
-                    if structured_citations:
-                        article.citations = structured_citations
+                    if structured.chunks:
+                        article.chunks = structured.chunks
+                    article.sections = structured.sections
+                    if structured.citations:
+                        article.citations = structured.citations
                         qwen_applied += 1
                         anystyle_applied += 1
                     else:
@@ -856,6 +866,10 @@ def ingest_pdfs(
                 article.citations,
                 min_score=settings.citation_min_quality,
             )
+            keywords, keyword_audit = extract_keywords(article, settings=settings)
+            article.keywords = keywords
+            article.keyword_extraction_method = str(keyword_audit.get("method") or "unknown")
+            article.keyword_extraction_audit = keyword_audit
             articles.append(article)
         except Exception as exc:
             failures.append({"pdf": str(p), "error": str(exc)})

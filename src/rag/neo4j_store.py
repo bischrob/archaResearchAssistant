@@ -179,6 +179,8 @@ class GraphStore:
             "CREATE CONSTRAINT chunk_id IF NOT EXISTS FOR (c:Chunk) REQUIRE c.id IS UNIQUE",
             "CREATE CONSTRAINT token_value IF NOT EXISTS FOR (t:Token) REQUIRE t.value IS UNIQUE",
             "CREATE CONSTRAINT reference_id IF NOT EXISTS FOR (r:Reference) REQUIRE r.id IS UNIQUE",
+            "CREATE CONSTRAINT section_id IF NOT EXISTS FOR (s:Section) REQUIRE s.id IS UNIQUE",
+            "CREATE CONSTRAINT keyword_norm IF NOT EXISTS FOR (k:Keyword) REQUIRE k.value_norm IS UNIQUE",
             (
                 "CREATE VECTOR INDEX chunk_embedding IF NOT EXISTS "
                 "FOR (c:Chunk) ON (c.embedding) "
@@ -208,6 +210,8 @@ class GraphStore:
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
             "CREATE TEXT INDEX reference_doi_text IF NOT EXISTS FOR (r:Reference) ON (r.doi)",
             "CREATE TEXT INDEX reference_source_text IF NOT EXISTS FOR (r:Reference) ON (r.source)",
+            "CREATE TEXT INDEX section_kind_text IF NOT EXISTS FOR (s:Section) ON (s.kind)",
+            "CREATE TEXT INDEX keyword_value_text IF NOT EXISTS FOR (k:Keyword) ON (k.value)",
         ]
         with self.driver.session() as session:
             for stmt in statements:
@@ -271,7 +275,11 @@ class GraphStore:
                 a.ocr_model = $ocr_model,
                 a.ocr_version = $ocr_version,
                 a.ocr_processed_at = $ocr_processed_at,
-                a.ocr_quality_summary = $ocr_quality_summary
+                a.ocr_quality_summary = $ocr_quality_summary,
+                a.section_types = $section_types,
+                a.keywords = $keywords,
+                a.keyword_extraction_method = $keyword_extraction_method,
+                a.keyword_extraction_audit = $keyword_extraction_audit
             """,
             id=article.article_id,
             title=article.title,
@@ -306,6 +314,10 @@ class GraphStore:
             ocr_version=article.ocr_version,
             ocr_processed_at=article.ocr_processed_at,
             ocr_quality_summary=article.ocr_quality_summary,
+            section_types=sorted({s.kind for s in (article.sections or [])}),
+            keywords=[k.value for k in (article.keywords or [])],
+            keyword_extraction_method=article.keyword_extraction_method,
+            keyword_extraction_audit=article.keyword_extraction_audit,
         )
 
         tx.run(
@@ -321,6 +333,22 @@ class GraphStore:
             MATCH (a:Article {id: $article_id})
             OPTIONAL MATCH (:Author)-[w:WROTE]->(a)
             DELETE w
+            """,
+            article_id=article.article_id,
+        )
+
+        tx.run(
+            """
+            MATCH (a:Article {id: $article_id})
+            OPTIONAL MATCH (a)-[hs:HAS_SECTION]->(s:Section)
+            DELETE hs
+            WITH a
+            OPTIONAL MATCH (a)-[hk:HAS_KEYWORD]->(:Keyword)
+            DELETE hk
+            WITH a
+            OPTIONAL MATCH (s:Section)
+            WHERE s.article_id = $article_id
+            DETACH DELETE s
             """,
             article_id=article.article_id,
         )
@@ -356,6 +384,9 @@ class GraphStore:
                     c.page_start = $page_start,
                     c.page_end = $page_end,
                     c.tokens = $tokens,
+                    c.section_type = $section_type,
+                    c.section_id = $section_id,
+                    c.section_label = $section_label,
                     c.embedding = $embedding
                 WITH c
                 MATCH (a:Article {id: $article_id})
@@ -367,6 +398,9 @@ class GraphStore:
                 page_start=chunk.page_start,
                 page_end=chunk.page_end,
                 tokens=chunk.tokens,
+                section_type=chunk.section_type,
+                section_id=chunk.section_id,
+                section_label=chunk.section_label,
                 embedding=emb,
                 article_id=article.article_id,
             )
@@ -385,6 +419,51 @@ class GraphStore:
                     rows=token_rows,
                     chunk_id=chunk.chunk_id,
                 )
+
+        for section in article.sections or []:
+            tx.run(
+                """
+                MERGE (s:Section {id: $id})
+                SET s.article_id = $article_id,
+                    s.kind = $kind,
+                    s.heading = $heading,
+                    s.start_line = $start_line,
+                    s.end_line = $end_line,
+                    s.page_start = $page_start,
+                    s.page_end = $page_end
+                WITH s
+                MATCH (a:Article {id: $article_id})
+                MERGE (a)-[:HAS_SECTION]->(s)
+                """,
+                id=section.section_id,
+                article_id=article.article_id,
+                kind=section.kind,
+                heading=section.heading,
+                start_line=section.start_line,
+                end_line=section.end_line,
+                page_start=section.page_start,
+                page_end=section.page_end,
+            )
+
+        for keyword in article.keywords or []:
+            tx.run(
+                """
+                MERGE (k:Keyword {value_norm: $value_norm})
+                SET k.value = $value
+                WITH k
+                MATCH (a:Article {id: $article_id})
+                MERGE (a)-[hk:HAS_KEYWORD]->(k)
+                SET hk.score = $score,
+                    hk.source = $source,
+                    hk.evidence = $evidence
+                """,
+                article_id=article.article_id,
+                value=keyword.value,
+                value_norm=keyword.normalized_value,
+                score=keyword.score,
+                source=keyword.source,
+                evidence=keyword.evidence,
+            )
 
         tx.run(
             """

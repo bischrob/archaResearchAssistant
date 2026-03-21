@@ -42,6 +42,29 @@ class Chunk:
     token_counts: dict[str, int]
     page_start: int
     page_end: int
+    section_type: str = 'body'
+    section_id: str | None = None
+    section_label: str | None = None
+
+
+@dataclass
+class Section:
+    section_id: str
+    kind: str
+    start_line: int
+    end_line: int
+    page_start: int
+    page_end: int
+    heading: str | None = None
+
+
+@dataclass
+class Keyword:
+    value: str
+    normalized_value: str
+    score: float | None = None
+    source: str | None = None
+    evidence: str | None = None
 
 
 @dataclass
@@ -74,6 +97,8 @@ class ArticleDoc:
     source_path: str
     chunks: list[Chunk]
     citations: list[Citation]
+    sections: list[Section] | None = None
+    keywords: list[Keyword] | None = None
     zotero_persistent_id: str | None = None
     zotero_item_key: str | None = None
     zotero_attachment_key: str | None = None
@@ -91,6 +116,8 @@ class ArticleDoc:
     ocr_version: str | None = None
     ocr_processed_at: str | None = None
     ocr_quality_summary: str | None = None
+    keyword_extraction_method: str | None = None
+    keyword_extraction_audit: dict | None = None
 
 
 def normalize_title(text: str) -> str:

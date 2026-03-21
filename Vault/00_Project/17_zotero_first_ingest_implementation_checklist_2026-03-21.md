@@ -59,10 +59,10 @@ Translate the broader Zotero → Neo4j architecture into an implementation seque
 ## Phase 4 — Section-aware document segmentation
 
 ### 4.1 Expand section model beyond main-text vs references
-- [ ] `frontmatter`
-- [ ] `body`
-- [ ] `references` (one or more sections)
-- [ ] `backmatter_other`
+- [x] `frontmatter`
+- [x] `body`
+- [x] `references` (one or more sections)
+- [x] `backmatter_other`
 
 ### 4.2 Improve layout-aware preprocessing
 - [ ] remove repeated headers/footers/page numbers before semantic sectioning
@@ -78,7 +78,7 @@ Translate the broader Zotero → Neo4j architecture into an implementation seque
 ## Phase 5 — Chunk model improvements
 
 ### 5.1 Enrich chunk metadata
-- [ ] `section_type`
+- [x] `section_type`
 - [ ] `heading_path`
 - [ ] `page_start`
 - [ ] `page_end`

@@ -177,3 +177,4 @@ class Settings:
         default_factory=lambda: _env_int("QWEN3_REFERENCE_SPLIT_WINDOW_CHARS", 2600)
     )
     qwen_require_success: bool = field(default_factory=lambda: _env_bool("QWEN3_REQUIRE_SUCCESS", False))
+    keyword_max_terms: int = field(default_factory=lambda: _env_int("KEYWORD_MAX_TERMS", 32))

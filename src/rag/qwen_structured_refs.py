@@ -12,7 +12,7 @@ import fitz
 
 from .anystyle_refs import parse_reference_strings_with_anystyle_docker
 from .config import Settings
-from .pdf_processing import Chunk, Citation, STOPWORDS, TOKEN_RE, build_lines_with_page
+from .pdf_processing import Chunk, Citation, Section, STOPWORDS, TOKEN_RE, build_lines_with_page
 from .qwen_local import decode_qwen_json, generate_with_qwen
 
 
@@ -73,6 +73,7 @@ class StructuredExtraction:
     chunks: list[Chunk]
     citations: list[Citation]
     reference_strings: list[str]
+    sections: list[Section]
 
 
 @dataclass
@@ -642,10 +643,8 @@ def detect_section_plan_details_with_qwen(
         seen.add(section.start_line)
         label = " ".join((lines[section.start_line] or "").split()).strip()[:120] if lines else ""
         if not label:
-            if section.kind == "front_matter":
+            if section.kind == "frontmatter":
                 label = "Front Matter"
-            elif section.kind == "preface":
-                label = "Preface"
             elif section.kind == "references":
                 label = "References"
             else:
@@ -674,11 +673,11 @@ def _classify_start_kind(lines: list[str], start: int, reference_starts: set[int
     if start in reference_starts:
         return "references"
     if start < first_content_start:
-        return "front_matter"
+        return "frontmatter"
     if PREFACE_HEADING_RE.match(clean):
-        return "preface"
-    if APPENDIX_HEADING_RE.match(clean):
-        return "appendix"
+        return "frontmatter"
+    if APPENDIX_HEADING_RE.match(clean) or BACK_MATTER_HEADING_RE.match(clean):
+        return "backmatter_other"
     return "body"
 
 
@@ -733,9 +732,9 @@ def _merge_short_sections(sections: list[SectionSpan], min_section_lines: int) -
         length = section.end_line - section.start_line + 1
         should_merge = False
         if merged and section.kind == merged[-1].kind:
-            if section.kind == "front_matter":
+            if section.kind == "frontmatter":
                 should_merge = True
-            elif section.kind in {"body", "preface"} and length < min_section_lines:
+            elif section.kind == "body" and length < min_section_lines:
                 should_merge = True
         if should_merge:
             prev = merged[-1]
@@ -774,6 +773,37 @@ def _build_typed_sections(
     return _merge_short_sections(sections, min_section_lines=min_section_lines)
 
 
+def _heading_for_section(lines: list[str], start_line: int, kind: str) -> str:
+    clean = " ".join((lines[start_line] or "").split()).strip()
+    if clean:
+        return clean[:120]
+    defaults = {"frontmatter": "Front Matter", "body": "Body", "references": "References", "backmatter_other": "Back Matter"}
+    return defaults.get(kind, "Section")
+
+
+def _build_section_metadata(article_id: str, lines_with_page: list[tuple[int, str]], sections: list[SectionSpan]) -> list[Section]:
+    lines = [line for _, line in lines_with_page]
+    out: list[Section] = []
+    for section in sections:
+        segment = lines_with_page[section.start_line : section.end_line + 1]
+        if segment:
+            page_start = segment[0][0]
+            page_end = segment[-1][0]
+        else:
+            page_start = 1
+            page_end = 1
+        out.append(Section(
+            section_id=f"{article_id}::section::{section.start_line}",
+            kind=section.kind,
+            start_line=section.start_line,
+            end_line=section.end_line,
+            page_start=page_start,
+            page_end=page_end,
+            heading=_heading_for_section(lines, section.start_line, section.kind),
+        ))
+    return out
+
+
 def _word_spans(length: int, size: int, overlap: int) -> list[tuple[int, int]]:
     out: list[tuple[int, int]] = []
     start = 0
@@ -794,14 +824,14 @@ def _tokenize(text: str) -> list[str]:
 def _build_body_chunks(
     article_id: str,
     lines_with_page: list[tuple[int, str]],
-    sections: list[tuple[int, int, str]],
+    sections: list[tuple[int, int, str, str | None]],
     chunk_size_words: int,
     chunk_overlap_words: int,
 ) -> list[Chunk]:
     chunks: list[Chunk] = []
     chunk_idx = 0
-    for start, end, kind in sections:
-        if kind not in {"body", "preface", "appendix"}:
+    for start, end, kind, heading in sections:
+        if kind != "body":
             continue
         words_with_page: list[tuple[str, int]] = []
         for page_num, line in lines_with_page[start : end + 1]:
@@ -830,6 +860,9 @@ def _build_body_chunks(
                     token_counts=dict(counts),
                     page_start=words_with_page[span_start][1],
                     page_end=words_with_page[span_end - 1][1],
+                    section_type=kind,
+                    section_id=f"{article_id}::section::{start}",
+                    section_label=heading,
                 )
             )
             chunk_idx += 1
@@ -1069,14 +1102,15 @@ def extract_structured_chunks_and_citations(
         strip_page_noise=strip_page_noise,
     )
     if not lines_with_page:
-        return StructuredExtraction(chunks=[], citations=[], reference_strings=[])
+        return StructuredExtraction(chunks=[], citations=[], reference_strings=[], sections=[])
 
     lines = [line for _, line in lines_with_page]
     headings, sections, _ = detect_section_plan_details_with_qwen(lines, settings=settings)
+    section_rows = _build_section_metadata(article_id, lines_with_page, sections)
     chunks = _build_body_chunks(
         article_id=article_id,
         lines_with_page=lines_with_page,
-        sections=[(x.start_line, x.end_line, x.kind) for x in sections],
+        sections=[(x.start_line, x.end_line, x.kind, next((s.heading for s in section_rows if s.start_line == x.start_line), None)) for x in sections],
         chunk_size_words=chunk_size_words,
         chunk_overlap_words=chunk_overlap_words,
     )
@@ -1106,4 +1140,5 @@ def extract_structured_chunks_and_citations(
         chunks=chunks,
         citations=citations,
         reference_strings=reference_strings,
+        sections=section_rows,
     )

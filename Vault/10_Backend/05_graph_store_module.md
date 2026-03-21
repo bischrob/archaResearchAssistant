@@ -7,9 +7,9 @@
 Encapsulate schema setup, ingestion writes, and retrieval queries against Neo4j.
 
 ## Schema objects
-- Node labels: `Article`, `Author`, `Chunk`, `Token`, `Reference`.
-- Relationships: `WROTE`, `IN_ARTICLE`, `MENTIONS`, `CITES_REFERENCE`, `CITES`, `RESOLVES_TO`.
-- Indexes/constraints include vector index `chunk_embedding`, fulltext for chunk/author/article, and several text indexes.
+- Node labels: `Article`, `Author`, `Chunk`, `Token`, `Reference`, `Section`, `Keyword`.
+- Relationships: `WROTE`, `IN_ARTICLE`, `MENTIONS`, `CITES_REFERENCE`, `CITES`, `RESOLVES_TO`, `HAS_SECTION`, `HAS_KEYWORD`.
+- Indexes/constraints include vector index `chunk_embedding`, fulltext for chunk/author/article, and text/uniqueness support for section and keyword metadata.
 
 ## Embedding model behavior
 - Uses `SentenceTransformerEmbedder` for real semantic embeddings.
@@ -19,7 +19,9 @@ Encapsulate schema setup, ingestion writes, and retrieval queries against Neo4j.
 ## Ingestion responsibilities
 - Upsert article metadata.
 - Upsert authors and author order (`WROTE.position`).
-- Upsert chunks with embeddings.
+- Upsert chunks with embeddings and section metadata (`section_type`, `section_id`, `section_label`).
+- Upsert section spans as first-class `Section` nodes linked to the article.
+- Upsert keyword nodes/relationships with extraction score/source/evidence plus article-level audit fields.
 - Upsert token mention counts per chunk.
 - Refresh per-article `Reference`/`CITES` edges before re-write to prevent stale duplicates on re-ingest.
 - Upsert references (including optional DOI/source/author token metadata) and link citing article.

@@ -53,11 +53,10 @@ def test_build_typed_sections_supports_multiple_reference_blocks_and_front_matte
     )
 
     assert [(s.start_line, s.end_line, s.kind) for s in sections] == [
-        (0, 1, "front_matter"),
-        (2, 3, "preface"),
+        (0, 3, "frontmatter"),
         (4, 5, "body"),
         (6, 7, "references"),
-        (8, 9, "appendix"),
+        (8, 9, "backmatter_other"),
         (10, 11, "references"),
     ]
 
@@ -126,8 +125,8 @@ def test_appendix_stops_reference_block() -> None:
         min_section_lines=1,
     )
     assert [(s.start_line, s.end_line, s.kind) for s in sections] == [
-        (0, 0, "front_matter"),
+        (0, 0, "frontmatter"),
         (1, 2, "body"),
         (3, 4, "references"),
-        (5, 6, "appendix"),
+        (5, 6, "backmatter_other"),
     ]
