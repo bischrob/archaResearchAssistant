@@ -115,6 +115,7 @@ After this diagnosis, the repo was updated to:
 - add `environment.yml` targeting Python 3.11
 - add the PyTorch CUDA 12.4 wheel index to `requirements.txt`
 - change `starlette` pin to `0.45.3` to match the `fastapi` constraint
+- remove erroneous `fitz==0.0.1.dev2` dependency so `PyMuPDF` provides the `fitz` import cleanly
 - remove the hash-embedding fallback from `GraphStore`
 - make embedding misconfiguration fail hard
 - update docs and backend Vault notes to reflect the real embedding behavior
