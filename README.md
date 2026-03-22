@@ -37,15 +37,15 @@ Recommended citation-extraction LoRA:
 
 - https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710
 
-## Recommended Qwen3 Base Model
+## Recommended OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow) Base Model
 
 Current code and training scripts in this repository are aligned to:
 
-- `Qwen/Qwen3-4B-Instruct-2507`
+- `OpenClaw agent/OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow)-4B-Instruct-2507`
 
 Recommended source:
 
-- https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+- https://huggingface.co/OpenClaw agent/OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow)-4B-Instruct-2507
 
 ## Supported Setup Matrix
 
@@ -55,7 +55,7 @@ Recommended source:
 - Zotero backend: recommended default
 - GPU: optional
 - OpenAI API key: required for grounded LLM answer flows
-- Local Qwen3 base model: optional unless using local Qwen-powered parsing or preprocessing
+- Local OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow) base model: optional unless using local OpenClaw agent-powered parsing or preprocessing
 
 ## Quickstart
 
@@ -124,11 +124,28 @@ Plugin workflow notes:
 
 ## Testing
 
+Project-local test environment:
+
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip setuptools wheel
+pip install pytest numpy PyMuPDF neo4j requests fastapi starlette httpx pydantic pyyaml
+```
+
+Run the suite:
+
+```bash
+pytest -q
 make test-unit
-make test-e2e
+make test-e2e   # live full-stack tests remain gated behind RUN_E2E=1
 make smoke
 ```
+
+Notes:
+
+- The default test suite now runs as real pytest tests rather than compile-only checks.
+- New integration coverage exercises Zotero-first identity enforcement, attachment resolver provenance, text-acquisition provenance, section-aware structured extraction, `.references.txt` sidecar generation, and Neo4j reference-ingest behavior with lightweight mocks where a live service would be too heavy.
 
 ## Local Conveniences
 

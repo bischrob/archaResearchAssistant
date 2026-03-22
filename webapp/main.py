@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.21.230946")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.011551")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -158,6 +158,7 @@ class AskExportRequest(BaseModel):
 
 class IngestPreviewRequest(BaseModel):
     mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
+    source_mode: str = Field(default="filesystem", pattern="^(filesystem|zotero_db)$")
     source_dir: str = Field(default_factory=_default_pdf_source_dir)
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
@@ -289,6 +290,24 @@ class JobManager:
 
 
 jobs = JobManager()
+
+
+def _summary_optional_fields(summary: Any) -> dict[str, Any]:
+    return {
+        "citation_override_pdfs": getattr(summary, "citation_override_pdfs", 0),
+        "anystyle_attempted_pdfs": getattr(summary, "anystyle_attempted_pdfs", 0),
+        "anystyle_applied_pdfs": getattr(summary, "anystyle_applied_pdfs", 0),
+        "anystyle_empty_pdfs": getattr(summary, "anystyle_empty_pdfs", 0),
+        "anystyle_failed_pdfs": getattr(summary, "anystyle_failed_pdfs", 0),
+        "anystyle_disabled_reason": getattr(summary, "anystyle_disabled_reason", None),
+        "anystyle_failure_samples": list(getattr(summary, "anystyle_failure_samples", []) or []),
+        "qwen_attempted_pdfs": getattr(summary, "qwen_attempted_pdfs", 0),
+        "qwen_applied_pdfs": getattr(summary, "qwen_applied_pdfs", 0),
+        "qwen_empty_pdfs": getattr(summary, "qwen_empty_pdfs", 0),
+        "qwen_failed_pdfs": getattr(summary, "qwen_failed_pdfs", 0),
+        "qwen_disabled_reason": getattr(summary, "qwen_disabled_reason", None),
+        "qwen_failure_samples": list(getattr(summary, "qwen_failure_samples", []) or []),
+    }
 
 
 def _require_api_token(authorization: str | None) -> None:
@@ -500,7 +519,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             total_rows = len(rows)
             jobs.set_progress("sync", 3.0, f"Loaded {total_rows} Zotero PDF attachment rows")
 
-            if bool(settings.zotero_require_persistent_id):
+            if bool(getattr(settings, "zotero_require_persistent_id", False)):
                 missing_pid_rows = [r for r in rows if not str(r.get("zotero_persistent_id") or "").strip()]
                 if missing_pid_rows:
                     sample = ", ".join(
@@ -515,52 +534,8 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     )
 
             jobs.set_progress("sync", 4.0, "Reading existing Zotero identifiers from Neo4j")
-            store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+            neo4j_zotero_ids: set[str] = set()
             try:
-                with store.driver.session() as session:
-                    neo4j_zotero_ids = {
-                        str(r["pid"])
-                        for r in session.run(
-                            """
-                            MATCH (a:Article)
-                            WHERE coalesce(a.zotero_persistent_id, '') <> ''
-                            RETURN DISTINCT a.zotero_persistent_id AS pid
-                            """
-                        )
-                        if str(r["pid"] or "").strip()
-                    }
-            finally:
-                store.close()
-
-            zotero_by_pid: dict[str, dict[str, Any]] = {}
-            for row in rows:
-                pid = str(row.get("zotero_persistent_id") or "").strip()
-                if not pid or pid in zotero_by_pid:
-                    continue
-                zotero_by_pid[pid] = row
-
-            missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
-            initial_missing_count = len(missing_rows)
-            jobs.set_progress("sync", 5.0, f"Anti-join complete: {len(missing_rows)} PDFs missing in Neo4j")
-
-            jobs.set_progress("sync", 7.0, f"Reconciling {len(missing_rows)} existing Neo4j articles")
-            reconcile_summary: dict[str, Any] | None = None
-            if missing_rows:
-                store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
-                try:
-                    reconcile_summary = store.reconcile_zotero_persistent_ids(missing_rows)
-                finally:
-                    store.close()
-
-                jobs.set_progress(
-                    "sync",
-                    10.0,
-                    "Reconcile complete: "
-                    f"{int(reconcile_summary.get('matched', 0))} matched, "
-                    f"{int(reconcile_summary.get('unresolved', 0))} unresolved, "
-                    f"{int(reconcile_summary.get('ambiguous', 0))} ambiguous",
-                )
-
                 store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
                 try:
                     with store.driver.session() as session:
@@ -577,8 +552,66 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                         }
                 finally:
                     store.close()
+            except Exception:
+                neo4j_zotero_ids = set()
 
-                missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
+            zotero_by_pid: dict[str, dict[str, Any]] = {}
+            for idx, row in enumerate(rows, start=1):
+                pid = str(row.get("zotero_persistent_id") or "").strip()
+                if not pid:
+                    pid = (
+                        str(row.get("attachment_path") or "").strip()
+                        or str(row.get("attachment_path_raw") or "").strip()
+                        or str(row.get("zotero_attachment_key") or "").strip()
+                        or f"row::{idx}"
+                    )
+                if pid in zotero_by_pid:
+                    continue
+                zotero_by_pid[pid] = row
+
+            missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
+            initial_missing_count = len(missing_rows)
+            jobs.set_progress("sync", 5.0, f"Anti-join complete: {len(missing_rows)} PDFs missing in Neo4j")
+
+            jobs.set_progress("sync", 7.0, f"Reconciling {len(missing_rows)} existing Neo4j articles")
+            reconcile_summary: dict[str, Any] | None = None
+            if missing_rows and neo4j_zotero_ids:
+                try:
+                    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                    try:
+                        reconcile_summary = store.reconcile_zotero_persistent_ids(missing_rows)
+                    finally:
+                        store.close()
+
+                    jobs.set_progress(
+                        "sync",
+                        10.0,
+                        "Reconcile complete: "
+                        f"{int(reconcile_summary.get('matched', 0))} matched, "
+                        f"{int(reconcile_summary.get('unresolved', 0))} unresolved, "
+                        f"{int(reconcile_summary.get('ambiguous', 0))} ambiguous",
+                    )
+
+                    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                    try:
+                        with store.driver.session() as session:
+                            neo4j_zotero_ids = {
+                                str(r["pid"])
+                                for r in session.run(
+                                    """
+                                    MATCH (a:Article)
+                                    WHERE coalesce(a.zotero_persistent_id, '') <> ''
+                                    RETURN DISTINCT a.zotero_persistent_id AS pid
+                                    """
+                                )
+                                if str(r["pid"] or "").strip()
+                            }
+                    finally:
+                        store.close()
+
+                    missing_rows = [row for pid, row in zotero_by_pid.items() if pid not in neo4j_zotero_ids]
+                except Exception:
+                    reconcile_summary = None
 
             ingest_candidates: list[Path] = []
             ingest_candidate_provenance: list[dict[str, Any]] = []
@@ -688,39 +721,30 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     "skipped_existing_pdfs": summary.skipped_existing_pdfs,
                     "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
                     "failed_pdfs": summary.failed_pdfs,
-                    "citation_override_pdfs": summary.citation_override_pdfs,
-                    "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
-                    "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
-                    "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
-                    "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
-                    "anystyle_disabled_reason": summary.anystyle_disabled_reason,
-                    "anystyle_failure_samples": summary.anystyle_failure_samples,
-                    "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
-                    "qwen_applied_pdfs": summary.qwen_applied_pdfs,
-                    "qwen_empty_pdfs": summary.qwen_empty_pdfs,
-                    "qwen_failed_pdfs": summary.qwen_failed_pdfs,
-                    "qwen_disabled_reason": summary.qwen_disabled_reason,
-                    "qwen_failure_samples": summary.qwen_failure_samples,
+                    **_summary_optional_fields(summary),
                 }
-                store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
                 try:
-                    with store.driver.session() as session:
-                        neo4j_zotero_ids = {
-                            str(r["pid"])
-                            for r in session.run(
-                                """
-                                MATCH (a:Article)
-                                WHERE coalesce(a.zotero_persistent_id, '') <> ''
-                                RETURN DISTINCT a.zotero_persistent_id AS pid
-                                """
-                            )
-                            if str(r["pid"] or "").strip()
-                        }
-                finally:
-                    store.close()
-                source_stats["zotero_missing_in_neo4j_after_ingest"] = sum(
-                    1 for pid in zotero_by_pid.keys() if pid not in neo4j_zotero_ids
-                )
+                    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+                    try:
+                        with store.driver.session() as session:
+                            neo4j_zotero_ids = {
+                                str(r["pid"])
+                                for r in session.run(
+                                    """
+                                    MATCH (a:Article)
+                                    WHERE coalesce(a.zotero_persistent_id, '') <> ''
+                                    RETURN DISTINCT a.zotero_persistent_id AS pid
+                                    """
+                                )
+                                if str(r["pid"] or "").strip()
+                            }
+                    finally:
+                        store.close()
+                    source_stats["zotero_missing_in_neo4j_after_ingest"] = sum(
+                        1 for pid in zotero_by_pid.keys() if pid not in neo4j_zotero_ids
+                    )
+                except Exception:
+                    source_stats["zotero_missing_in_neo4j_after_ingest"] = None
 
             jobs.set_progress("sync", 100.0, "Sync complete")
             return {
@@ -819,7 +843,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             # In strict metadata mode, avoid re-processing known unmatched files.
             ingest_candidates = (
                 [p for p in pdf_files if str(p) not in unmatched_set]
-                if bool(settings.metadata_require_match)
+                if bool(getattr(settings, "metadata_require_match", False))
                 else list(pdf_files)
             )
             summary = ingest_pdfs(
@@ -838,19 +862,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 "skipped_existing_pdfs": summary.skipped_existing_pdfs,
                 "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
                 "failed_pdfs": summary.failed_pdfs,
-                "citation_override_pdfs": summary.citation_override_pdfs,
-                "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
-                "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
-                "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
-                "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
-                "anystyle_disabled_reason": summary.anystyle_disabled_reason,
-                "anystyle_failure_samples": summary.anystyle_failure_samples,
-                "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
-                "qwen_applied_pdfs": summary.qwen_applied_pdfs,
-                "qwen_empty_pdfs": summary.qwen_empty_pdfs,
-                "qwen_failed_pdfs": summary.qwen_failed_pdfs,
-                "qwen_disabled_reason": summary.qwen_disabled_reason,
-                "qwen_failure_samples": summary.qwen_failure_samples,
+                **_summary_optional_fields(summary),
             }
 
         jobs.set_progress("sync", 100.0, "Sync complete")
@@ -948,6 +960,7 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                 skip_existing=not req.override_existing,
                 progress_callback=on_batch_progress,
             )
+            optional = _summary_optional_fields(summary)
             all_batch_summaries.append(
                 {
                     "batch_number": idx,
@@ -959,15 +972,7 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                     "failed_count": len(summary.failed_pdfs),
                     "skipped_existing_count": len(summary.skipped_existing_pdfs),
                     "skipped_no_metadata_count": len(summary.skipped_no_metadata_pdfs),
-                    "citation_override_pdfs": summary.citation_override_pdfs,
-                    "anystyle_attempted_pdfs": summary.anystyle_attempted_pdfs,
-                    "anystyle_applied_pdfs": summary.anystyle_applied_pdfs,
-                    "anystyle_empty_pdfs": summary.anystyle_empty_pdfs,
-                    "anystyle_failed_pdfs": summary.anystyle_failed_pdfs,
-                    "qwen_attempted_pdfs": summary.qwen_attempted_pdfs,
-                    "qwen_applied_pdfs": summary.qwen_applied_pdfs,
-                    "qwen_empty_pdfs": summary.qwen_empty_pdfs,
-                    "qwen_failed_pdfs": summary.qwen_failed_pdfs,
+                    **{k: v for k, v in optional.items() if k not in {"anystyle_disabled_reason", "anystyle_failure_samples", "qwen_disabled_reason", "qwen_failure_samples"}},
                 }
             )
             agg["ingested_articles"] += summary.ingested_articles
@@ -977,23 +982,23 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
             agg["skipped_existing_pdfs"].extend(summary.skipped_existing_pdfs)
             agg["skipped_no_metadata_pdfs"].extend(summary.skipped_no_metadata_pdfs)
             agg["failed_pdfs"].extend(summary.failed_pdfs)
-            agg["citation_override_pdfs"] += summary.citation_override_pdfs
-            agg["anystyle_attempted_pdfs"] += summary.anystyle_attempted_pdfs
-            agg["anystyle_applied_pdfs"] += summary.anystyle_applied_pdfs
-            agg["anystyle_empty_pdfs"] += summary.anystyle_empty_pdfs
-            agg["anystyle_failed_pdfs"] += summary.anystyle_failed_pdfs
-            if summary.anystyle_disabled_reason and not agg["anystyle_disabled_reason"]:
-                agg["anystyle_disabled_reason"] = summary.anystyle_disabled_reason
-            if summary.anystyle_failure_samples:
-                agg["anystyle_failure_samples"].extend(summary.anystyle_failure_samples)
-            agg["qwen_attempted_pdfs"] += summary.qwen_attempted_pdfs
-            agg["qwen_applied_pdfs"] += summary.qwen_applied_pdfs
-            agg["qwen_empty_pdfs"] += summary.qwen_empty_pdfs
-            agg["qwen_failed_pdfs"] += summary.qwen_failed_pdfs
-            if summary.qwen_disabled_reason and not agg["qwen_disabled_reason"]:
-                agg["qwen_disabled_reason"] = summary.qwen_disabled_reason
-            if summary.qwen_failure_samples:
-                agg["qwen_failure_samples"].extend(summary.qwen_failure_samples)
+            agg["citation_override_pdfs"] += optional["citation_override_pdfs"]
+            agg["anystyle_attempted_pdfs"] += optional["anystyle_attempted_pdfs"]
+            agg["anystyle_applied_pdfs"] += optional["anystyle_applied_pdfs"]
+            agg["anystyle_empty_pdfs"] += optional["anystyle_empty_pdfs"]
+            agg["anystyle_failed_pdfs"] += optional["anystyle_failed_pdfs"]
+            if optional["anystyle_disabled_reason"] and not agg["anystyle_disabled_reason"]:
+                agg["anystyle_disabled_reason"] = optional["anystyle_disabled_reason"]
+            if optional["anystyle_failure_samples"]:
+                agg["anystyle_failure_samples"].extend(optional["anystyle_failure_samples"])
+            agg["qwen_attempted_pdfs"] += optional["qwen_attempted_pdfs"]
+            agg["qwen_applied_pdfs"] += optional["qwen_applied_pdfs"]
+            agg["qwen_empty_pdfs"] += optional["qwen_empty_pdfs"]
+            agg["qwen_failed_pdfs"] += optional["qwen_failed_pdfs"]
+            if optional["qwen_disabled_reason"] and not agg["qwen_disabled_reason"]:
+                agg["qwen_disabled_reason"] = optional["qwen_disabled_reason"]
+            if optional["qwen_failure_samples"]:
+                agg["qwen_failure_samples"].extend(optional["qwen_failure_samples"])
             partial_summary = {
                 "mode": mode,
                 "source_mode": req.source_mode,

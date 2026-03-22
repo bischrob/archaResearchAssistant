@@ -285,10 +285,16 @@ def assess_text_quality(lines_with_page: list[tuple[int, str]], *, total_page_co
 
 
 def acquire_pdf_text(pdf_path: Path, *, settings: Settings, strip_page_noise: bool = True) -> TextAcquisitionResult:
-    with fitz.open(pdf_path) as doc:
-        total_page_count = len(doc)
+    total_page_count = 0
+    try:
+        with fitz.open(pdf_path) as doc:
+            total_page_count = len(doc)
+    except Exception:
+        total_page_count = 0
 
     native_lines = extract_native_pdf_lines(pdf_path, strip_page_noise=strip_page_noise)
+    if total_page_count <= 0:
+        total_page_count = max((page for page, _ in native_lines), default=1)
     check_backend = (settings.text_quality_check_backend or "heuristic_placeholder").strip().lower()
     native_report = assess_text_quality(native_lines, total_page_count=total_page_count, backend=check_backend)
 

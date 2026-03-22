@@ -29,16 +29,16 @@ class AttachmentResolution:
 class ZoteroAttachmentResolver:
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.webdav_url = (settings.zotero_webdav_url or "").strip().rstrip("/")
-        self.webdav_cache_dir = resolve_input_path(settings.zotero_webdav_cache_dir)
-        self.linked_path_map = self._load_linked_path_map(settings.zotero_linked_path_map_json)
-        self.attachment_overrides = self._load_attachment_overrides(settings.zotero_attachment_override_json)
+        self.webdav_url = (getattr(settings, "zotero_webdav_url", "") or "").strip().rstrip("/")
+        self.webdav_cache_dir = resolve_input_path(getattr(settings, "zotero_webdav_cache_dir", ".cache/zotero_webdav"))
+        self.linked_path_map = self._load_linked_path_map(getattr(settings, "zotero_linked_path_map_json", ""))
+        self.attachment_overrides = self._load_attachment_overrides(getattr(settings, "zotero_attachment_override_json", ""))
         self._session: requests.Session | None = None
         if self.webdav_url:
             self.webdav_cache_dir.mkdir(parents=True, exist_ok=True)
             self._session = requests.Session()
-            username = (settings.zotero_webdav_username or "").strip()
-            password = settings.zotero_webdav_password or ""
+            username = (getattr(settings, "zotero_webdav_username", "") or "").strip()
+            password = getattr(settings, "zotero_webdav_password", "") or ""
             if username:
                 self._session.auth = (username, password)
 

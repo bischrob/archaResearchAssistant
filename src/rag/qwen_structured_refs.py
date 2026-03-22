@@ -13,7 +13,6 @@ import fitz
 from .anystyle_refs import parse_reference_strings_with_anystyle_docker
 from .config import Settings
 from .pdf_processing import Chunk, Citation, Section, STOPWORDS, TOKEN_RE, build_lines_with_page
-from .qwen_local import decode_qwen_json, generate_with_qwen
 
 
 REFERENCE_HEADING_RE = re.compile(
@@ -560,65 +559,16 @@ def _line_idx_from_row(row: dict) -> int | None:
 
 
 def detect_section_plan_with_qwen(lines: list[str], *, settings: Settings | None = None) -> tuple[list[int], int | None]:
-    cfg = settings or Settings()
+    _ = settings
     if not lines:
         return [0], None
-
-    candidates = _heading_candidates(lines)
-    payload = [{"idx": idx, "line": text} for idx, text in candidates]
-    user = (
-        "Candidate heading lines as JSON:\n"
-        f"{json.dumps(payload, ensure_ascii=False)}\n\n"
-        "Return only JSON in the required schema."
-    )
-    parsed = None
-    try:
-        raw = generate_with_qwen(
-            messages=[
-                {"role": "system", "content": SECTION_SYSTEM_PROMPT},
-                {"role": "user", "content": user},
-            ],
-            settings=cfg,
-            task="citation",
-            max_new_tokens=max(256, min(int(cfg.qwen_citation_max_new_tokens), 768)),
-            temperature=0.0,
-        )
-        parsed = decode_qwen_json(raw)
-    except Exception:
-        parsed = None
-
-    heading_indices: set[int] = {0}
-    ref_starts: set[int] = set()
-
-    if isinstance(parsed, dict):
-        rows = parsed.get("headings") or parsed.get("sections") or []
-        if isinstance(rows, list):
-            for row in rows:
-                if not isinstance(row, dict):
-                    continue
-                idx = _line_idx_from_row(row)
-                if idx is None or idx < 0 or idx >= len(lines):
-                    continue
-                heading_indices.add(idx)
-                kind = str(row.get("kind") or "").strip().lower()
-                if kind == "references":
-                    ref_starts.add(idx)
-        ref_candidate = _parse_int(
-            parsed.get("reference_start_line")
-            or parsed.get("references_start_line")
-            or parsed.get("reference_start")
-        )
-        if ref_candidate is not None and 0 <= ref_candidate < len(lines):
-            ref_starts.add(ref_candidate)
-
-    for idx in _heuristic_reference_starts(lines):
-        ref_starts.add(idx)
-
+    heading_indices = sorted({0, *[idx for idx, _ in _heading_candidates(lines)]})
+    ref_starts = _heuristic_reference_starts(lines)
     ref_start = min(ref_starts) if ref_starts else None
-    if ref_start is not None:
-        heading_indices.add(ref_start)
-
-    return sorted(heading_indices), ref_start
+    if ref_start is not None and ref_start not in heading_indices:
+        heading_indices.append(ref_start)
+        heading_indices.sort()
+    return heading_indices, ref_start
 
 
 def detect_section_plan_details_with_qwen(
@@ -1016,68 +966,8 @@ def split_reference_strings_heuristic(reference_text: str) -> list[str]:
 
 
 def split_reference_strings_with_qwen(reference_text: str, *, settings: Settings | None = None) -> list[str]:
-    cfg = settings or Settings()
-    global_numbered = _sanitize_reference_rows(_split_numbered_rows(reference_text))
-    if global_numbered:
-        return global_numbered
-
-    max_input_chars = max(1200, min(int(cfg.qwen_max_input_chars * 0.78), int(cfg.qwen_reference_split_window_chars)))
-    windows = _reference_windows(reference_text, max_chars=max_input_chars)
-    if not windows:
-        return []
-
-    out: list[str] = []
-    for block in windows:
-        refs: list[str] = []
-        prompts = [
-            (
-                "Split the bibliography text below into one item per full reference.\n"
-                "Important: page breaks do not end references; continue references across page boundaries.\n"
-                "Do not include headers, figure captions, or tokens such as <EOS>/<pad>.\n"
-                "Return JSON only in the required schema.\n\n"
-                f"Bibliography text:\n{block}"
-            ),
-            (
-                "Retry with strict validation.\n"
-                "Output JSON only: {\"references\": [\"one reference\", \"one reference\"]}.\n"
-                "Rules: one reference per item, no merged items, no headers/captions/padding tokens.\n\n"
-                f"Bibliography text:\n{block}"
-            ),
-        ]
-        for user in prompts:
-            parsed = None
-            try:
-                raw = generate_with_qwen(
-                    messages=[
-                        {"role": "system", "content": REFERENCE_SPLIT_SYSTEM_PROMPT},
-                        {"role": "user", "content": user},
-                    ],
-                    settings=cfg,
-                    task="citation",
-                    max_new_tokens=max(256, min(int(cfg.qwen_citation_max_new_tokens), 900)),
-                    temperature=0.0,
-                )
-                parsed = decode_qwen_json(raw)
-            except Exception:
-                parsed = None
-            refs = _sanitize_reference_rows(_parse_reference_rows(parsed))
-            if not _looks_invalid_split(refs, block):
-                break
-
-        # Strict post-processing for numbered bibliographies: one marker -> one output row.
-        numbered_refs = _sanitize_reference_rows(_split_numbered_rows(block))
-        if numbered_refs:
-            refs = numbered_refs
-
-        if not refs:
-            refs = _sanitize_reference_rows(_heuristic_reference_split(block))
-        if _looks_invalid_split(refs, block):
-            numbered = _sanitize_reference_rows(_split_numbered_rows(block))
-            if numbered:
-                refs = numbered
-        out.extend(refs)
-
-    return _sanitize_reference_rows(out)
+    _ = settings
+    return split_reference_strings_heuristic(reference_text)
 
 
 def split_reference_strings_for_anystyle(reference_text: str, *, settings: Settings | None = None) -> list[str]:
@@ -1085,6 +975,17 @@ def split_reference_strings_for_anystyle(reference_text: str, *, settings: Setti
     if not _looks_invalid_split(heuristic, reference_text):
         return heuristic
     return split_reference_strings_with_qwen(reference_text, settings=settings)
+
+
+def _write_references_sidecar(pdf_path: Path, reference_strings: list[str]) -> Path | None:
+    sidecar = pdf_path.with_suffix('.references.txt')
+    body = "\n".join(x.strip() for x in reference_strings if (x or '').strip()).strip()
+    if not body:
+        if sidecar.exists():
+            sidecar.unlink()
+        return None
+    sidecar.write_text(body + "\n", encoding="utf-8")
+    return sidecar
 
 
 def extract_structured_chunks_and_citations(
@@ -1127,6 +1028,7 @@ def extract_structured_chunks_and_citations(
     for block in reference_chunks:
         reference_strings.extend(split_reference_strings_for_anystyle(block, settings=settings))
 
+    _write_references_sidecar(pdf_path, reference_strings)
     citations = parse_reference_strings_with_anystyle_docker(
         reference_strings,
         article_id=article_id,

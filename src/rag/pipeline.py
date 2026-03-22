@@ -17,9 +17,10 @@ from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_i
 from .path_utils import resolve_input_path
 from .zip_pdf_source import collect_source_pdfs
 from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filter_citations, load_article
-from .qwen_local import extract_citations_with_qwen
 from .qwen_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
 from .keyword_extraction import extract_keywords
+from .zotero_attachment_resolver import ZoteroAttachmentResolver
+from .zotero_metadata import load_zotero_entries
 
 DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
 
@@ -58,12 +59,6 @@ class IngestSummary:
     anystyle_failed_pdfs: int = 0
     anystyle_disabled_reason: str | None = None
     anystyle_failure_samples: list[str] = field(default_factory=list)
-    qwen_attempted_pdfs: int = 0
-    qwen_applied_pdfs: int = 0
-    qwen_empty_pdfs: int = 0
-    qwen_failed_pdfs: int = 0
-    qwen_disabled_reason: str | None = None
-    qwen_failure_samples: list[str] = field(default_factory=list)
 
 
 def _cache_dir() -> Path:
@@ -120,48 +115,19 @@ def _anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def _qwen_cache_dir() -> Path:
-    p = Path(".cache") / "qwen_refs"
+def _structured_anystyle_cache_dir() -> Path:
+    p = Path('.cache') / 'structured_anystyle_refs'
     p.mkdir(parents=True, exist_ok=True)
     return p
 
 
-def _qwen_structured_cache_dir() -> Path:
-    p = Path(".cache") / "qwen_structured_refs"
-    p.mkdir(parents=True, exist_ok=True)
-    return p
-
-
-def _qwen_cache_key(pdf_path: Path, settings: Settings) -> str:
+def _structured_anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
     stat = pdf_path.stat()
     raw = "|".join(
         [
             str(pdf_path.resolve()),
             str(stat.st_mtime_ns),
             str(stat.st_size),
-            settings.qwen_model_path,
-            settings.qwen_citation_model_path,
-            settings.qwen_citation_adapter_path,
-            str(settings.qwen_citation_batch_size),
-            str(settings.qwen_citation_max_new_tokens),
-        ]
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def _qwen_structured_cache_key(pdf_path: Path, settings: Settings) -> str:
-    stat = pdf_path.stat()
-    raw = "|".join(
-        [
-            str(pdf_path.resolve()),
-            str(stat.st_mtime_ns),
-            str(stat.st_size),
-            settings.qwen_model_path,
-            settings.qwen_citation_model_path,
-            settings.qwen_citation_adapter_path,
-            str(settings.qwen_citation_batch_size),
-            str(settings.qwen_citation_max_new_tokens),
-            str(settings.qwen_max_input_chars),
             str(settings.chunk_size_words),
             str(settings.chunk_overlap_words),
             str(int(settings.chunk_strip_page_noise)),
@@ -201,37 +167,14 @@ def _load_anystyle_citations_cached(pdf_path: Path, settings: Settings) -> list[
     return citations
 
 
-def _load_qwen_citations_cached(
-    pdf_path: Path,
-    article_id: str,
-    candidates: list[Citation],
-    settings: Settings,
-) -> list[Citation]:
-    key = _qwen_cache_key(pdf_path, settings)
-    cache_file = _qwen_cache_dir() / f"{key}.json"
-    if cache_file.exists():
-        with cache_file.open("r", encoding="utf-8") as f:
-            payload = json.load(f)
-        if isinstance(payload, list):
-            return _deserialize_citations(payload)
 
-    citations = extract_citations_with_qwen(
-        article_id=article_id,
-        citation_candidates=candidates,
-        settings=settings,
-    )
-    with cache_file.open("w", encoding="utf-8") as f:
-        json.dump([asdict(c) for c in citations], f, ensure_ascii=False)
-    return citations
-
-
-def _load_qwen_structured_anystyle_cached(
+def _load_structured_anystyle_cached(
     pdf_path: Path,
     article_id: str,
     settings: Settings,
 ) -> StructuredExtraction:
-    key = _qwen_structured_cache_key(pdf_path, settings)
-    cache_file = _qwen_structured_cache_dir() / f"{key}.json"
+    key = _structured_anystyle_cache_key(pdf_path, settings)
+    cache_file = _structured_anystyle_cache_dir() / f"{key}.json"
     if cache_file.exists():
         with cache_file.open("r", encoding="utf-8") as f:
             payload = json.load(f)
@@ -265,20 +208,12 @@ def _load_qwen_structured_anystyle_cached(
 
 
 def _citation_parser_mode(settings: Settings) -> str:
-    mode = (settings.citation_parser or "").strip().lower()
-    if mode in {"heuristic", "builtin", "built-in", "default"}:
-        return "heuristic"
-    if mode in {"qwen", "qwen3", "qwen_lora", "qwen3_lora", "local_qwen"}:
-        return "qwen"
-    if mode in {
-        "qwen_anystyle",
-        "qwen_split_anystyle",
-        "qwen_refsplit_anystyle",
-        "qwen_section_anystyle",
-        "qwen_structured_anystyle",
-    }:
-        return "qwen_anystyle"
-    return "anystyle"
+    mode = (settings.citation_parser or '').strip().lower()
+    if mode in {'heuristic', 'builtin', 'built-in', 'default'}:
+        return 'heuristic'
+    if mode in {'structured_anystyle', 'section_anystyle', 'anystyle_structured', 'qwen_anystyle', 'qwen_split_anystyle', 'qwen_refsplit_anystyle', 'qwen_section_anystyle', 'qwen_structured_anystyle'}:
+        return 'structured_anystyle'
+    return 'anystyle'
 
 
 def _is_global_anystyle_failure(msg: str) -> bool:
@@ -293,18 +228,6 @@ def _is_global_anystyle_failure(msg: str) -> bool:
     )
     return any(marker in text for marker in markers)
 
-
-def _is_global_qwen_failure(msg: str) -> bool:
-    text = (msg or "").lower()
-    markers = (
-        "qwen model path is not configured",
-        "qwen3 model path is not configured",
-        "qwen path not found",
-        "peft is required",
-        "out of memory",
-        "cuda error",
-    )
-    return any(marker in text for marker in markers)
 
 
 def _deserialize_article(obj: dict) -> ArticleDoc:
@@ -607,7 +530,7 @@ def choose_pdfs(
     require_metadata: bool = True,
     settings: Settings | None = None,
     partial_count: int = 3,
-    source_mode: str = "zotero_db",
+    source_mode: str = "filesystem",
 ) -> list[Path]:
     mode = mode.lower().strip()
     if mode == "test3":
@@ -766,12 +689,6 @@ def ingest_pdfs(
     anystyle_failed = 0
     anystyle_failure_samples: list[str] = []
     anystyle_disabled_reason: str | None = None
-    qwen_attempted = 0
-    qwen_applied = 0
-    qwen_empty = 0
-    qwen_failed = 0
-    qwen_failure_samples: list[str] = []
-    qwen_disabled_reason: str | None = None
     total_steps = max(1, len(selected_pdfs) * 2)
     parse_done = 0
     for p in selected_pdfs:
@@ -806,34 +723,10 @@ def ingest_pdfs(
                         raise
                     if _is_global_anystyle_failure(err):
                         anystyle_disabled_reason = err
-            elif parser_mode == "qwen" and not qwen_disabled_reason:
-                qwen_attempted += 1
-                try:
-                    extracted = _load_qwen_citations_cached(
-                        pdf_path=p,
-                        article_id=article.article_id,
-                        candidates=article.citations,
-                        settings=settings,
-                    )
-                    if extracted:
-                        article.citations = extracted
-                        qwen_applied += 1
-                    else:
-                        qwen_empty += 1
-                except Exception as exc:
-                    qwen_failed += 1
-                    err = str(exc)
-                    if len(qwen_failure_samples) < 10:
-                        qwen_failure_samples.append(f"{p.name}: {err}")
-                    if settings.qwen_require_success:
-                        raise
-                    if _is_global_qwen_failure(err):
-                        qwen_disabled_reason = err
-            elif parser_mode == "qwen_anystyle" and not qwen_disabled_reason and not anystyle_disabled_reason:
-                qwen_attempted += 1
+            elif parser_mode == 'structured_anystyle' and not anystyle_disabled_reason:
                 anystyle_attempted += 1
                 try:
-                    structured = _load_qwen_structured_anystyle_cached(
+                    structured = _load_structured_anystyle_cached(
                         pdf_path=p,
                         article_id=article.article_id,
                         settings=settings,
@@ -843,23 +736,16 @@ def ingest_pdfs(
                     article.sections = structured.sections
                     if structured.citations:
                         article.citations = structured.citations
-                        qwen_applied += 1
                         anystyle_applied += 1
                     else:
-                        qwen_empty += 1
                         anystyle_empty += 1
                 except Exception as exc:
                     err = str(exc)
-                    qwen_failed += 1
                     anystyle_failed += 1
-                    if len(qwen_failure_samples) < 10:
-                        qwen_failure_samples.append(f"{p.name}: {err}")
                     if len(anystyle_failure_samples) < 10:
-                        anystyle_failure_samples.append(f"{p.name}: {err}")
-                    if settings.qwen_require_success or settings.anystyle_require_success:
+                        anystyle_failure_samples.append(f'{p.name}: {err}')
+                    if settings.anystyle_require_success:
                         raise
-                    if _is_global_qwen_failure(err):
-                        qwen_disabled_reason = err
                     if _is_global_anystyle_failure(err):
                         anystyle_disabled_reason = err
             article.citations = filter_citations(
@@ -925,10 +811,4 @@ def ingest_pdfs(
         anystyle_failed_pdfs=anystyle_failed,
         anystyle_disabled_reason=anystyle_disabled_reason,
         anystyle_failure_samples=anystyle_failure_samples,
-        qwen_attempted_pdfs=qwen_attempted,
-        qwen_applied_pdfs=qwen_applied,
-        qwen_empty_pdfs=qwen_empty,
-        qwen_failed_pdfs=qwen_failed,
-        qwen_disabled_reason=qwen_disabled_reason,
-        qwen_failure_samples=qwen_failure_samples,
     )
