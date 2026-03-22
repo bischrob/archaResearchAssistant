@@ -530,7 +530,7 @@ def choose_pdfs(
     require_metadata: bool = True,
     settings: Settings | None = None,
     partial_count: int = 3,
-    source_mode: str = "filesystem",
+    source_mode: str = "zotero_db",
 ) -> list[Path]:
     mode = mode.lower().strip()
     if mode == "test3":

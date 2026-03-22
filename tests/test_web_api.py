@@ -68,7 +68,7 @@ def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
         lambda *args, **kwargs: (started.set() or release.wait(1) or None),
     )
 
-    start = client.post("/api/sync", json={"dry_run": True})
+    start = client.post("/api/sync", json={"dry_run": True, "source_mode": "filesystem"})
     assert start.status_code == 200
     assert start.json()["status"] == "running"
     assert started.wait(1.0)
@@ -345,6 +345,45 @@ def test_sync_stop_transitions_through_cancelling(monkeypatch, tmp_path: Path, c
     assert final["request_id"] == start_payload["request_id"]
 
 
+def test_sync_defaults_to_zotero_db_when_source_mode_omitted(monkeypatch, tmp_path: Path, client):
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    zotero_storage = tmp_path / "storage"
+    zotero_storage.mkdir()
+
+    class FakeSettings:
+        pdf_source_dir = str(tmp_path / "pdfs")
+        metadata_backend = "zotero"
+        zotero_db_path = str(zotero_db)
+        zotero_storage_root = str(zotero_storage)
+        zotero_require_persistent_id = False
+        neo4j_uri = "bolt://ignored"
+        neo4j_user = "neo4j"
+        neo4j_password = "password"
+        embedding_model = "test"
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(webmain, "load_zotero_entries", lambda *args, **kwargs: [])
+
+    class FakeResolver:
+        def __init__(self, settings):
+            pass
+
+        def resolve(self, row):
+            raise AssertionError("resolver should not be used when there are no rows")
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", FakeResolver)
+
+    resp = client.post("/api/sync", json={"dry_run": True, "run_ingest": False})
+    assert resp.status_code == 200
+    final = wait_for_status(client, "/api/sync/status")
+    assert final["status"] == "completed"
+    assert final["result"]["source_mode"] == "zotero_db"
+
+
 def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, client):
     p = tmp_path / "a.pdf"
     p.write_text("x")
@@ -505,6 +544,74 @@ def test_ingest_preview_endpoint(monkeypatch, tmp_path: Path, client):
     assert data["rows"][0]["title"] == "Demo Title"
     assert choose_calls[0]["skip_existing"] is True
     assert choose_calls[0]["partial_count"] == 9
+
+
+def test_ingest_endpoint_defaults_to_zotero_db_source_mode(monkeypatch, tmp_path: Path, client):
+    p = tmp_path / "a.pdf"
+    p.write_text("x")
+
+    choose_calls = []
+    monkeypatch.setattr(
+        webmain,
+        "choose_pdfs",
+        lambda **kwargs: (choose_calls.append(kwargs) or [p]),
+    )
+    monkeypatch.setattr(
+        webmain,
+        "ingest_pdfs",
+        lambda **kwargs: IngestSummary(
+            ingested_articles=1,
+            total_chunks=1,
+            total_references=0,
+            selected_pdfs=[str(p)],
+            skipped_existing_pdfs=[],
+            skipped_no_metadata_pdfs=[],
+            failed_pdfs=[],
+        ),
+    )
+
+    resp = client.post(
+        "/api/ingest",
+        json={"mode": "test3", "source_dir": "pdfs", "pdfs": [], "override_existing": False},
+    )
+    assert resp.status_code == 200
+    final = wait_for_status(client, "/api/ingest/status")
+    assert final["status"] == "completed"
+    assert choose_calls[0]["source_mode"] == "zotero_db"
+
+
+def test_ingest_preview_defaults_to_zotero_db_source_mode(monkeypatch, tmp_path: Path, client):
+    p = tmp_path / "demo.pdf"
+    p.write_text("x")
+    choose_calls = []
+    monkeypatch.setattr(
+        webmain,
+        "choose_pdfs",
+        lambda **kwargs: (choose_calls.append(kwargs) or [p]),
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def existing_article_ids(self):
+            return set()
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+    monkeypatch.setattr(webmain, "_load_metadata_index_for_settings", lambda _settings: {})
+    monkeypatch.setattr(webmain, "find_metadata_for_pdf", lambda *args, **kwargs: None)
+
+    resp = client.post(
+        "/api/ingest/preview",
+        json={"mode": "custom", "source_dir": "pdfs", "pdfs": [str(p)], "override_existing": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert [call["source_mode"] for call in choose_calls] == ["zotero_db", "zotero_db"]
 
 
 def test_query_validation_and_success(monkeypatch, client):

@@ -21,7 +21,13 @@ def test_choose_pdfs_test3_prefers_readable_headers(tmp_path: Path) -> None:
     _write_pdf_header(good2)
     _write_pdf_header(good3)
 
-    selected = pipeline.choose_pdfs(mode="test3", source_dir=str(tmp_path), skip_existing=False, require_metadata=False)
+    selected = pipeline.choose_pdfs(
+        mode="test3",
+        source_dir=str(tmp_path),
+        skip_existing=False,
+        require_metadata=False,
+        source_mode="filesystem",
+    )
 
     assert selected == [good1, good2, good3]
 
@@ -34,7 +40,13 @@ def test_choose_pdfs_all_includes_all_pdf_files(tmp_path: Path) -> None:
     p1.write_bytes(b"x")
     p2.write_bytes(b"y")
 
-    selected = pipeline.choose_pdfs(mode="all", source_dir=str(tmp_path), skip_existing=False, require_metadata=False)
+    selected = pipeline.choose_pdfs(
+        mode="all",
+        source_dir=str(tmp_path),
+        skip_existing=False,
+        require_metadata=False,
+        source_mode="filesystem",
+    )
 
     assert selected == [p2, p1]
 
@@ -46,6 +58,7 @@ def test_choose_pdfs_all_empty_dir_raises_clear_error(tmp_path: Path) -> None:
             source_dir=str(tmp_path),
             skip_existing=False,
             require_metadata=False,
+            source_mode="filesystem",
         )
 
 
@@ -631,412 +644,8 @@ def test_ingest_pdfs_falls_back_when_anystyle_fails(monkeypatch, tmp_path: Path)
     assert seen["source"] == "heuristic"
 
 
-def test_ingest_pdfs_uses_qwen_when_enabled(monkeypatch, tmp_path: Path) -> None:
-    p1 = tmp_path / "ok.pdf"
-    p1.write_text("x")
-
-    def fake_load_article(
-        pdf_path: Path,
-        chunk_size_words: int,
-        chunk_overlap_words: int,
-        metadata=None,
-        strip_page_noise: bool = True,
-    ):
-        return ArticleDoc(
-            article_id=pdf_path.stem,
-            title=pdf_path.stem,
-            normalized_title=pdf_path.stem,
-            year=2024,
-            author="Author",
-            authors=["Author"],
-            citekey=None,
-            paperpile_id=None,
-            doi=None,
-            journal=None,
-            publisher=None,
-            source_path=str(pdf_path),
-            chunks=[
-                Chunk(
-                    chunk_id=f"{pdf_path.stem}::0",
-                    index=0,
-                    text="text",
-                    tokens=["text"],
-                    token_counts={"text": 1},
-                    page_start=1,
-                    page_end=1,
-                )
-            ],
-            citations=[
-                Citation(
-                    citation_id=f"{pdf_path.stem}::ref::0",
-                    raw_text="heuristic-row",
-                    year=2020,
-                    title_guess="Heuristic Title",
-                    normalized_title="heuristic title",
-                    source="heuristic",
-                )
-            ],
-        )
-
-    seen = {"raw_text": None, "source": None}
-
-    class FakeStore:
-        embedding_dimension = 384
-
-        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
-            self.args = (uri, user, password, embedding_model)
-
-        def setup_schema(self, vector_dimensions: int):
-            assert vector_dimensions == 384
-
-        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
-            assert len(articles) == 1
-            seen["raw_text"] = articles[0].citations[0].raw_text
-            seen["source"] = articles[0].citations[0].source
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
-    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
-    monkeypatch.setattr(
-        pipeline,
-        "_load_qwen_citations_cached",
-        lambda pdf_path, article_id, candidates, settings: [
-            Citation(
-                citation_id=f"{pdf_path.stem}::ref::0",
-                raw_text="qwen-json-row",
-                year=1999,
-                title_guess="Qwen Parsed Reference",
-                normalized_title="qwen parsed reference",
-                source="qwen_lora",
-            )
-        ],
-    )
-    monkeypatch.setattr(
-        pipeline,
-        "load_paperpile_index",
-        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
-    )
-
-    summary = pipeline.ingest_pdfs(
-        selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen", metadata_backend="paperpile"),
-        skip_existing=False,
-    )
-
-    assert summary.ingested_articles == 1
-    assert summary.qwen_attempted_pdfs == 1
-    assert summary.qwen_applied_pdfs == 1
-    assert summary.qwen_failed_pdfs == 0
-    assert seen["raw_text"] == "qwen-json-row"
-    assert seen["source"] == "qwen_lora"
 
 
-def test_ingest_pdfs_falls_back_when_qwen_fails(monkeypatch, tmp_path: Path) -> None:
-    p1 = tmp_path / "ok.pdf"
-    p1.write_text("x")
-
-    def fake_load_article(
-        pdf_path: Path,
-        chunk_size_words: int,
-        chunk_overlap_words: int,
-        metadata=None,
-        strip_page_noise: bool = True,
-    ):
-        return ArticleDoc(
-            article_id=pdf_path.stem,
-            title=pdf_path.stem,
-            normalized_title=pdf_path.stem,
-            year=2024,
-            author="Author",
-            authors=["Author"],
-            citekey=None,
-            paperpile_id=None,
-            doi=None,
-            journal=None,
-            publisher=None,
-            source_path=str(pdf_path),
-            chunks=[
-                Chunk(
-                    chunk_id=f"{pdf_path.stem}::0",
-                    index=0,
-                    text="text",
-                    tokens=["text"],
-                    token_counts={"text": 1},
-                    page_start=1,
-                    page_end=1,
-                )
-            ],
-            citations=[
-                Citation(
-                    citation_id=f"{pdf_path.stem}::ref::0",
-                    raw_text="heuristic-row",
-                    year=2020,
-                    title_guess="Heuristic Title",
-                    normalized_title="heuristic title",
-                    source="heuristic",
-                )
-            ],
-        )
-
-    seen = {"raw_text": None, "source": None}
-
-    class FakeStore:
-        embedding_dimension = 384
-
-        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
-            self.args = (uri, user, password, embedding_model)
-
-        def setup_schema(self, vector_dimensions: int):
-            assert vector_dimensions == 384
-
-        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
-            assert len(articles) == 1
-            seen["raw_text"] = articles[0].citations[0].raw_text
-            seen["source"] = articles[0].citations[0].source
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
-    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
-    monkeypatch.setattr(
-        pipeline,
-        "_load_qwen_citations_cached",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("Qwen path not found")),
-    )
-    monkeypatch.setattr(
-        pipeline,
-        "load_paperpile_index",
-        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
-    )
-
-    summary = pipeline.ingest_pdfs(
-        selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen", metadata_backend="paperpile"),
-        skip_existing=False,
-    )
-
-    assert summary.ingested_articles == 1
-    assert summary.qwen_attempted_pdfs == 1
-    assert summary.qwen_applied_pdfs == 0
-    assert summary.qwen_failed_pdfs == 1
-    assert summary.qwen_disabled_reason is not None
-    assert seen["raw_text"] == "heuristic-row"
-    assert seen["source"] == "heuristic"
-
-
-def test_ingest_pdfs_uses_qwen_anystyle_structured_mode(monkeypatch, tmp_path: Path) -> None:
-    p1 = tmp_path / "ok.pdf"
-    p1.write_text("x")
-
-    def fake_load_article(
-        pdf_path: Path,
-        chunk_size_words: int,
-        chunk_overlap_words: int,
-        metadata=None,
-        strip_page_noise: bool = True,
-    ):
-        return ArticleDoc(
-            article_id=pdf_path.stem,
-            title=pdf_path.stem,
-            normalized_title=pdf_path.stem,
-            year=2024,
-            author="Author",
-            authors=["Author"],
-            citekey=None,
-            paperpile_id=None,
-            doi=None,
-            journal=None,
-            publisher=None,
-            source_path=str(pdf_path),
-            chunks=[
-                Chunk(
-                    chunk_id=f"{pdf_path.stem}::0",
-                    index=0,
-                    text="old text",
-                    tokens=["old"],
-                    token_counts={"old": 1},
-                    page_start=1,
-                    page_end=1,
-                )
-            ],
-            citations=[
-                Citation(
-                    citation_id=f"{pdf_path.stem}::ref::0",
-                    raw_text="heuristic-row",
-                    year=2020,
-                    title_guess="Heuristic Title",
-                    normalized_title="heuristic title",
-                    source="heuristic",
-                )
-            ],
-        )
-
-    seen = {"chunk_text": None, "raw_text": None, "source": None}
-
-    class FakeStore:
-        embedding_dimension = 384
-
-        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
-            self.args = (uri, user, password, embedding_model)
-
-        def setup_schema(self, vector_dimensions: int):
-            assert vector_dimensions == 384
-
-        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
-            assert len(articles) == 1
-            seen["chunk_text"] = articles[0].chunks[0].text
-            seen["raw_text"] = articles[0].citations[0].raw_text
-            seen["source"] = articles[0].citations[0].source
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
-    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
-    monkeypatch.setattr(
-        pipeline,
-        "_load_qwen_structured_anystyle_cached",
-        lambda pdf_path, article_id, settings: (
-            [
-                Chunk(
-                    chunk_id=f"{pdf_path.stem}::chunk::0",
-                    index=0,
-                    text="qwen section chunk",
-                    tokens=["qwen", "section", "chunk"],
-                    token_counts={"qwen": 1, "section": 1, "chunk": 1},
-                    page_start=2,
-                    page_end=3,
-                )
-            ],
-            [
-                Citation(
-                    citation_id=f"{article_id}::ref::0",
-                    raw_text="Abbott, D. R. 1999. Example.",
-                    year=1999,
-                    title_guess="Example",
-                    normalized_title="example",
-                    source="anystyle",
-                )
-            ],
-        ),
-    )
-    monkeypatch.setattr(
-        pipeline,
-        "load_paperpile_index",
-        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
-    )
-
-    summary = pipeline.ingest_pdfs(
-        selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen_refsplit_anystyle", metadata_backend="paperpile"),
-        skip_existing=False,
-    )
-
-    assert summary.ingested_articles == 1
-    assert summary.qwen_attempted_pdfs == 1
-    assert summary.qwen_applied_pdfs == 1
-    assert summary.anystyle_attempted_pdfs == 1
-    assert summary.anystyle_applied_pdfs == 1
-    assert seen["chunk_text"] == "qwen section chunk"
-    assert seen["raw_text"] == "Abbott, D. R. 1999. Example."
-    assert seen["source"] == "anystyle"
-
-
-def test_ingest_pdfs_falls_back_when_qwen_anystyle_structured_fails(monkeypatch, tmp_path: Path) -> None:
-    p1 = tmp_path / "ok.pdf"
-    p1.write_text("x")
-
-    def fake_load_article(
-        pdf_path: Path,
-        chunk_size_words: int,
-        chunk_overlap_words: int,
-        metadata=None,
-        strip_page_noise: bool = True,
-    ):
-        return ArticleDoc(
-            article_id=pdf_path.stem,
-            title=pdf_path.stem,
-            normalized_title=pdf_path.stem,
-            year=2024,
-            author="Author",
-            authors=["Author"],
-            citekey=None,
-            paperpile_id=None,
-            doi=None,
-            journal=None,
-            publisher=None,
-            source_path=str(pdf_path),
-            chunks=[
-                Chunk(
-                    chunk_id=f"{pdf_path.stem}::0",
-                    index=0,
-                    text="old text",
-                    tokens=["old"],
-                    token_counts={"old": 1},
-                    page_start=1,
-                    page_end=1,
-                )
-            ],
-            citations=[
-                Citation(
-                    citation_id=f"{pdf_path.stem}::ref::0",
-                    raw_text="heuristic-row",
-                    year=2020,
-                    title_guess="Heuristic Title",
-                    normalized_title="heuristic title",
-                    source="heuristic",
-                )
-            ],
-        )
-
-    seen = {"raw_text": None, "source": None}
-
-    class FakeStore:
-        embedding_dimension = 384
-
-        def __init__(self, uri: str, user: str, password: str, embedding_model: str):
-            self.args = (uri, user, password, embedding_model)
-
-        def setup_schema(self, vector_dimensions: int):
-            assert vector_dimensions == 384
-
-        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
-            assert len(articles) == 1
-            seen["raw_text"] = articles[0].citations[0].raw_text
-            seen["source"] = articles[0].citations[0].source
-
-        def close(self):
-            pass
-
-    monkeypatch.setattr(pipeline, "load_article", fake_load_article)
-    monkeypatch.setattr(pipeline, "GraphStore", FakeStore)
-    monkeypatch.setattr(
-        pipeline,
-        "_load_qwen_structured_anystyle_cached",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("Qwen path not found")),
-    )
-    monkeypatch.setattr(
-        pipeline,
-        "load_paperpile_index",
-        lambda _path: {"ok.pdf": {"title": "From Paperpile", "authors": ["A One"]}},
-    )
-
-    summary = pipeline.ingest_pdfs(
-        selected_pdfs=[p1],
-        settings=Settings(citation_parser="qwen_split_anystyle", metadata_backend="paperpile"),
-        skip_existing=False,
-    )
-
-    assert summary.ingested_articles == 1
-    assert summary.qwen_attempted_pdfs == 1
-    assert summary.qwen_failed_pdfs == 1
-    assert summary.anystyle_attempted_pdfs == 1
-    assert summary.anystyle_failed_pdfs == 1
-    assert seen["raw_text"] == "heuristic-row"
-    assert seen["source"] == "heuristic"
 
 
 def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, tmp_path: Path) -> None:
@@ -1066,6 +675,7 @@ def test_choose_pdfs_test3_skips_existing_and_returns_three_fresh(monkeypatch, t
         skip_existing=True,
         require_metadata=False,
         settings=Settings(),
+        source_mode="filesystem",
     )
 
     assert selected == [files[2], files[3], files[4]]
@@ -1099,6 +709,7 @@ def test_choose_pdfs_test3_respects_partial_count_after_existing_skip(monkeypatc
         require_metadata=False,
         settings=Settings(),
         partial_count=2,
+        source_mode="filesystem",
     )
 
     assert selected == [files[3], files[4]]
@@ -1130,6 +741,7 @@ def test_choose_pdfs_override_includes_existing(monkeypatch, tmp_path: Path) -> 
         skip_existing=False,
         require_metadata=False,
         settings=Settings(),
+        source_mode="filesystem",
     )
 
     assert selected == [p1, p2]
@@ -1162,5 +774,36 @@ def test_choose_pdfs_skips_files_without_metadata_by_default(monkeypatch, tmp_pa
         source_dir=str(tmp_path),
         skip_existing=False,
         settings=Settings(metadata_backend="paperpile"),
+        source_mode="filesystem",
     )
     assert selected == [p1]
+
+
+def test_ingest_pdfs_uses_structured_anystyle_mode(monkeypatch, tmp_path: Path) -> None:
+    p1 = tmp_path / 'ok.pdf'
+    p1.write_text('x')
+    def fake_load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int, metadata=None, strip_page_noise: bool = True):
+        return ArticleDoc(article_id=pdf_path.stem, title=pdf_path.stem, normalized_title=pdf_path.stem, year=2024, author='Author', authors=['Author'], citekey=None, paperpile_id=None, doi=None, journal=None, publisher=None, source_path=str(pdf_path), chunks=[Chunk(chunk_id=f"{pdf_path.stem}::0", index=0, text='old text', tokens=['old'], token_counts={'old': 1}, page_start=1, page_end=1)], citations=[Citation(citation_id=f"{pdf_path.stem}::ref::0", raw_text='heuristic-row', year=2020, title_guess='Heuristic Title', normalized_title='heuristic title', source='heuristic')])
+    seen = {'chunk_text': None, 'raw_text': None, 'source': None}
+    class FakeStore:
+        embedding_dimension = 384
+        def __init__(self, uri: str, user: str, password: str, embedding_model: str): self.args = (uri, user, password, embedding_model)
+        def setup_schema(self, vector_dimensions: int): assert vector_dimensions == 384
+        def ingest_articles(self, articles, should_cancel=None, article_progress_callback=None):
+            assert len(articles) == 1
+            seen['chunk_text'] = articles[0].chunks[0].text
+            seen['raw_text'] = articles[0].citations[0].raw_text
+            seen['source'] = articles[0].citations[0].source
+        def close(self):
+            pass
+    monkeypatch.setattr(pipeline, 'load_article', fake_load_article)
+    monkeypatch.setattr(pipeline, 'GraphStore', FakeStore)
+    monkeypatch.setattr(pipeline, '_load_structured_anystyle_cached', lambda pdf_path, article_id, settings: pipeline.StructuredExtraction(chunks=[Chunk(chunk_id=f"{pdf_path.stem}::chunk::0", index=0, text='section chunk', tokens=['section','chunk'], token_counts={'section':1,'chunk':1}, page_start=2, page_end=3)], citations=[Citation(citation_id=f"{article_id}::ref::0", raw_text='Abbott, D. R. 1999. Example.', year=1999, title_guess='Example', normalized_title='example', source='anystyle')], reference_strings=[], sections=[]))
+    monkeypatch.setattr(pipeline, 'load_paperpile_index', lambda _path: {'ok.pdf': {'title': 'From Paperpile', 'authors': ['A One']}})
+    summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(citation_parser='structured_anystyle', metadata_backend='paperpile'), skip_existing=False)
+    assert summary.ingested_articles == 1
+    assert summary.anystyle_attempted_pdfs == 1
+    assert summary.anystyle_applied_pdfs == 1
+    assert seen['chunk_text'] == 'section chunk'
+    assert seen['raw_text'] == 'Abbott, D. R. 1999. Example.'
+    assert seen['source'] == 'anystyle'

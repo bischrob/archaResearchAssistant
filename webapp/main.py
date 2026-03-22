@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.011551")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.013612")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -112,7 +112,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 class SyncRequest(BaseModel):
     dry_run: bool = False
     source_dir: str = Field(default_factory=_default_pdf_source_dir)
-    source_mode: str = Field(default="filesystem", pattern="^(filesystem|zotero_db)$")
+    source_mode: str = Field(default="zotero_db", pattern="^(filesystem|zotero_db)$")
     run_ingest: bool = True
     ingest_skip_existing: bool = True
 
@@ -158,7 +158,7 @@ class AskExportRequest(BaseModel):
 
 class IngestPreviewRequest(BaseModel):
     mode: str = Field(default="batch", pattern="^(batch|all|custom|test3)$")
-    source_mode: str = Field(default="filesystem", pattern="^(filesystem|zotero_db)$")
+    source_mode: str = Field(default="zotero_db", pattern="^(filesystem|zotero_db)$")
     source_dir: str = Field(default_factory=_default_pdf_source_dir)
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
@@ -484,7 +484,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
     def run(job: JobState) -> dict:
         jobs.set_progress("sync", 0.0, "Checking local source")
         settings = Settings()
-        source_mode = (req.source_mode or "filesystem").strip().lower() or "filesystem"
+        source_mode = (req.source_mode or "zotero_db").strip().lower() or "zotero_db"
         configured_source = (req.source_dir or "").strip() or settings.pdf_source_dir
         pdf_root = resolve_input_path(configured_source)
         source_stats: dict[str, Any] = {}
@@ -906,6 +906,7 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
         jobs.set_progress("ingest", 0.0, "Selecting files")
         selected = choose_pdfs(
             mode=mode,
+            source_mode=req.source_mode,
             source_dir=req.source_dir,
             explicit_pdfs=req.pdfs,
             skip_existing=not req.override_existing,
@@ -1090,6 +1091,7 @@ def ingest_preview(req: IngestPreviewRequest, authorization: str | None = Header
         try:
             selected_for_ingest = choose_pdfs(
                 mode=mode,
+                source_mode=req.source_mode,
                 source_dir=req.source_dir,
                 explicit_pdfs=req.pdfs,
                 skip_existing=not req.override_existing,
