@@ -181,7 +181,7 @@ Convert the Zotero-first ingest checklist into concrete implementation tasks for
 **Definition of done:**
 - deterministic heuristics run first; LLM only resolves hard boundary cases
 
-**Status update (2026-03-21):** implemented in the current ingest path. Heuristics still propose heading/reference candidates, Qwen remains the ambiguity resolver via `detect_section_plan_with_qwen()`, and the resulting normalized section types now persist onto `Article`, `Chunk`, and `Section` graph metadata.
+**Status update (2026-03-21):** implemented in the current ingest path. Heuristics still propose heading/reference candidates, OpenClaw agent remains the ambiguity resolver via `detect_section_plan_with_qwen()`, and the resulting normalized section types now persist onto `Article`, `Chunk`, and `Section` graph metadata.
 
 ---
 
@@ -358,7 +358,7 @@ low
 ## Epic H — AI-driven keyword extraction
 
 ### Task H1 — Extract article-level retrieval keywords
-**Status update (2026-03-21):** implemented. `src/rag/keyword_extraction.py` now derives an auditable keyword set from body chunks, prefers Qwen JSON output when available, and falls back to deterministic token-based extraction when not.
+**Status update (2026-03-21):** implemented. `src/rag/keyword_extraction.py` now derives an auditable keyword set from body chunks, prefers OpenClaw agent JSON output when available, and falls back to deterministic token-based extraction when not.
 
 **Definition of done:**
 - article ingest persists keywords plus extraction audit/provenance for later retrieval/reranking

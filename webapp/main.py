@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.021306")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.022904")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
