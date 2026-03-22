@@ -277,6 +277,91 @@ function renderQueryJob(job) {
   `;
 }
 
+let lastZoteroBrowse = [];
+
+function selectedZoteroPersistentIds() {
+  return Array.from(document.querySelectorAll(".zotero-select:checked"))
+    .map((el) => el.getAttribute("data-pid") || "")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function renderZoteroBrowse(payload) {
+  const out = document.getElementById("zoteroBrowseOut");
+  const items = payload?.items || [];
+  lastZoteroBrowse = items;
+  if (!items.length) {
+    renderSimpleMessage(out, "Zotero PDF Browser", "completed", "No matching Zotero PDF-backed items.");
+    return;
+  }
+  out.innerHTML = `
+    ${statusHeader({ status: "completed" }, "Zotero PDF Browser")}
+    <div class="meta">Matches: ${escapeHtml(payload.total ?? items.length)} | Showing: ${escapeHtml(items.length)} | Available only: ${escapeHtml(payload.available_only ?? true)}</div>
+    <table class="preview-table">
+      <thead>
+        <tr>
+          <th>Select</th>
+          <th>Title</th>
+          <th>Authors</th>
+          <th>Year</th>
+          <th>Persistent ID</th>
+          <th>Available</th>
+          <th>In Graph</th>
+          <th>Resolver</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map((item) => `
+          <tr>
+            <td><input class="zotero-select" type="checkbox" data-pid="${escapeHtml(item.zotero_persistent_id || "")}" ${item.available ? "" : "disabled"} /></td>
+            <td>${escapeHtml(item.title || "Untitled")}</td>
+            <td>${escapeHtml((item.authors || []).join(", "))}</td>
+            <td>${escapeHtml(item.year || "")}</td>
+            <td><code>${escapeHtml(item.zotero_persistent_id || "")}</code></td>
+            <td>${escapeHtml(item.available ? "yes" : `no (${item.issue_code || "unresolved"})`)}</td>
+            <td>${escapeHtml(item.exists_in_graph ? "yes" : "no")}</td>
+            <td>${escapeHtml(item.resolver || item.acquisition_source || "-")}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+async function runZoteroSelectionIngest(reingest) {
+  const out = document.getElementById("zoteroBrowseOut");
+  const zotero_persistent_ids = selectedZoteroPersistentIds();
+  if (!zotero_persistent_ids.length) {
+    renderSimpleMessage(out, "Zotero PDF Browser", "failed", "Select at least one available Zotero PDF item.");
+    return;
+  }
+  await api("/api/zotero/items/ingest", { zotero_persistent_ids, reingest: !!reingest });
+  renderSimpleMessage(out, "Zotero Selection Ingest", "running", reingest ? "Starting re-ingest..." : "Starting ingest...");
+  startPolling("ingest", async (payload) => {
+    const state = jobState(payload);
+    if (state === "completed" && payload.result?.selected_items) {
+      const summary = payload.result.summary || {};
+      out.innerHTML = `
+        ${statusHeader(payload, reingest ? "Zotero Re-ingest" : "Zotero Ingest")}
+        ${progressBlock(payload)}
+        <div class="kv">
+          <strong>Source Mode</strong><span>${escapeHtml(payload.result.source_mode || "zotero_db")}</span>
+          <strong>Selected Items</strong><span>${escapeHtml(payload.result.selection_count ?? 0)}</span>
+          <strong>Resolved Items</strong><span>${escapeHtml(payload.result.resolved_selection_count ?? 0)}</span>
+          <strong>Re-ingest</strong><span>${escapeHtml(payload.result.reingest ?? false)}</span>
+          <strong>Ingested Articles</strong><span>${escapeHtml(summary.ingested_articles ?? 0)}</span>
+          <strong>Skipped Existing</strong><span>${escapeHtml((summary.skipped_existing_pdfs || []).length)}</span>
+        </div>
+        <details><summary>Selected items</summary><pre>${escapeHtml(JSON.stringify(payload.result.selected_items, null, 2))}</pre></details>
+        <details><summary>Ingest summary</summary><pre>${escapeHtml(JSON.stringify(summary, null, 2))}</pre></details>
+      `;
+      await refreshHealth();
+      return;
+    }
+    renderSimpleMessage(out, reingest ? "Zotero Re-ingest" : "Zotero Ingest", state, payload.error || payload.progress_message || "Working...");
+  });
+}
+
 function renderDiagnostics(payload) {
   const out = document.getElementById("diagOut");
   const checks = payload?.checks || [];
@@ -354,6 +439,38 @@ document.getElementById("syncStopBtn").addEventListener("click", async () => {
   }
 });
 
+document.getElementById("zoteroSearchBtn").addEventListener("click", async () => {
+  const out = document.getElementById("zoteroBrowseOut");
+  renderSimpleMessage(out, "Zotero PDF Browser", "running", "Searching Zotero PDF-backed items...");
+  try {
+    const payload = await api("/api/zotero/items/search", {
+      query: document.getElementById("zoteroSearchText").value.trim(),
+      limit: parseInt(document.getElementById("zoteroSearchLimit").value || "25", 10),
+      offset: 0,
+      available_only: document.getElementById("zoteroAvailableOnly").checked,
+    });
+    renderZoteroBrowse(payload);
+  } catch (err) {
+    renderSimpleMessage(out, "Zotero PDF Browser", "failed", err.message);
+  }
+});
+
+document.getElementById("zoteroIngestBtn").addEventListener("click", async () => {
+  try {
+    await runZoteroSelectionIngest(false);
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("zoteroBrowseOut"), "Zotero Ingest", "failed", err.message);
+  }
+});
+
+document.getElementById("zoteroReingestBtn").addEventListener("click", async () => {
+  try {
+    await runZoteroSelectionIngest(true);
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("zoteroBrowseOut"), "Zotero Re-ingest", "failed", err.message);
+  }
+});
+
 document.getElementById("queryBtn").addEventListener("click", async () => {
   const query = document.getElementById("queryText").value.trim();
   const limit = parseInt(document.getElementById("queryLimit").value || "20", 10);
@@ -416,6 +533,7 @@ document.getElementById("diagBtn").addEventListener("click", async () => {
 renderSyncJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
 renderSimpleMessage(document.getElementById("diagOut"), "Diagnostics", "idle", "Click Run Diagnostics.");
+renderSimpleMessage(document.getElementById("zoteroBrowseOut"), "Zotero PDF Browser", "idle", "Search available Zotero PDF-backed items.");
 initDocumentationTabs();
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);

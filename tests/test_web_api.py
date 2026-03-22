@@ -614,6 +614,180 @@ def test_ingest_preview_defaults_to_zotero_db_source_mode(monkeypatch, tmp_path:
     assert [call["source_mode"] for call in choose_calls] == ["zotero_db", "zotero_db"]
 
 
+def test_zotero_items_search_returns_available_pdf_rows(monkeypatch, tmp_path: Path, client):
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    storage = tmp_path / "storage"
+    storage.mkdir()
+    pdf_path = tmp_path / "available.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\n")
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "zotero_db_path": str(zotero_db),
+            "zotero_storage_root": str(storage),
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def existing_identity_hits(self, **kwargs):
+            assert kwargs["zotero_persistent_ids"] == {"1:AAA"}
+            return {"zotero_persistent_id": {"1:AAA"}}
+
+        def close(self):
+            pass
+
+    resolutions = {
+        "1:AAA": SimpleNamespace(
+            path=pdf_path,
+            resolver="local_storage",
+            issue_code="ok",
+            detail="",
+            acquisition_source="zotero_storage_local",
+            provenance={"resolver": "local_storage", "local_path": str(pdf_path)},
+        ),
+        "1:BBB": SimpleNamespace(
+            path=None,
+            resolver="local_storage",
+            issue_code="zotero_storage_missing_local",
+            detail="storage:missing.pdf",
+            acquisition_source="unresolved",
+            provenance={"resolver": "local_storage", "issue_code": "zotero_storage_missing_local"},
+        ),
+    }
+
+    class FakeResolver:
+        def __init__(self, settings):
+            pass
+
+        def resolve(self, row):
+            return resolutions[row["zotero_persistent_id"]]
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "load_zotero_entries",
+        lambda *args, **kwargs: [
+            {"title": "Alpha Paper", "authors": ["Ada"], "doi": "10.1/a", "zotero_persistent_id": "1:AAA", "zotero_item_key": "AAA", "zotero_attachment_key": "ATT1"},
+            {"title": "Beta Paper", "authors": ["Bob"], "doi": "10.1/b", "zotero_persistent_id": "1:BBB", "zotero_item_key": "BBB", "zotero_attachment_key": "ATT2"},
+        ],
+    )
+    monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", FakeResolver)
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/zotero/items/search", json={"query": "alpha", "limit": 10, "available_only": True})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["ok"] is True
+    assert data["total"] == 1
+    assert len(data["items"]) == 1
+    row = data["items"][0]
+    assert row["zotero_persistent_id"] == "1:AAA"
+    assert row["available"] is True
+    assert row["exists_in_graph"] is True
+    assert row["resolver"] == "local_storage"
+    assert row["acquisition_source"] == "zotero_storage_local"
+
+
+@pytest.mark.parametrize("reingest,expected_skip_existing", [(False, True), (True, False)])
+def test_zotero_items_ingest_uses_selected_persistent_ids(monkeypatch, tmp_path: Path, client, reingest, expected_skip_existing):
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    storage = tmp_path / "storage"
+    storage.mkdir()
+    pdf_path = tmp_path / "selected.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\n")
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "zotero_db_path": str(zotero_db),
+            "zotero_storage_root": str(storage),
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def existing_identity_hits(self, **kwargs):
+            return {"zotero_persistent_id": {"1:AAA"}}
+
+        def close(self):
+            pass
+
+    class FakeResolver:
+        def __init__(self, settings):
+            pass
+
+        def resolve(self, row):
+            return SimpleNamespace(
+                path=pdf_path,
+                resolver="local_storage",
+                issue_code="ok",
+                detail="",
+                acquisition_source="zotero_storage_local",
+                provenance={"resolver": "local_storage", "local_path": str(pdf_path)},
+            )
+
+        def close(self):
+            pass
+
+    ingest_calls = []
+
+    def fake_ingest_pdfs(**kwargs):
+        ingest_calls.append(kwargs)
+        return IngestSummary(
+            ingested_articles=1,
+            total_chunks=2,
+            total_references=1,
+            selected_pdfs=[str(pdf_path)],
+            skipped_existing_pdfs=[] if reingest else [str(pdf_path)],
+            skipped_no_metadata_pdfs=[],
+            failed_pdfs=[],
+        )
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "load_zotero_entries",
+        lambda *args, **kwargs: [
+            {"title": "Alpha Paper", "authors": ["Ada"], "doi": "10.1/a", "zotero_persistent_id": "1:AAA", "zotero_item_key": "AAA", "zotero_attachment_key": "ATT1"},
+        ],
+    )
+    monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", FakeResolver)
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+    monkeypatch.setattr(webmain, "ingest_pdfs", fake_ingest_pdfs)
+
+    resp = client.post("/api/zotero/items/ingest", json={"zotero_persistent_ids": ["1:AAA"], "reingest": reingest})
+    assert resp.status_code == 200
+    final = wait_for_status(client, "/api/ingest/status")
+    assert final["status"] == "completed"
+    assert final["result"]["source_mode"] == "zotero_db"
+    assert final["result"]["reingest"] is reingest
+    assert final["result"]["selected_items"][0]["zotero_persistent_id"] == "1:AAA"
+    assert ingest_calls[0]["skip_existing"] is expected_skip_existing
+    assert ingest_calls[0]["selected_pdfs"] == [pdf_path]
+
+
+
 def test_query_validation_and_success(monkeypatch, client):
     bad = client.post("/api/query", json={"query": "   ", "limit": 5})
     assert bad.status_code == 400

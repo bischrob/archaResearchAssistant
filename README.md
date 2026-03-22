@@ -82,7 +82,7 @@ For full setup, including Zotero, LoRA, and Anystyle:
 
 1. Configure `.env` with your OpenAI key and Zotero paths.
 2. Start the stack with `make start`.
-3. Open the web UI and use `Sync + Ingest`.
+3. Open the web UI and use `Sync + Ingest` for anti-join syncs, or `Zotero PDF Browser` to search available Zotero-backed PDFs and ingest or re-ingest selected items.
 4. Use `Search` for paper or chunk retrieval.
 
 ## Zotero WebDAV Fallback
@@ -145,7 +145,7 @@ make smoke
 Notes:
 
 - The default test suite now runs as real pytest tests rather than compile-only checks.
-- New integration coverage exercises Zotero-first identity enforcement, attachment resolver provenance, text-acquisition provenance, section-aware structured extraction, `.references.txt` sidecar generation, and Neo4j reference-ingest behavior with lightweight mocks where a live service would be too heavy.
+- New integration coverage exercises Zotero-first identity enforcement, attachment resolver provenance, text-acquisition provenance, section-aware structured extraction, `.references.txt` sidecar generation, Neo4j reference-ingest behavior, and the Zotero PDF browser/API ingest path with lightweight mocks only at external boundaries.
 
 ## Local Conveniences
 

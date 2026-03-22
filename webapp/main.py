@@ -13,7 +13,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
@@ -99,7 +99,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.013612")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.021306")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -163,6 +163,32 @@ class IngestPreviewRequest(BaseModel):
     pdfs: list[str] = Field(default_factory=list)
     override_existing: bool = False
     partial_count: int = Field(default=3, ge=1, le=5000)
+
+class ZoteroBrowseRequest(BaseModel):
+    query: str = ""
+    limit: int = Field(default=100, ge=1, le=500)
+    offset: int = Field(default=0, ge=0, le=5000)
+    available_only: bool = True
+
+
+class ZoteroSelectionIngestRequest(BaseModel):
+    zotero_persistent_ids: list[str] = Field(default_factory=list, min_length=1, max_length=500)
+    reingest: bool = False
+
+    @field_validator("zotero_persistent_ids")
+    @classmethod
+    def _dedupe_ids(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for raw in values:
+            value = (raw or "").strip()
+            if not value or value in seen:
+                continue
+            seen.add(value)
+            cleaned.append(value)
+        if not cleaned:
+            raise ValueError("At least one Zotero persistent id is required.")
+        return cleaned
 
 
 @dataclass
@@ -370,6 +396,118 @@ def _count_remote_pdfs(remote_path: str) -> int | None:
         return len(lines)
     except (subprocess.TimeoutExpired, Exception):
         return None
+
+
+def _zotero_graph_presence(settings: Settings, persistent_ids: set[str]) -> set[str]:
+    if not persistent_ids:
+        return set()
+    try:
+        store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+        try:
+            hits = store.existing_identity_hits(
+                dois=set(),
+                zotero_persistent_ids=set(persistent_ids),
+                zotero_item_keys=set(),
+                zotero_attachment_keys=set(),
+                title_year_keys=set(),
+                file_stems=set(),
+            )
+        finally:
+            store.close()
+        return set(hits.get("zotero_persistent_id", set()) or set())
+    except Exception:
+        return set()
+
+
+def _browse_zotero_pdf_items(settings: Settings, *, query: str = "", limit: int = 100, offset: int = 0, available_only: bool = True) -> dict[str, Any]:
+    db_path_raw = (settings.zotero_db_path or "").strip()
+    if not db_path_raw:
+        raise RuntimeError("Zotero browse requires ZOTERO_DB_PATH to be configured.")
+    db_path = resolve_input_path(db_path_raw)
+    if not db_path.exists():
+        raise RuntimeError(f"Zotero DB not found: {db_path}")
+
+    storage_root_raw = (settings.zotero_storage_root or "").strip()
+    storage_root = storage_root_raw or str(db_path.parent / "storage")
+    rows = load_zotero_entries(str(db_path), storage_root)
+
+    resolver = ZoteroAttachmentResolver(settings)
+    try:
+        resolved_rows: list[dict[str, Any]] = []
+        for row in rows:
+            resolution = resolver.resolve(row)
+            if available_only and resolution.path is None:
+                continue
+            merged = dict(row)
+            merged["resolution"] = resolution
+            resolved_rows.append(merged)
+    finally:
+        resolver.close()
+
+    query_text = (query or "").strip().lower()
+    if query_text:
+        def matches(row: dict[str, Any]) -> bool:
+            fields = [
+                row.get("title"),
+                row.get("doi"),
+                row.get("journal"),
+                row.get("publisher"),
+                row.get("zotero_persistent_id"),
+                row.get("zotero_item_key"),
+                row.get("zotero_attachment_key"),
+                " ".join(row.get("authors") or []),
+            ]
+            haystack = "\n".join(str(x or "") for x in fields).lower()
+            return query_text in haystack
+        resolved_rows = [row for row in resolved_rows if matches(row)]
+
+    resolved_rows.sort(key=lambda row: (str(row.get("title") or "").lower(), str(row.get("zotero_persistent_id") or "").lower()))
+    total = len(resolved_rows)
+    window = resolved_rows[offset : offset + limit]
+    present_in_graph = _zotero_graph_presence(
+        settings,
+        {
+            str(row.get("zotero_persistent_id") or "").strip()
+            for row in window
+            if str(row.get("zotero_persistent_id") or "").strip()
+        },
+    )
+
+    items: list[dict[str, Any]] = []
+    for row in window:
+        resolution = row["resolution"]
+        persistent_id = str(row.get("zotero_persistent_id") or "").strip()
+        items.append(
+            {
+                "title": row.get("title"),
+                "year": row.get("year"),
+                "authors": row.get("authors") or [],
+                "doi": row.get("doi"),
+                "journal": row.get("journal"),
+                "publisher": row.get("publisher"),
+                "zotero_persistent_id": persistent_id or None,
+                "zotero_item_key": row.get("zotero_item_key"),
+                "zotero_attachment_key": row.get("zotero_attachment_key"),
+                "available": resolution.path is not None,
+                "exists_in_graph": persistent_id in present_in_graph if persistent_id else False,
+                "path": str(resolution.path) if resolution.path is not None else None,
+                "resolver": resolution.resolver or None,
+                "acquisition_source": resolution.acquisition_source or None,
+                "issue_code": resolution.issue_code or None,
+                "issue_detail": resolution.detail or None,
+                "provenance": resolution.provenance,
+            }
+        )
+
+    return {
+        "ok": True,
+        "query": query,
+        "offset": offset,
+        "limit": limit,
+        "available_only": available_only,
+        "total": total,
+        "items": items,
+    }
 
 
 @app.get("/")
@@ -895,6 +1033,105 @@ def sync_status(authorization: str | None = Header(default=None)) -> dict:
 def sync_stop(authorization: str | None = Header(default=None)) -> dict:
     _require_api_token(authorization)
     return jobs.stop("sync")
+
+
+@app.post("/api/zotero/items/search")
+def zotero_items_search(req: ZoteroBrowseRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
+    settings = Settings()
+    return _browse_zotero_pdf_items(
+        settings,
+        query=req.query,
+        limit=req.limit,
+        offset=req.offset,
+        available_only=req.available_only,
+    )
+
+
+@app.post("/api/zotero/items/ingest")
+def zotero_items_ingest(req: ZoteroSelectionIngestRequest, authorization: str | None = Header(default=None)) -> dict:
+    _require_api_token(authorization)
+
+    def run(job: JobState) -> dict:
+        settings = Settings()
+        jobs.set_progress("ingest", 0.0, "Loading Zotero PDF items")
+        browse = _browse_zotero_pdf_items(settings, query="", limit=5000, offset=0, available_only=False)
+        by_pid = {
+            str(item.get("zotero_persistent_id") or "").strip(): item
+            for item in browse["items"]
+            if str(item.get("zotero_persistent_id") or "").strip()
+        }
+
+        selected_items: list[dict[str, Any]] = []
+        missing_ids: list[str] = []
+        unavailable_ids: list[str] = []
+        for idx, pid in enumerate(req.zotero_persistent_ids, start=1):
+            if job.cancel_event.is_set():
+                raise RuntimeError("Ingest cancelled by user.")
+            jobs.set_progress(
+                "ingest",
+                min(20.0, idx / max(1, len(req.zotero_persistent_ids)) * 20.0),
+                f"Resolving Zotero item {idx}/{len(req.zotero_persistent_ids)}",
+            )
+            item = by_pid.get(pid)
+            if item is None:
+                missing_ids.append(pid)
+                continue
+            if not item.get("available") or not item.get("path"):
+                unavailable_ids.append(pid)
+                continue
+            selected_items.append(item)
+
+        if missing_ids:
+            raise RuntimeError(f"Unknown Zotero persistent id(s): {', '.join(missing_ids[:10])}")
+        if not selected_items:
+            raise RuntimeError("No selected Zotero PDF items were available for ingest.")
+
+        selected_pdfs = [Path(str(item["path"])) for item in selected_items]
+
+        def on_ingest_progress(percent: float, message: str) -> None:
+            jobs.set_progress("ingest", 20.0 + (max(0.0, min(100.0, float(percent))) * 0.8), message)
+
+        summary = ingest_pdfs(
+            selected_pdfs=selected_pdfs,
+            wipe=False,
+            settings=settings,
+            should_cancel=lambda: job.cancel_event.is_set(),
+            skip_existing=not req.reingest,
+            progress_callback=on_ingest_progress,
+        )
+        jobs.set_progress("ingest", 100.0, "Zotero selection ingest complete")
+        return {
+            "ok": True,
+            "source_mode": "zotero_db",
+            "selection_count": len(req.zotero_persistent_ids),
+            "resolved_selection_count": len(selected_items),
+            "reingest": bool(req.reingest),
+            "unavailable_ids": unavailable_ids,
+            "selected_items": [
+                {
+                    "zotero_persistent_id": item.get("zotero_persistent_id"),
+                    "title": item.get("title"),
+                    "path": item.get("path"),
+                    "exists_in_graph": item.get("exists_in_graph"),
+                    "resolver": item.get("resolver"),
+                    "acquisition_source": item.get("acquisition_source"),
+                }
+                for item in selected_items
+            ],
+            "summary": {
+                "ingested_articles": summary.ingested_articles,
+                "total_chunks": summary.total_chunks,
+                "total_references": summary.total_references,
+                "selected_pdfs": summary.selected_pdfs,
+                "skipped_existing_pdfs": summary.skipped_existing_pdfs,
+                "skipped_no_metadata_pdfs": summary.skipped_no_metadata_pdfs,
+                "failed_pdfs": summary.failed_pdfs,
+                **_summary_optional_fields(summary),
+            },
+        }
+
+    return jobs.start("ingest", run)
 
 
 @app.post("/api/ingest")
