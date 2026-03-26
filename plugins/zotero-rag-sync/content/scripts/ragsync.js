@@ -49,7 +49,7 @@ var RAGSync = {
   },
 
   getBackendURL() {
-    return this.getStringPref(this.prefBackendURL, 'http://127.0.0.1:8000').replace(/\/+$/, '');
+    return this.getStringPref(this.prefBackendURL, 'http://127.0.0.1:8001').replace(/\/+$/, '');
   },
 
   getBearerToken() {

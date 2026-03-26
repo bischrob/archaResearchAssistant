@@ -7,13 +7,13 @@ Use this when you already know roughly which paper you want.
 If you know the citekey:
 
 ```bash
-curl "http://127.0.0.1:8000/api/article/<citekey>?chunk_limit=1"
+curl "http://127.0.0.1:8001/api/article/<citekey>?chunk_limit=1"
 ```
 
 If you know several citekeys:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/articles/by-citekeys" \
+curl -X POST "http://127.0.0.1:8001/api/articles/by-citekeys" \
   -H "Content-Type: application/json" \
   -d '{"citekeys":["smith2024copyright","doe2023genai"],"chunk_limit":1}'
 ```
@@ -21,7 +21,7 @@ curl -X POST "http://127.0.0.1:8000/api/articles/by-citekeys" \
 If you know title, author, or year but not citekey:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/query" \
+curl -X POST "http://127.0.0.1:8001/api/query" \
   -H "Content-Type: application/json" \
   -d '{
     "query":"\"Copyright and Artificial Intelligence\" 2024 Guadamuz",
