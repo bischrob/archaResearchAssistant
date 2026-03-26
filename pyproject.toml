@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "researchassistant"
+version = "0.1.0"
+description = "archaResearch Assistant operator and ingestion toolkit"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "requests",
+  "typer>=0.12",
+]
+
+[project.scripts]
+ra = "rag.cli:entrypoint"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

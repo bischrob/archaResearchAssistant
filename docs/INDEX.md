@@ -10,6 +10,7 @@ Start here based on your role.
 
 ## Operator
 
+- [Operator Runbook](OPERATOR_RUNBOOK.md)
 - [New User Setup](NEW_USER_SETUP.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
 

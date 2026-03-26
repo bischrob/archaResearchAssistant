@@ -89,8 +89,10 @@ Use the build, runtime, and fallback guidance in [Anystyle Setup](ANYSTYLE_SETUP
 
 ```bash
 make preflight
-make start
+python scripts/ra.py start
 ```
+
+You can still use `make start`, but `python scripts/ra.py start` is now the preferred operator entrypoint because it reuses the repo startup script and can wait for API health.
 
 ## 6) Use the web GUI
 
@@ -120,9 +122,26 @@ Progress overlay behavior in the plugin:
 - While running: `Run in Background` and `Cancel Sync`
 - After completion/failure/cancel: `Close`
 
-## 7) Quick checks
+## 8) Quick checks
+
+Preferred CLI checks:
+
+- `ra status`
+- `ra diagnostics`
+- `ra sync dry-run`
+- `ra zotero-search "query text"`
+
+Legacy equivalents still work:
+
+- `python scripts/ra.py status`
+- `python scripts/ra.py diagnostics`
+- `python scripts/ra.py sync dry-run`
+- `python scripts/ra.py zotero-search "query text"`
+
+Raw API checks still work when needed:
 
 - Health endpoint:
-  - `curl -s http://127.0.0.1:8000/api/health | python -m json.tool`
+  - `curl -s http://192.168.0.37:8001/api/health | python -m json.tool`
 - Dry-run anti-join sync:
-  - `curl -s -X POST http://127.0.0.1:8000/api/sync -H 'Content-Type: application/json' -d '{"dry_run":true,"source_mode":"zotero_db","run_ingest":false}' | python -m json.tool`
+  - `curl -s -X POST http://192.168.0.37:8001/api/sync -H 'Content-Type: application/json' -d '{"dry_run":true,"source_mode":"zotero_db","run_ingest":false}' | python -m json.tool`
+ent-Type: application/json' -d '{"dry_run":true,"source_mode":"zotero_db","run_ingest":false}' | python -m json.tool`

@@ -195,6 +195,39 @@ def _extract_lines_from_paddle_page_payload(payload: object) -> list[str]:
     return lines
 
 
+def _extract_lines_from_paddle_predict_item(item: object) -> list[str]:
+    payload = getattr(item, 'json', item)
+    if not isinstance(payload, dict):
+        return []
+    inner = payload.get('res') if isinstance(payload.get('res'), dict) else payload
+    rec_texts = inner.get('rec_texts')
+    if not isinstance(rec_texts, list):
+        return []
+    lines: list[str] = []
+    for value in rec_texts:
+        text = str(value).strip()
+        if text:
+            lines.append(text)
+    return lines
+
+
+def _run_paddleocr_page(pipeline: object, image_path: Path) -> list[str]:
+    predict = getattr(pipeline, 'predict', None)
+    if callable(predict):
+        output = predict(str(image_path))
+        lines: list[str] = []
+        for item in output:
+            lines.extend(_extract_lines_from_paddle_predict_item(item))
+        if lines:
+            return lines
+    ocr = getattr(pipeline, 'ocr', None)
+    if callable(ocr):
+        payload = ocr(str(image_path))
+        if isinstance(payload, list):
+            return _extract_lines_from_paddle_page_payload(payload)
+    return []
+
+
 def generate_ocr_text_sidecar(
     pdf_path: Path,
     settings: Settings,
@@ -219,8 +252,7 @@ def generate_ocr_text_sidecar(
                     image_path = tmp / f"page_{page_idx:05d}.png"
                     pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
                     pix.save(str(image_path))
-                    payload = pipeline.ocr(str(image_path), cls=True)
-                    for line in _extract_lines_from_paddle_page_payload(payload if isinstance(payload, list) else []):
+                    for line in _run_paddleocr_page(pipeline, image_path):
                         if line:
                             collected.append(line)
     except Exception:
@@ -284,7 +316,13 @@ def assess_text_quality(lines_with_page: list[tuple[int, str]], *, total_page_co
     )
 
 
-def acquire_pdf_text(pdf_path: Path, *, settings: Settings, strip_page_noise: bool = True) -> TextAcquisitionResult:
+def acquire_pdf_text(
+    pdf_path: Path,
+    *,
+    settings: Settings,
+    strip_page_noise: bool = True,
+    preferred_text_path: Path | None = None,
+) -> TextAcquisitionResult:
     total_page_count = 0
     try:
         with fitz.open(pdf_path) as doc:
@@ -306,7 +344,7 @@ def acquire_pdf_text(pdf_path: Path, *, settings: Settings, strip_page_noise: bo
             native_text_report=native_report,
         )
 
-    ocr_path = locate_ocr_text(pdf_path, settings)
+    ocr_path = preferred_text_path.resolve() if preferred_text_path and preferred_text_path.exists() else locate_ocr_text(pdf_path, settings)
     ocr_engine = None
     ocr_model = None
     ocr_version = None

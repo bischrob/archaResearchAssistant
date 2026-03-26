@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
+PYTHON_BIN="${PYTHON_BIN:-$("${ROOT_DIR}/scripts/resolve_python.sh")}"
+
 warn() { echo "[WARN] $*"; }
 ok() { echo "[OK] $*"; }
 fail() { echo "[FAIL] $*"; exit 1; }
@@ -49,6 +51,11 @@ require_cmd() {
   ok "Found command: $cmd"
 }
 
+require_python() {
+  [[ -x "${PYTHON_BIN}" ]] || fail "Missing required Python interpreter: ${PYTHON_BIN}"
+  ok "Using python: ${PYTHON_BIN}"
+}
+
 check_env_file() {
   if [[ ! -f .env ]]; then
     warn ".env not found. Copy .env.example to .env and set values."
@@ -56,15 +63,11 @@ check_env_file() {
   fi
   ok "Found .env"
 
-  local required=(OPENAI_API_KEY NEO4J_PASSWORD)
-  local key
-  for key in "${required[@]}"; do
-    if ! grep -Eq "^${key}=.+" .env; then
-      warn "${key} is missing or empty in .env"
-    else
-      ok "${key} appears set in .env"
-    fi
-  done
+  if grep -Eq '^OPENCLAW_AGENT_COMMAND=.+' .env; then
+    ok "OPENCLAW_AGENT_COMMAND appears set in .env"
+  else
+    warn "OPENCLAW_AGENT_COMMAND is missing in .env. Ask / grounded-answer features will fall back without OpenClaw."
+  fi
 
   local backend
   backend="$(grep -E '^METADATA_BACKEND=' .env | tail -n1 | cut -d'=' -f2- | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' || true)"
@@ -108,7 +111,7 @@ check_docker_daemon() {
 }
 
 check_port_8000() {
-  python - "${PORT_TO_CHECK}" <<'PY'
+  "${PYTHON_BIN}" - "${PORT_TO_CHECK}" <<'PY'
 import socket
 import sys
 
@@ -152,7 +155,7 @@ check_configured_paths() {
 check_neo4j_if_running() {
   if docker inspect -f '{{.State.Running}}' neo4j >/dev/null 2>&1; then
     if [[ "$(docker inspect -f '{{.State.Running}}' neo4j 2>/dev/null || true)" == "true" ]]; then
-      python - <<'PY'
+      "${PYTHON_BIN}" - <<'PY'
 driver = None
 try:
     from neo4j import GraphDatabase
@@ -180,7 +183,7 @@ PY
 
 main() {
   echo "Running preflight checks in ${ROOT_DIR}"
-  require_cmd python
+  require_python
   require_cmd docker
   check_compose
   check_docker_daemon

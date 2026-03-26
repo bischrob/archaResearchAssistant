@@ -12,6 +12,26 @@ Set:
 
 - `ZOTERO_STORAGE_ROOT=/path/to/Zotero/storage`
 
+## Zotero PDF Browser shows a JSON parse error
+
+If the UI shows:
+
+- `JSON.parse: unexpected character at line 1 column 1 of the JSON data`
+
+the browser received a non-JSON error response from the API. The UI now handles that more cleanly, but the underlying cause is usually one of these:
+
+- `ZOTERO_DB_PATH` is unset or points to a missing `zotero.sqlite`
+- `ZOTERO_STORAGE_ROOT` is unset or points to the wrong Zotero `storage/` directory
+- a resolver or backend dependency failed before the API could build a normal response
+
+Check:
+
+- `make preflight`
+- `echo "$ZOTERO_DB_PATH"`
+- `echo "$ZOTERO_STORAGE_ROOT"`
+
+Then restart the web app and retry the Zotero browser search.
+
 Optional fallback for Zotero-managed attachment downloads:
 
 - `ZOTERO_WEBDAV_URL=...`
@@ -54,6 +74,27 @@ Set:
 See:
 
 - [Model Setup](MODEL_SETUP.md)
+
+## `/api/query` looks stalled or spends a long time at startup
+
+Two different failure modes have shown up here:
+
+1. **Cold embedder startup**: creating a fresh `SentenceTransformer` for each query can make the first live query look hung.
+2. **Off-domain false positives**: the request completes, but generic `points` matches swamp archaeology-specific papers.
+
+What changed in-repo:
+
+- `GraphStore` now reuses a cached sentence-transformer embedder for identical model/device settings.
+- Archaeology reranking now tracks `anchor_hits` and penalizes rows with no culture/place anchors when the query contains them.
+- A persistent live harness was added at `eval/archaeology_query_golden.json` and `scripts/run_live_query_golden.py`.
+
+Check the harness against your running API:
+
+```bash
+python3 scripts/run_live_query_golden.py --base-url http://127.0.0.1:8000
+```
+
+If the harness still shows old behavior, the running service is probably using an older environment or process image and needs to be restarted in the supported environment.
 
 ## API bearer token mismatch
 

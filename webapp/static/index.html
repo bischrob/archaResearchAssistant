@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>archaResearch Asssistant</title>
+  <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
@@ -11,7 +12,7 @@
     <header>
       <div class="brand-line">
         <h1>archaResearch Asssistant</h1>
-        <span class="version-badge" id="appVersionBadge">v-</span>
+        <button class="version-badge version-button" id="appVersionBadge" type="button" title="Refresh version">v-</button>
         <span class="mode-badge">Basic Mode</span>
       </div>
       <p class="tagline">Neo4j-backed ingestion, retrieval, and grounded answer workflows.</p>
@@ -24,7 +25,8 @@
           <strong>1) Health</strong><span>Set API token if needed, then click Refresh Health.</span>
           <strong>2) Sync + Ingest</strong><span>Use Zotero DB mode, keep Skip Existing on, and run Sync + Ingest.</span>
           <strong>3) Search</strong><span>Run a query after ingest completes.</span>
-          <strong>4) Diagnostics</strong><span>Use Diagnostics if sync or ingest fails.</span>
+          <strong>4) Ask</strong><span>Run a grounded answer after search if you want a cited summary.</span>
+          <strong>5) Diagnostics</strong><span>Use Diagnostics if sync or ingest fails.</span>
         </div>
       </details>
     </section>
@@ -66,15 +68,13 @@
       </div>
 
       <div id="docsSetup" class="tab-content active markdown-body">
-        <p><strong>OpenAI API key:</strong> set <code>OPENAI_API_KEY</code> in your local <code>.env</code> file.</p>
+        <p><strong>OpenClaw backend:</strong> set <code>OPENCLAW_AGENT_COMMAND</code> in your local <code>.env</code> file. This repo can use the bundled adapter script plus <code>OPENCLAW_BIN</code>.</p>
         <p><strong>Zotero:</strong> set <code>ZOTERO_DB_PATH</code>, usually <code>ZOTERO_STORAGE_ROOT</code>, and keep <code>ZOTERO_REQUIRE_PERSISTENT_ID=1</code> so ingest fails if Zotero rows are missing stable IDs.</p>
         <p><strong>Zotero WebDAV fallback:</strong> if local Zotero storage is not reachable, set <code>ZOTERO_WEBDAV_URL</code>, <code>ZOTERO_WEBDAV_USERNAME</code>, <code>ZOTERO_WEBDAV_PASSWORD</code>, and optionally <code>ZOTERO_WEBDAV_CACHE_DIR</code> in <code>.env</code>.</p>
         <p><strong>Linked-file mappings:</strong> if Zotero uses linked Windows or UNC paths, set <code>ZOTERO_LINKED_PATH_MAP_JSON</code> to map those prefixes to reachable local paths.</p>
         <p><strong>Zotero plugin migration step:</strong> if your library still uses linked PDFs, run <code>Tools &gt; RAG Sync &gt; Normalize Linked PDFs To Stored Attachments</code> in Zotero before relying on WebDAV-backed sync.</p>
-        <p><strong>Qwen3:</strong> use <code>Qwen/Qwen3-4B-Instruct-2507</code> as the recommended base model and set <code>QWEN3_MODEL_PATH</code>.</p>
-        <p><strong>LoRA release asset:</strong> use the published adapter release and set <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
-        <p><a href="https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507" target="_blank" rel="noopener noreferrer">Recommended Qwen3 base model</a></p>
-        <p><a href="https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710" target="_blank" rel="noopener noreferrer">LoRA release asset</a></p>
+        <p><strong>OpenClaw ambiguity resolver:</strong> set <code>OPENCLAW_AGENT_COMMAND</code> so ambiguous reference blocks can be reconstructed into one-reference-per-line text before Anystyle parsing.</p>
+        <p><strong>Reference parsing runtime:</strong> the recommended ingest path is heuristics + OpenClaw-agent repair + Anystyle with <code>CITATION_PARSER=openclaw_refsplit_anystyle</code>.</p>
         <p><strong>API bearer token:</strong> only enter it in the System panel if backend auth is enabled.</p>
       </div>
 
@@ -85,7 +85,7 @@
         <p><strong>Anystyle:</strong> build and start it with Docker if you want the recommended citation parser:</p>
         <pre><code>docker compose build anystyle
 docker compose up -d anystyle</code></pre>
-        <p>Recommended parser mode is <code>CITATION_PARSER=qwen_refsplit_anystyle</code>.</p>
+        <p>Recommended parser mode is <code>CITATION_PARSER=openclaw_refsplit_anystyle</code>.</p>
         <p><strong>Stop behavior:</strong> <strong>Stop Sync</strong> requests cancellation. The job becomes <code>cancelled</code> when processing stops.</p>
         <p><strong>Progress meaning:</strong> early progress reports Zotero detection, then ingest progresses file-by-file.</p>
         <p><strong>Zotero plugin overlay:</strong> while running it shows <code>Run in Background</code> and <code>Cancel Sync</code>; after completion, failure, or cancellation it shows <code>Close</code>.</p>
@@ -105,7 +105,7 @@ docker compose up -d anystyle</code></pre>
         <p><strong>Linked files still failing:</strong> add <code>ZOTERO_LINKED_PATH_MAP_JSON</code> if Zotero uses Windows or UNC linked paths that need to map to local Linux/WSL paths.</p>
         <p><strong>Best long-term fix for linked files:</strong> normalize them into Zotero-managed stored attachments from the Zotero plugin, then let Zotero sync them to WebDAV.</p>
         <p><strong>Anystyle not running:</strong> start the Docker service.</p>
-        <p><strong>Qwen model or LoRA missing:</strong> set <code>QWEN3_MODEL_PATH</code> and <code>QWEN3_CITATION_ADAPTER_PATH</code>.</p>
+        <p><strong>OpenClaw agent missing:</strong> set <code>OPENCLAW_AGENT_COMMAND</code> if you want ambiguous reference blocks repaired before Anystyle parsing.</p>
         <p><strong>Bearer token mismatch:</strong> make the UI token match <code>API_BEARER_TOKEN</code>.</p>
         <p><strong>Neo4j or Docker unavailable:</strong> run preflight and restart services.</p>
       </div>
@@ -152,6 +152,32 @@ docker compose up -d anystyle</code></pre>
       <button id="queryBtn">Run Query</button>
       <button id="queryStopBtn">Stop Query</button>
       <div id="queryResults" class="output"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Ask</h2>
+      <div class="row">
+        <label>Question
+          <input id="askQuestion" placeholder="e.g. What is the chronology argument for the Uinta basin?" />
+        </label>
+        <label>RAG Chunks
+          <input id="askRagResults" type="number" value="8" min="1" max="30" />
+        </label>
+        <label>Model Hint
+          <input id="askModel" placeholder="optional model name" />
+        </label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="askPreprocess" checked /> Rewrite search query with OpenClaw</label>
+        <label><input type="checkbox" id="askEnforceCitations" checked /> Require inline citations</label>
+      </div>
+      <div class="row">
+        <button id="askBtn">Run Grounded Answer</button>
+        <button id="askExportMarkdownBtn">Export Markdown</button>
+        <button id="askExportCsvBtn">Export CSV</button>
+        <button id="askExportPdfBtn">Export PDF</button>
+      </div>
+      <div id="askResults" class="output"></div>
     </section>
 
     <section class="panel">

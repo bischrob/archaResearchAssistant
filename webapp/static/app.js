@@ -18,28 +18,59 @@ function buildHeaders() {
 }
 
 async function api(path, body) {
-  const res = await fetch(path, {
+  return fetchJson(path, {
     method: "POST",
     headers: buildHeaders(),
     body: JSON.stringify(body),
   });
-  const payload = await res.json();
+}
+
+async function apiGet(path) {
+  return fetchJson(path, {
+    method: "GET",
+    headers: buildHeaders(),
+  });
+}
+
+async function fetchJson(path, options) {
+  const res = await fetch(path, {
+    ...options,
+  });
+  const payload = await parseResponsePayload(res);
   if (!res.ok) {
-    throw new Error(payload.detail || "Request failed");
+    throw new Error(extractErrorMessage(payload, res.status));
   }
   return payload;
 }
 
-async function apiGet(path) {
-  const res = await fetch(path, {
-    method: "GET",
-    headers: buildHeaders(),
-  });
-  const payload = await res.json();
-  if (!res.ok) {
-    throw new Error(payload.detail || "Request failed");
+async function parseResponsePayload(res) {
+  const contentType = String(res.headers.get("content-type") || "").toLowerCase();
+  const raw = await res.text();
+  if (!raw) {
+    return {};
   }
-  return payload;
+  if (contentType.includes("application/json")) {
+    try {
+      return JSON.parse(raw);
+    } catch (_err) {
+      return { detail: raw.trim() || "Invalid JSON response." };
+    }
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (_err) {
+    return { detail: raw.trim() || `Request failed with status ${res.status}.` };
+  }
+}
+
+function extractErrorMessage(payload, status) {
+  if (payload && typeof payload === "object") {
+    const detail = String(payload.detail || payload.message || "").trim();
+    if (detail) {
+      return detail;
+    }
+  }
+  return `Request failed with status ${status}`;
 }
 
 const pollers = {};
@@ -139,10 +170,7 @@ function renderHealth(payload) {
   const out = document.getElementById("healthOut");
   const stats = payload?.stats || {};
   const appVersion = String(payload?.version || "").trim();
-  const badge = document.getElementById("appVersionBadge");
-  if (badge) {
-    badge.textContent = appVersion ? `v${appVersion}` : "v-";
-  }
+  renderVersion(payload);
   out.innerHTML = `
     ${statusHeader({ status: "completed" }, "System Health")}
     <div class="kv">
@@ -158,10 +186,34 @@ function renderHealth(payload) {
   `;
 }
 
+function renderVersion(payload) {
+  const appVersion = String(payload?.version || "").trim();
+  const appTitle = String(payload?.title || document.title || "").trim();
+  const badge = document.getElementById("appVersionBadge");
+  if (!badge) return;
+  badge.textContent = appVersion ? `v${appVersion}` : "v-";
+  badge.dataset.version = appVersion;
+  badge.title = appVersion
+    ? `${appTitle || "Application"} ${appVersion}. Click to refresh version.`
+    : "Version unavailable. Click to retry.";
+}
+
+function renderVersionError(err) {
+  const badge = document.getElementById("appVersionBadge");
+  if (!badge) return;
+  badge.textContent = "v!";
+  badge.title = `Version lookup failed: ${err?.message || "Unknown error"}`;
+}
+
+async function refreshVersion() {
+  const payload = await apiGet("/api/version");
+  renderVersion(payload);
+  return payload;
+}
+
 async function refreshHealth() {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "running", "Loading health data...");
-  const res = await fetch("/api/health");
-  const payload = await res.json();
+  const payload = await apiGet("/api/health");
   renderHealth(payload);
 }
 
@@ -278,6 +330,7 @@ function renderQueryJob(job) {
 }
 
 let lastZoteroBrowse = [];
+let lastAskReport = null;
 
 function selectedZoteroPersistentIds() {
   return Array.from(document.querySelectorAll(".zotero-select:checked"))
@@ -389,12 +442,102 @@ function renderDiagnostics(payload) {
   `;
 }
 
+function triggerDownload(blob, filename) {
+  const href = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = href;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(href), 1000);
+}
+
+function renderAskReport(payload) {
+  const out = document.getElementById("askResults");
+  const used = Array.isArray(payload?.used_citations) ? payload.used_citations : [];
+  const rag = Array.isArray(payload?.rag_results) ? payload.rag_results : [];
+  const audit = payload?.audit || {};
+  lastAskReport = payload || null;
+  out.innerHTML = `
+    ${statusHeader({ status: "completed" }, "Grounded Answer")}
+    <div class="kv">
+      <strong>Question</strong><span>${escapeHtml(payload?.question || "")}</span>
+      <strong>Search Query Used</strong><span>${escapeHtml(payload?.search_query_used || "")}</span>
+      <strong>Backend</strong><span>${escapeHtml(payload?.query_preprocess?.backend || "openclaw_agent")}</span>
+      <strong>Rewrite Mode</strong><span>${escapeHtml(payload?.query_preprocess?.method || "-")}</span>
+      <strong>RAG Results</strong><span>${escapeHtml(payload?.rag_results_count ?? rag.length)}</span>
+      <strong>Citations Used</strong><span>${escapeHtml(used.length)}</span>
+      <strong>Audit Risk</strong><span>${escapeHtml(audit?.risk_label || "-")}</span>
+    </div>
+    <article class="result">
+      <strong>Answer</strong>
+      <p>${escapeHtml(payload?.answer || "No answer returned.")}</p>
+    </article>
+    ${used.length ? `
+      <table class="preview-table">
+        <thead>
+          <tr>
+            <th>Citation</th>
+            <th>Title</th>
+            <th>Year</th>
+            <th>Chunk</th>
+            <th>Pages</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${used.map((citation) => `
+            <tr>
+              <td><code>${escapeHtml(citation.citation_id || "")}</code></td>
+              <td>${escapeHtml(citation.article_title || "Untitled")}</td>
+              <td>${escapeHtml(citation.article_year || "")}</td>
+              <td>${escapeHtml(citation.chunk_id || "")}</td>
+              <td>${escapeHtml(`${citation.page_start || ""}-${citation.page_end || ""}`)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    ` : `<div class="empty">No cited passages returned.</div>`}
+    <details>
+      <summary>RAG Context (${rag.length})</summary>
+      <pre>${escapeHtml(JSON.stringify(rag, null, 2))}</pre>
+    </details>
+  `;
+}
+
+async function exportAskReport(format) {
+  if (!lastAskReport) {
+    renderSimpleMessage(document.getElementById("askResults"), "Grounded Answer", "failed", "Run a grounded answer before exporting.");
+    return;
+  }
+  const res = await fetch("/api/ask/export", {
+    method: "POST",
+    headers: buildHeaders(),
+    body: JSON.stringify({ report: lastAskReport, format }),
+  });
+  if (!res.ok) {
+    const payload = await parseResponsePayload(res);
+    throw new Error(extractErrorMessage(payload, res.status));
+  }
+  const blob = await res.blob();
+  const ext = format === "markdown" ? "md" : format;
+  triggerDownload(blob, `rag-answer-report.${ext}`);
+}
+
 
 document.getElementById("healthBtn").addEventListener("click", async () => {
   try {
     await refreshHealth();
   } catch (err) {
     renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
+  }
+});
+
+document.getElementById("appVersionBadge").addEventListener("click", async () => {
+  try {
+    await refreshVersion();
+  } catch (err) {
+    renderVersionError(err);
   }
 });
 
@@ -522,11 +665,51 @@ document.getElementById("diagBtn").addEventListener("click", async () => {
   const out = document.getElementById("diagOut");
   renderSimpleMessage(out, "Diagnostics", "running", "Running checks...");
   try {
-    const res = await fetch("/api/diagnostics");
-    const payload = await res.json();
+    const payload = await apiGet("/api/diagnostics");
     renderDiagnostics(payload);
   } catch (err) {
     renderSimpleMessage(out, "Diagnostics", "failed", err.message);
+  }
+});
+
+document.getElementById("askBtn").addEventListener("click", async () => {
+  const out = document.getElementById("askResults");
+  renderSimpleMessage(out, "Grounded Answer", "running", "Calling OpenClaw...");
+  try {
+    const payload = await api("/api/ask", {
+      question: document.getElementById("askQuestion").value.trim(),
+      rag_results: parseInt(document.getElementById("askRagResults").value || "8", 10),
+      model: document.getElementById("askModel").value.trim() || null,
+      enforce_citations: document.getElementById("askEnforceCitations").checked,
+      preprocess_search: document.getElementById("askPreprocess").checked,
+    });
+    renderAskReport(payload);
+  } catch (err) {
+    renderSimpleMessage(out, "Grounded Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askExportMarkdownBtn").addEventListener("click", async () => {
+  try {
+    await exportAskReport("markdown");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askResults"), "Grounded Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askExportCsvBtn").addEventListener("click", async () => {
+  try {
+    await exportAskReport("csv");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askResults"), "Grounded Answer", "failed", err.message);
+  }
+});
+
+document.getElementById("askExportPdfBtn").addEventListener("click", async () => {
+  try {
+    await exportAskReport("pdf");
+  } catch (err) {
+    renderSimpleMessage(document.getElementById("askResults"), "Grounded Answer", "failed", err.message);
   }
 });
 
@@ -534,7 +717,11 @@ renderSyncJob({ status: "idle" });
 renderQueryJob({ status: "idle" });
 renderSimpleMessage(document.getElementById("diagOut"), "Diagnostics", "idle", "Click Run Diagnostics.");
 renderSimpleMessage(document.getElementById("zoteroBrowseOut"), "Zotero PDF Browser", "idle", "Search available Zotero PDF-backed items.");
+renderSimpleMessage(document.getElementById("askResults"), "Grounded Answer", "idle", "Run a grounded answer after retrieving or ingesting content.");
 initDocumentationTabs();
+refreshVersion().catch((err) => {
+  renderVersionError(err);
+});
 refreshHealth().catch((err) => {
   renderSimpleMessage(document.getElementById("healthOut"), "System Health", "failed", err.message);
 });

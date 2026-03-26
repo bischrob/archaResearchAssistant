@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import os
+import threading
 import time
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -35,6 +37,12 @@ def _normalize_source_path(value: str | None) -> str:
     return _normalize_identity(str(value or "").replace("\\", "/"))
 
 
+def _json_property(value) -> str | None:
+    if value is None:
+        return None
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
 def _author_token_set(names: list[str]) -> set[str]:
     out: set[str] = set()
     for name in names:
@@ -42,6 +50,10 @@ def _author_token_set(names: list[str]) -> set[str]:
             if len(tok) >= 3:
                 out.add(tok)
     return out
+
+
+_EMBEDDER_CACHE_LOCK = threading.Lock()
+_EMBEDDER_CACHE: dict[tuple[str, str, int, bool], "SentenceTransformerEmbedder"] = {}
 
 
 class SentenceTransformerEmbedder:
@@ -113,14 +125,22 @@ class GraphStore:
                 "Set EMBEDDING_MODEL to a real sentence-transformers model."
             )
 
-        return SentenceTransformerEmbedder(
-            resolved_model,
-            device=os.getenv("EMBEDDING_DEVICE", "cpu"),
-            batch_size=int(os.getenv("EMBEDDING_BATCH_SIZE", "8")),
-            normalize_embeddings=(
-                os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() not in {"0", "false", "no"}
-            ),
-        )
+        device = os.getenv("EMBEDDING_DEVICE", "cpu")
+        batch_size = int(os.getenv("EMBEDDING_BATCH_SIZE", "8"))
+        normalize_embeddings = os.getenv("EMBEDDING_NORMALIZE", "true").strip().lower() not in {"0", "false", "no"}
+        cache_key = (resolved_model, device.strip().lower(), int(batch_size), bool(normalize_embeddings))
+        with _EMBEDDER_CACHE_LOCK:
+            cached = _EMBEDDER_CACHE.get(cache_key)
+            if cached is not None:
+                return cached
+            embedder = SentenceTransformerEmbedder(
+                resolved_model,
+                device=device,
+                batch_size=batch_size,
+                normalize_embeddings=normalize_embeddings,
+            )
+            _EMBEDDER_CACHE[cache_key] = embedder
+            return embedder
 
     @property
     def embedding_dimension(self) -> int:
@@ -279,7 +299,7 @@ class GraphStore:
                 a.section_types = $section_types,
                 a.keywords = $keywords,
                 a.keyword_extraction_method = $keyword_extraction_method,
-                a.keyword_extraction_audit = $keyword_extraction_audit
+                a.keyword_extraction_audit_json = $keyword_extraction_audit_json
             """,
             id=article.article_id,
             title=article.title,
@@ -317,7 +337,7 @@ class GraphStore:
             section_types=sorted({s.kind for s in (article.sections or [])}),
             keywords=[k.value for k in (article.keywords or [])],
             keyword_extraction_method=article.keyword_extraction_method,
-            keyword_extraction_audit=article.keyword_extraction_audit,
+            keyword_extraction_audit_json=_json_property(article.keyword_extraction_audit),
         )
 
         tx.run(
@@ -491,10 +511,12 @@ class GraphStore:
                     r.title_guess = $title_guess,
                     r.title_norm = $title_norm,
                     r.author_tokens = $author_tokens,
+                    r.authors = $authors,
                     r.doi = $doi,
                     r.source = $source,
                     r.type_guess = $type_guess,
-                    r.quality_score = $quality_score
+                    r.quality_score = $quality_score,
+                    r.bibtex = $bibtex
                 WITH r
                 MATCH (a:Article {id: $article_id})
                 MERGE (a)-[:CITES_REFERENCE]->(r)
@@ -505,12 +527,32 @@ class GraphStore:
                 title_guess=citation.title_guess,
                 title_norm=citation.normalized_title,
                 author_tokens=citation.author_tokens or [],
+                authors=citation.authors or [],
                 doi=citation.doi,
                 source=citation.source,
                 type_guess=citation.type_guess,
                 quality_score=citation.quality_score,
+                bibtex=citation.bibtex,
                 article_id=article.article_id,
             )
+            for pos, author_name in enumerate(citation.authors or []):
+                author_name = (author_name or "").strip()
+                if not author_name:
+                    continue
+                tx.run(
+                    """
+                    MERGE (p:Author {name_norm: $author_norm})
+                    SET p.name = $author_name
+                    WITH p
+                    MATCH (r:Reference {id: $reference_id})
+                    MERGE (p)-[w:WROTE]->(r)
+                    SET w.position = $position
+                    """,
+                    author_norm=author_name.lower(),
+                    author_name=author_name,
+                    reference_id=citation.citation_id,
+                    position=pos,
+                )
 
     def _link_article_citations(self, articles: Iterable[ArticleDoc]) -> None:
         by_title = {a.article_id: a for a in articles}

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import json
 
 import numpy as np
 import pytest
 
+import src.rag.neo4j_store as neo4j_store
 from src.rag.neo4j_store import GraphStore, SentenceTransformerEmbedder
 from src.rag.pdf_processing import ArticleDoc, Chunk
 
@@ -165,6 +167,7 @@ def test_link_article_citations_handles_missing_authors(monkeypatch):
 
 def test_graph_store_uses_sentence_transformers_when_requested(monkeypatch):
     fake_driver = _FakeDriver()
+    neo4j_store._EMBEDDER_CACHE.clear()
 
     class _FakeSentenceTransformer:
         def __init__(self, model_name, device=None):
@@ -214,6 +217,7 @@ def test_graph_store_uses_sentence_transformers_when_requested(monkeypatch):
 )
 def test_graph_store_rejects_hash_embedder_configuration(monkeypatch, provider, model_name, expected_message):
     fake_driver = _FakeDriver()
+    neo4j_store._EMBEDDER_CACHE.clear()
     monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
     monkeypatch.setenv("EMBEDDING_PROVIDER", provider)
     with pytest.raises(ValueError, match=expected_message):
@@ -265,3 +269,74 @@ def test_ingest_article_tx_persists_ocr_provenance(monkeypatch):
     assert article_write["ocr_version"] == "3.0.0"
     assert article_write["ocr_processed_at"] == "2026-03-21T22:00:00Z"
     assert "native_reason=native_text_too_short" in article_write["ocr_quality_summary"]
+
+
+def test_ingest_article_tx_serializes_keyword_audit_to_json(monkeypatch):
+    fake_driver = _FakeDriver()
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", _FakeSentenceTransformer)
+    store = GraphStore("bolt://unused", "neo4j", "pass")
+    try:
+        article = ArticleDoc(
+            article_id="kw1",
+            title="Keyword Audit Title",
+            normalized_title="keyword audit title",
+            year=2024,
+            author="Alice",
+            authors=["Alice"],
+            citekey=None,
+            paperpile_id=None,
+            doi=None,
+            journal=None,
+            publisher=None,
+            source_path="/tmp/kw1.pdf",
+            chunks=[],
+            citations=[],
+            keyword_extraction_method="heuristic",
+            keyword_extraction_audit={
+                "method": "heuristic",
+                "keyword_count": 2,
+                "source_sections": ["body"],
+                "sample": [
+                    {"value": "platform", "score": 0.9},
+                    {"value": "mounds", "score": 0.8},
+                ],
+            },
+        )
+        store.ingest_articles([article])
+    finally:
+        store.close()
+
+    session = fake_driver.sessions[0]
+    article_write = next(kwargs for query, kwargs in zip(session.tx_queries, session.tx_kwargs) if "MERGE (a:Article {id: $id})" in query)
+    assert article_write["keyword_extraction_audit_json"] is not None
+    decoded = json.loads(article_write["keyword_extraction_audit_json"])
+    assert decoded["method"] == "heuristic"
+    assert decoded["keyword_count"] == 2
+    assert decoded["sample"][0]["value"] == "platform"
+
+
+def test_graph_store_reuses_cached_embedder_for_same_configuration(monkeypatch):
+    fake_driver = _FakeDriver()
+    neo4j_store._EMBEDDER_CACHE.clear()
+
+    created: list[_FakeSentenceTransformer] = []
+
+    class TrackingSentenceTransformer(_FakeSentenceTransformer):
+        def __init__(self, model_name, device=None):
+            super().__init__(model_name, device=device)
+            created.append(self)
+
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", TrackingSentenceTransformer)
+    monkeypatch.setenv("EMBEDDING_PROVIDER", "sentence_transformers")
+    monkeypatch.setenv("EMBEDDING_BATCH_SIZE", "8")
+    monkeypatch.setenv("EMBEDDING_DEVICE", "cpu")
+    try:
+        store_a = GraphStore("bolt://unused", "neo4j", "pass", embedding_model="sentence-transformers/all-MiniLM-L6-v2")
+        store_b = GraphStore("bolt://unused", "neo4j", "pass", embedding_model="sentence-transformers/all-MiniLM-L6-v2")
+        assert store_a.embedder is store_b.embedder
+        assert len(created) == 1
+    finally:
+        store_a.close()
+        store_b.close()

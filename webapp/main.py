@@ -1,5 +1,7 @@
 ﻿from __future__ import annotations
 
+import copy
+import logging
 import os
 import subprocess
 import threading
@@ -11,13 +13,13 @@ from typing import Any, Callable
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, PlainTextResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
-from src.rag.llm_answer import ask_openai_grounded, preprocess_search_query
+from src.rag.llm_answer import ask_openclaw_grounded, gate_rows_for_synthesis, preprocess_search_query
 from src.rag.metadata_provider import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_metadata_index
 from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
@@ -34,6 +36,12 @@ ROOT = Path(__file__).resolve().parents[1]
 STATIC_DIR = ROOT / "webapp" / "static"
 SYNC_SCRIPT = ROOT / "scripts" / "sync_pdfs_from_gdrive.sh"
 DOTENV_PATH = ROOT / ".env"
+LOGGER = logging.getLogger(__name__)
+DEFAULT_ASK_SCORE_THRESHOLD = float(os.getenv("RA_ASK_SCORE_THRESHOLD", "1.0"))
+DEFAULT_ASK_RETRIEVAL_POOL = int(os.getenv("RA_ASK_RETRIEVAL_POOL", "30"))
+_ZOTERO_BROWSE_CACHE_TTL_SECONDS = 30.0
+_zotero_browse_cache_lock = threading.Lock()
+_zotero_browse_cache: dict[tuple[str, str], dict[str, Any]] = {}
 
 
 def _load_dotenv(path: Path) -> None:
@@ -99,7 +107,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.22.022904")
+app = FastAPI(title="archaResearch Asssistant", version="2026.03.26.013351")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -107,6 +115,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(_request, exc: RuntimeError) -> JSONResponse:
+    return JSONResponse(status_code=400, content={"detail": str(exc) or "Runtime error"})
+
+
+@app.exception_handler(Exception)
+async def unhandled_error_handler(_request, exc: Exception) -> JSONResponse:
+    LOGGER.exception("Unhandled webapp exception", exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": str(exc) or "Internal server error"})
 
 
 class SyncRequest(BaseModel):
@@ -131,6 +150,7 @@ class QueryRequest(BaseModel):
     limit: int = Field(default=20, ge=1, le=20)
     limit_scope: str = Field(default="papers", pattern="^(papers|chunks)$")
     chunks_per_paper: int = Field(default=8, ge=1, le=20)
+    score_threshold: float | None = Field(default=None, ge=0.0)
 
 
 class ArticleLookupRequest(BaseModel):
@@ -145,7 +165,9 @@ class ArticleClaimMatchRequest(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
-    rag_results: int = Field(default=8, ge=1, le=30)
+    rag_results: int | None = Field(default=None, ge=1, le=30)
+    score_threshold: float | None = Field(default=DEFAULT_ASK_SCORE_THRESHOLD, ge=0.0)
+    retrieval_pool: int = Field(default=DEFAULT_ASK_RETRIEVAL_POOL, ge=1, le=100)
     model: str | None = None
     enforce_citations: bool = True
     preprocess_search: bool = True
@@ -314,6 +336,11 @@ class JobManager:
             job.progress_percent = max(0.0, min(100.0, float(percent)))
             job.progress_message = message
 
+    def set_result(self, name: str, result: dict[str, Any] | None) -> None:
+        with self._lock:
+            job = self._jobs[name]
+            job.result = copy.deepcopy(result) if result is not None else None
+
 
 jobs = JobManager()
 
@@ -419,6 +446,84 @@ def _zotero_graph_presence(settings: Settings, persistent_ids: set[str]) -> set[
         return set()
 
 
+def _browse_query_matches(row: dict[str, Any], query_text: str) -> bool:
+    if not query_text:
+        return True
+    fields = [
+        row.get("title"),
+        row.get("doi"),
+        row.get("journal"),
+        row.get("publisher"),
+        row.get("zotero_persistent_id"),
+        row.get("zotero_item_key"),
+        row.get("zotero_attachment_key"),
+        " ".join(row.get("authors") or []),
+    ]
+    haystack = "\n".join(str(x or "") for x in fields).lower()
+    return query_text in haystack
+
+
+def _zotero_browse_cache_key(db_path: Path, storage_root: str) -> str:
+    try:
+        stat = db_path.stat()
+        return f"{db_path}:{storage_root}:{stat.st_mtime_ns}:{stat.st_size}"
+    except OSError:
+        return f"{db_path}:{storage_root}:missing"
+
+
+def _get_cached_zotero_rows(cache_key: str) -> list[dict[str, Any]] | None:
+    with _zotero_browse_cache_lock:
+        entry = _zotero_browse_cache.get(("rows", cache_key))
+        if not entry:
+            return None
+        if (time.time() - float(entry["ts"])) > _ZOTERO_BROWSE_CACHE_TTL_SECONDS:
+            _zotero_browse_cache.pop(("rows", cache_key), None)
+            return None
+        return list(entry["value"])
+
+
+def _set_cached_zotero_rows(cache_key: str, rows: list[dict[str, Any]]) -> None:
+    with _zotero_browse_cache_lock:
+        _zotero_browse_cache[("rows", cache_key)] = {"ts": time.time(), "value": list(rows)}
+
+
+def _get_cached_zotero_resolution(cache_key: str, row: dict[str, Any]) -> Any | None:
+    pid = str(row.get("zotero_persistent_id") or "").strip()
+    attachment_key = str(row.get("zotero_attachment_key") or "").strip()
+    raw_path = str(row.get("attachment_path_raw") or "").strip()
+    resolved_path = str(row.get("attachment_path") or "").strip()
+    row_key = pid or attachment_key or raw_path or resolved_path
+    if not row_key:
+        return None
+    with _zotero_browse_cache_lock:
+        entry = _zotero_browse_cache.get(("resolution", cache_key, row_key))
+        if not entry:
+            return None
+        if entry.get("fingerprint") != (raw_path, resolved_path):
+            _zotero_browse_cache.pop(("resolution", cache_key, row_key), None)
+            return None
+        if (time.time() - float(entry["ts"])) > _ZOTERO_BROWSE_CACHE_TTL_SECONDS:
+            _zotero_browse_cache.pop(("resolution", cache_key, row_key), None)
+            return None
+        return entry["value"]
+
+
+def _set_cached_zotero_resolution(cache_key: str, row: dict[str, Any], resolution: Any) -> None:
+    pid = str(row.get("zotero_persistent_id") or "").strip()
+    attachment_key = str(row.get("zotero_attachment_key") or "").strip()
+    raw_path = str(row.get("attachment_path_raw") or "").strip()
+    resolved_path = str(row.get("attachment_path") or "").strip()
+    row_key = pid or attachment_key or raw_path or resolved_path
+    if not row_key:
+        return
+    with _zotero_browse_cache_lock:
+        _zotero_browse_cache[("resolution", cache_key, row_key)] = {
+            "ts": time.time(),
+            "fingerprint": (raw_path, resolved_path),
+            "value": resolution,
+        }
+
+
 def _browse_zotero_pdf_items(settings: Settings, *, query: str = "", limit: int = 100, offset: int = 0, available_only: bool = True) -> dict[str, Any]:
     db_path_raw = (settings.zotero_db_path or "").strip()
     if not db_path_raw:
@@ -429,13 +534,23 @@ def _browse_zotero_pdf_items(settings: Settings, *, query: str = "", limit: int 
 
     storage_root_raw = (settings.zotero_storage_root or "").strip()
     storage_root = storage_root_raw or str(db_path.parent / "storage")
-    rows = load_zotero_entries(str(db_path), storage_root)
+    cache_key = _zotero_browse_cache_key(db_path, storage_root)
+    rows = _get_cached_zotero_rows(cache_key)
+    if rows is None:
+        rows = load_zotero_entries(str(db_path), storage_root)
+        _set_cached_zotero_rows(cache_key, rows)
+
+    query_text = (query or "").strip().lower()
+    candidate_rows = [row for row in rows if _browse_query_matches(row, query_text)]
 
     resolver = ZoteroAttachmentResolver(settings)
     try:
         resolved_rows: list[dict[str, Any]] = []
-        for row in rows:
-            resolution = resolver.resolve(row)
+        for row in candidate_rows:
+            resolution = _get_cached_zotero_resolution(cache_key, row)
+            if resolution is None:
+                resolution = resolver.resolve(row)
+                _set_cached_zotero_resolution(cache_key, row, resolution)
             if available_only and resolution.path is None:
                 continue
             merged = dict(row)
@@ -443,23 +558,6 @@ def _browse_zotero_pdf_items(settings: Settings, *, query: str = "", limit: int 
             resolved_rows.append(merged)
     finally:
         resolver.close()
-
-    query_text = (query or "").strip().lower()
-    if query_text:
-        def matches(row: dict[str, Any]) -> bool:
-            fields = [
-                row.get("title"),
-                row.get("doi"),
-                row.get("journal"),
-                row.get("publisher"),
-                row.get("zotero_persistent_id"),
-                row.get("zotero_item_key"),
-                row.get("zotero_attachment_key"),
-                " ".join(row.get("authors") or []),
-            ]
-            haystack = "\n".join(str(x or "") for x in fields).lower()
-            return query_text in haystack
-        resolved_rows = [row for row in resolved_rows if matches(row)]
 
     resolved_rows.sort(key=lambda row: (str(row.get("title") or "").lower(), str(row.get("zotero_persistent_id") or "").lower()))
     total = len(resolved_rows)
@@ -513,6 +611,20 @@ def _browse_zotero_pdf_items(settings: Settings, *, query: str = "", limit: int 
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
+
+
+@app.get("/favicon.ico")
+def favicon() -> FileResponse:
+    return FileResponse(STATIC_DIR / "favicon.ico", media_type="image/x-icon")
+
+
+@app.get("/api/version")
+def version_info() -> dict[str, str]:
+    return {
+        "status": "ok",
+        "version": app.version,
+        "title": app.title,
+    }
 
 
 @app.get("/api/health")
@@ -1088,9 +1200,126 @@ def zotero_items_ingest(req: ZoteroSelectionIngestRequest, authorization: str | 
             raise RuntimeError("No selected Zotero PDF items were available for ingest.")
 
         selected_pdfs = [Path(str(item["path"])) for item in selected_items]
+        live_selected_items = [
+            {
+                "zotero_persistent_id": item.get("zotero_persistent_id"),
+                "title": item.get("title"),
+                "path": item.get("path"),
+                "exists_in_graph": item.get("exists_in_graph"),
+                "resolver": item.get("resolver"),
+                "acquisition_source": item.get("acquisition_source"),
+                "job_state": "queued",
+                "article_id": None,
+                "chunk_count": None,
+                "reference_count": None,
+                "error": None,
+                "last_message": "Queued",
+            }
+            for item in selected_items
+        ]
+        item_by_path = {
+            str(item.get("path") or ""): item
+            for item in live_selected_items
+            if str(item.get("path") or "")
+        }
+        live_summary: dict[str, Any] = {
+            "ingested_articles": 0,
+            "total_chunks": 0,
+            "total_references": 0,
+            "selected_pdfs": [],
+            "skipped_existing_pdfs": [],
+            "skipped_no_metadata_pdfs": [],
+            "failed_pdfs": [],
+            "parsed_pdfs": 0,
+            "uploaded_pdfs": 0,
+            "current_pdf": None,
+            "current_stage": "queued",
+        }
+        live_result: dict[str, Any] = {
+            "ok": True,
+            "source_mode": "zotero_db",
+            "selection_count": len(req.zotero_persistent_ids),
+            "resolved_selection_count": len(selected_items),
+            "reingest": bool(req.reingest),
+            "unavailable_ids": unavailable_ids,
+            "selected_items": live_selected_items,
+            "summary": live_summary,
+        }
+        jobs.set_result("ingest", live_result)
+
+        def persist_live_result() -> None:
+            jobs.set_result("ingest", live_result)
 
         def on_ingest_progress(percent: float, message: str) -> None:
             jobs.set_progress("ingest", 20.0 + (max(0.0, min(100.0, float(percent))) * 0.8), message)
+            live_summary["last_progress_message"] = message
+            persist_live_result()
+
+        def on_ingest_event(event: dict[str, Any]) -> None:
+            pdf_path = str(event.get("pdf") or "")
+            entry = item_by_path.get(pdf_path) if pdf_path else None
+            event_name = str(event.get("event") or "").strip()
+            message = str(event.get("message") or "").strip() or None
+            if pdf_path:
+                live_summary["current_pdf"] = pdf_path
+            if event_name:
+                live_summary["current_stage"] = event_name
+
+            if entry is not None:
+                if message:
+                    entry["last_message"] = message
+                article_id = event.get("article_id")
+                if article_id:
+                    entry["article_id"] = article_id
+                if event.get("chunk_count") is not None:
+                    entry["chunk_count"] = event.get("chunk_count")
+                if event.get("reference_count") is not None:
+                    entry["reference_count"] = event.get("reference_count")
+
+            if event_name == "skipped_existing":
+                if entry is not None:
+                    entry["job_state"] = "skipped_existing"
+                if pdf_path and pdf_path not in live_summary["skipped_existing_pdfs"]:
+                    live_summary["skipped_existing_pdfs"].append(pdf_path)
+            elif event_name == "skipped_no_metadata":
+                if entry is not None:
+                    entry["job_state"] = "skipped_no_metadata"
+                if pdf_path and pdf_path not in live_summary["skipped_no_metadata_pdfs"]:
+                    live_summary["skipped_no_metadata_pdfs"].append(pdf_path)
+            elif event_name == "parse_started":
+                if entry is not None:
+                    entry["job_state"] = "parsing"
+            elif event_name == "parse_succeeded":
+                if entry is not None:
+                    entry["job_state"] = "parsed"
+                live_summary["parsed_pdfs"] = sum(1 for item in live_selected_items if item["job_state"] in {"parsed", "uploaded"})
+            elif event_name == "parse_failed":
+                if entry is not None:
+                    entry["job_state"] = "failed"
+                    entry["error"] = str(event.get("error") or "Unknown error")
+                live_summary["failed_pdfs"] = [
+                    {
+                        "pdf": item["path"],
+                        "error": item["error"],
+                    }
+                    for item in live_selected_items
+                    if item.get("job_state") == "failed" and item.get("error")
+                ]
+            elif event_name == "upload_started":
+                live_summary["current_stage"] = "uploading"
+            elif event_name == "upload_succeeded":
+                if entry is not None:
+                    entry["job_state"] = "uploaded"
+                if pdf_path and pdf_path not in live_summary["selected_pdfs"]:
+                    live_summary["selected_pdfs"].append(pdf_path)
+                live_summary["uploaded_pdfs"] = sum(1 for item in live_selected_items if item["job_state"] == "uploaded")
+                live_summary["ingested_articles"] = live_summary["uploaded_pdfs"]
+                live_summary["total_chunks"] = sum(int(item.get("chunk_count") or 0) for item in live_selected_items if item.get("job_state") == "uploaded")
+                live_summary["total_references"] = sum(int(item.get("reference_count") or 0) for item in live_selected_items if item.get("job_state") == "uploaded")
+            elif event_name == "ingest_complete":
+                live_summary["current_stage"] = "completed"
+
+            persist_live_result()
 
         summary = ingest_pdfs(
             selected_pdfs=selected_pdfs,
@@ -1099,6 +1328,7 @@ def zotero_items_ingest(req: ZoteroSelectionIngestRequest, authorization: str | 
             should_cancel=lambda: job.cancel_event.is_set(),
             skip_existing=not req.reingest,
             progress_callback=on_ingest_progress,
+            event_callback=on_ingest_event,
         )
         jobs.set_progress("ingest", 100.0, "Zotero selection ingest complete")
         return {
@@ -1108,17 +1338,7 @@ def zotero_items_ingest(req: ZoteroSelectionIngestRequest, authorization: str | 
             "resolved_selection_count": len(selected_items),
             "reingest": bool(req.reingest),
             "unavailable_ids": unavailable_ids,
-            "selected_items": [
-                {
-                    "zotero_persistent_id": item.get("zotero_persistent_id"),
-                    "title": item.get("title"),
-                    "path": item.get("path"),
-                    "exists_in_graph": item.get("exists_in_graph"),
-                    "resolver": item.get("resolver"),
-                    "acquisition_source": item.get("acquisition_source"),
-                }
-                for item in selected_items
-            ],
+            "selected_items": live_selected_items,
             "summary": {
                 "ingested_articles": summary.ingested_articles,
                 "total_chunks": summary.total_chunks,
@@ -1502,6 +1722,7 @@ def query(req: QueryRequest, authorization: str | None = Header(default=None)) -
                 req.limit,
                 limit_scope=req.limit_scope,
                 chunks_per_paper=req.chunks_per_paper,
+                score_threshold=req.score_threshold,
             )
         finally:
             store.close()
@@ -1515,6 +1736,7 @@ def query(req: QueryRequest, authorization: str | None = Header(default=None)) -
             "limit_scope": req.limit_scope,
             "chunks_per_paper": req.chunks_per_paper,
             "results": rows,
+            "score_threshold": req.score_threshold,
         }
 
     return jobs.start("query", run)
@@ -1548,21 +1770,26 @@ def ask(req: AskRequest) -> dict:
 
     store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
     try:
+        retrieval_limit = req.rag_results or max(1, int(req.retrieval_pool))
+        retrieval_threshold = None if req.rag_results is not None else req.score_threshold
         # Ask keeps chunk-mode retrieval for richer grounding context.
         rag_rows = contextual_retrieve(
             store,
             search_query_used,
-            limit=req.rag_results,
+            limit=retrieval_limit,
             limit_scope="chunks",
             chunks_per_paper=1,
+            score_threshold=retrieval_threshold,
         )
     finally:
         store.close()
 
+    usable_rows, excluded_rows, gate_summary = gate_rows_for_synthesis(question, rag_rows)
+
     try:
-        llm = ask_openai_grounded(
+        llm = ask_openclaw_grounded(
             question=question,
-            rows=rag_rows,
+            rows=usable_rows,
             model=req.model,
             enforce_citations=req.enforce_citations,
         )
@@ -1576,13 +1803,28 @@ def ask(req: AskRequest) -> dict:
         "question": question,
         "search_query_used": search_query_used,
         "query_preprocess": preprocess_meta,
+        "retrieval_mode": "fixed_top_n" if req.rag_results is not None else "score_threshold",
+        "retrieval_pool": retrieval_limit,
+        "score_threshold": retrieval_threshold,
         "rag_results_count": len(rag_rows),
         "rag_results": rag_rows,
+        "usable_rag_results_count": len(usable_rows),
+        "usable_rag_results": usable_rows,
+        "excluded_rag_results_count": len(excluded_rows),
+        "excluded_rag_results": excluded_rows,
         "model": llm.get("model"),
         "answer": llm.get("answer"),
         "citation_enforced": llm.get("citation_enforced"),
+        "answer_method": llm.get("method"),
+        "synthesis_status": llm.get("synthesis_status"),
+        "fallback_reason": llm.get("fallback_reason"),
+        "agent_error": llm.get("agent_error"),
+        "evidence_snippets": llm.get("evidence_snippets", []),
+        "relevance_summary": llm.get("relevance_summary") or gate_summary,
         "audit": audit,
         "used_citations": llm.get("used_citations", []),
+        "relevant_citations": llm.get("relevant_citations", []),
+        "excluded_citations": llm.get("excluded_citations", []),
         "all_citations": llm.get("all_citations", []),
     }
     return report

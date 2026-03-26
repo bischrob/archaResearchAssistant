@@ -4,6 +4,8 @@ import json
 import os
 import shlex
 import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 
 from .config import Settings
@@ -18,6 +20,27 @@ def _command_for_task(task: str, settings: Settings | None = None) -> str:
     return (specific or cfg.openclaw_agent_command or "").strip()
 
 
+def _prepare_command(command: str) -> list[str]:
+    parts = shlex.split(command)
+    if not parts:
+        return parts
+
+    executable = parts[0]
+    lowered = executable.lower()
+    if lowered.endswith(".py"):
+        return [sys.executable, *parts]
+
+    try:
+        resolved = Path(executable).expanduser()
+    except (OSError, RuntimeError, ValueError):
+        resolved = None
+
+    if resolved and resolved.suffix.lower() == ".py":
+        return [sys.executable, *parts]
+
+    return parts
+
+
 def invoke_openclaw_agent(task: str, payload: dict[str, Any], *, settings: Settings | None = None, timeout: int = 120) -> dict[str, Any] | None:
     command = _command_for_task(task, settings=settings)
     if not command:
@@ -25,7 +48,7 @@ def invoke_openclaw_agent(task: str, payload: dict[str, Any], *, settings: Setti
     env = os.environ.copy()
     env["OPENCLAW_AGENT_TASK"] = task
     proc = subprocess.run(
-        shlex.split(command),
+        _prepare_command(command),
         input=json.dumps(payload, ensure_ascii=False),
         capture_output=True,
         text=True,

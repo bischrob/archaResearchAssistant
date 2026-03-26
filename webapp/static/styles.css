@@ -66,6 +66,21 @@ h1 {
   box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2);
 }
 
+.version-button {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.version-button:hover {
+  filter: brightness(1.03);
+}
+
+.version-button:focus-visible {
+  outline: 2px solid #f9f4e8;
+  outline-offset: 2px;
+}
+
 .mode-badge {
   background: #5f5f62;
   color: #ece7da;
@@ -179,7 +194,7 @@ button:hover { filter: brightness(1.05); }
 }
 
 .meta {
-  color: #444;
+  color: #e6dfd1;
   font-size: 0.95rem;
 }
 
@@ -266,6 +281,10 @@ details > summary h2 {
   border-collapse: collapse;
   margin-top: 8px;
   font-size: 0.9rem;
+  color: var(--ink);
+  background: rgba(18, 18, 20, 0.24);
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .preview-table th,
@@ -277,16 +296,34 @@ details > summary h2 {
 }
 
 .preview-table th {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff7ea;
+  font-weight: 700;
+}
+
+.preview-table td {
+  background: rgba(255, 255, 255, 0.04);
+  color: #f5efe2;
+}
+
+.preview-table tbody tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.preview-table code {
+  color: #fff4d6;
+  background: rgba(0, 0, 0, 0.26);
+  border-radius: 4px;
+  padding: 1px 4px;
 }
 
 .ok {
-  color: var(--ok);
+  color: #d7ffcb;
   font-weight: 600;
 }
 
 .bad {
-  color: var(--danger);
+  color: #ffd0d0;
   font-weight: 600;
 }
 

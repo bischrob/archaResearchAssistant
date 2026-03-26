@@ -4,9 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${ROOT_DIR}"
 
+PYTHON_BIN="$("${ROOT_DIR}/scripts/resolve_python.sh")"
+if [[ ! -x "${PYTHON_BIN}" ]]; then
+  echo "Error: Could not locate a usable Python interpreter." >&2
+  exit 1
+fi
+export PYTHON_BIN
+export PATH="$(dirname "${PYTHON_BIN}"):${PATH}"
+echo "Using Python interpreter: ${PYTHON_BIN}"
+
 port_is_free() {
   local port="$1"
-  python - "$port" <<'PY'
+  "${PYTHON_BIN}" - "$port" <<'PY'
 import socket
 import sys
 
@@ -69,7 +78,7 @@ fi
 
 if [[ "${INIT_NEO4J_SCHEMA:-1}" == "1" ]]; then
   echo "Initializing Neo4j schema..."
-  python "${ROOT_DIR}/scripts/init_neo4j_indexes.py" \
+  "${PYTHON_BIN}" "${ROOT_DIR}/scripts/init_neo4j_indexes.py" \
     --wait-seconds "${NEO4J_INIT_WAIT_SECONDS:-90}" \
     --retry-interval "${NEO4J_INIT_RETRY_INTERVAL:-2}"
 fi

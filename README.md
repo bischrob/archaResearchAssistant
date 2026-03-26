@@ -10,6 +10,7 @@ archaResearch Asssistant is a Neo4j-backed PDF ingest and retrieval system with 
 - Anystyle setup: [docs/ANYSTYLE_SETUP.md](docs/ANYSTYLE_SETUP.md)
 - Citation-first lookup: [docs/CITATION_LOOKUP.md](docs/CITATION_LOOKUP.md)
 - Troubleshooting: [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- Operator CLI runbook: [docs/OPERATOR_RUNBOOK.md](docs/OPERATOR_RUNBOOK.md)
 
 ## Included vs Excluded
 
@@ -37,15 +38,17 @@ Recommended citation-extraction LoRA:
 
 - https://github.com/bischrob/archaResearchAssistant/releases/tag/lora-20260319-104710
 
-## Recommended OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow) Base Model
+## Recommended Parsing Architecture
 
-Current code and training scripts in this repository are aligned to:
+Current production ingest is aligned to:
 
-- `OpenClaw agent/OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow)-4B-Instruct-2507`
+- heuristics for section/reference detection
+- OpenClaw-agent repair for ambiguous reference blocks
+- Anystyle for structured citation parsing from one-reference-per-line text
 
-Recommended source:
+Recommended runtime setting:
 
-- https://huggingface.co/OpenClaw agent/OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow)-4B-Instruct-2507
+- `CITATION_PARSER=openclaw_refsplit_anystyle`
 
 ## Supported Setup Matrix
 
@@ -55,7 +58,22 @@ Recommended source:
 - Zotero backend: recommended default
 - GPU: optional
 - OpenAI API key: required for grounded LLM answer flows
-- Local OpenClaw agent3 (removed; replaced by OpenClaw-agent / deterministic flow) base model: optional unless using local OpenClaw agent-powered parsing or preprocessing
+- OpenClaw agent command: recommended for ambiguous reference reconstruction during ingest
+
+## Golden-query live harness
+
+Persistent archaeology-style live query checks now live in:
+
+- `eval/archaeology_query_golden.json`
+- `scripts/run_live_query_golden.py`
+
+Run them against a running web API instance:
+
+```bash
+python3 scripts/run_live_query_golden.py --base-url http://192.168.0.37:8001
+```
+
+The current golden set is intentionally aimed at false-positive regressions around generic `points`/`projectile points` matches.
 
 ## Quickstart
 
@@ -64,19 +82,41 @@ conda env create -f environment.yml
 conda activate researchassistant
 cp .env.example .env
 make preflight
-make start
+pip install -e .
+ra start
+ra status
 make smoke
+```
+
+## Operator CLI
+
+The repo now ships a first-party operator CLI with an installable `ra` entrypoint for the common daily workflows that previously required raw curl payloads. The legacy `python scripts/ra.py ...` path still works as a thin wrapper, but the preferred repo-native install path is:
+
+```bash
+pip install -e .
+ra status
+ra diagnostics
+ra sync dry-run
+ra sync ingest
+ra zotero-search "transformer"
+ra zotero-ingest ABC123XYZ
+ra query "household archaeology"
+ra ask "What do recent papers say about household resilience?"
+ra article shawThinkingFastSlowArtificial2026
 ```
 
 Notes:
 
-- The supported local Python target is currently **Python 3.11**.
+- The default ra API target is http://192.168.0.37:8001 (home2). Override with RA_BASE_URL or --base-url when needed.
+- `ra start` now resolves Python deterministically: repo `.venv` first, then active virtual/conda envs, then named conda envs, then PATH Python.
+- The supported local Python target is currently **Python 3.11+**.
 - `requirements.txt` is configured to use the PyTorch CUDA 12.4 wheel index.
 - The ingest pipeline now requires **real sentence-transformer embeddings**; hash-placeholder embeddings are disabled.
 
 For full setup, including Zotero, LoRA, and Anystyle:
 
 - [docs/NEW_USER_SETUP.md](docs/NEW_USER_SETUP.md)
+- [docs/WSL_LAUNCHER.md](docs/WSL_LAUNCHER.md)
 
 ## Core Workflow
 
@@ -120,6 +160,7 @@ Plugin workflow notes:
   - `Run in Background` while work is still running
   - `Cancel Sync` while work is still running
   - `Close` once the run has completed, failed, or been cancelled
+- `Import PDF URL To Stored Attachment` prompts for a PDF URL and imports it as a Zotero-managed stored attachment under the currently selected parent item. This is the direct path for making a remote PDF eligible for Zotero file sync/WebDAV without creating a linked URL attachment.
 - `Normalize Linked PDFs To Stored Attachments` converts selected linked PDF attachments into Zotero-managed stored attachments under the same parent item. This is the recommended way to migrate away from UNC/linked-file paths before relying on WebDAV-backed sync.
 
 ## Testing

@@ -79,6 +79,8 @@ class Citation:
     type_guess: str | None = None
     author_tokens: list[str] | None = None
     quality_score: float | None = None
+    authors: list[str] | None = None
+    bibtex: str | None = None
 
 
 @dataclass
@@ -364,6 +366,7 @@ def load_article(
         pdf_path,
         settings=settings,
         strip_page_noise=strip_page_noise,
+        preferred_text_path=Path(str(metadata.get("zotero_ocr_text_path") or "")).resolve() if metadata.get("zotero_ocr_text_path") else None,
     )
     page_text = _extract_page_text(pdf_path)
     lines_with_page = acquisition.lines_with_page

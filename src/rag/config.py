@@ -58,7 +58,7 @@ class Settings:
     chunk_overlap_words: int = field(default_factory=lambda: _env_int('CHUNK_OVERLAP_WORDS', 45))
     citation_min_quality: float = field(default_factory=lambda: _env_float('CITATION_MIN_QUALITY', 0.35))
     chunk_strip_page_noise: bool = field(default_factory=lambda: _env_not_false('CHUNK_STRIP_PAGE_NOISE', True))
-    citation_parser: str = field(default_factory=lambda: _env_str('CITATION_PARSER', 'structured_anystyle').strip().lower())
+    citation_parser: str = field(default_factory=lambda: _env_str('CITATION_PARSER', 'openclaw_refsplit_anystyle').strip().lower())
     text_acquisition_policy: str = field(default_factory=lambda: _env_str('TEXT_ACQUISITION_POLICY', 'native_pdf_then_paddle_if_malformed').strip().lower())
     text_quality_check_backend: str = field(default_factory=lambda: _env_str('TEXT_QUALITY_CHECK_BACKEND', 'heuristic_placeholder').strip().lower())
     paddleocr_text_dir: str = field(default_factory=lambda: _env_str('PADDLEOCR_TEXT_DIR', 'ocr/paddleocr/text').strip())

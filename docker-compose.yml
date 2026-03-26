@@ -4,12 +4,12 @@ services:
     image: neo4j:2025.02.0-community
     container_name: neo4j
     volumes:
-      - ./db/data:/data
-      - ./db/logs:/logs
-      - ./db/backups:/backups
-      - ./db/import:/import
-      - ./db/conf:/conf
-      - ./db/plugins:/plugins
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+      - neo4j-backups:/backups
+      - neo4j-import:/import
+      - neo4j-conf:/conf
+      - neo4j-plugins:/plugins
     environment:
       - NEO4J_apoc_export_file_enabled=true
       - NEO4J_server_directories_import=/var/lib/neo4j/
@@ -28,9 +28,9 @@ services:
     command: bash
     user: "0:0"
     volumes:
-      - ./db/data:/data
-      - ./db/backups:/backups
-      - ./db/conf:/conf
+      - neo4j-data:/data
+      - neo4j-backups:/backups
+      - neo4j-conf:/conf
 
   anystyle:
     image: ruby:3.3
@@ -60,3 +60,11 @@ services:
       context: anystyle
     gpus: ${ANYSTYLE_GPU_DEVICES:-all}
     restart: unless-stopped
+
+volumes:
+  neo4j-data:
+  neo4j-logs:
+  neo4j-backups:
+  neo4j-import:
+  neo4j-conf:
+  neo4j-plugins:

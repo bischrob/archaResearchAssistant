@@ -17,10 +17,11 @@ from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_i
 from .path_utils import resolve_input_path
 from .zip_pdf_source import collect_source_pdfs
 from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filter_citations, load_article
-from .qwen_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
+from .openclaw_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
 from .keyword_extraction import extract_keywords
 from .zotero_attachment_resolver import ZoteroAttachmentResolver
 from .zotero_metadata import load_zotero_entries
+from .zotero_sidecars import prepare_zotero_sidecars
 
 DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
 
@@ -116,13 +117,14 @@ def _anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
 
 
 def _structured_anystyle_cache_dir() -> Path:
-    p = Path('.cache') / 'structured_anystyle_refs'
+    p = Path('.cache') / 'openclaw_structured_refs'
     p.mkdir(parents=True, exist_ok=True)
     return p
 
 
-def _structured_anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
+def _structured_anystyle_cache_key(pdf_path: Path, settings: Settings, metadata: dict | None) -> str:
     stat = pdf_path.stat()
+    md = json.dumps(metadata or {}, sort_keys=True, ensure_ascii=False)
     raw = "|".join(
         [
             str(pdf_path.resolve()),
@@ -136,6 +138,7 @@ def _structured_anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
             str(settings.anystyle_timeout_seconds),
             str(int(settings.anystyle_use_gpu)),
             settings.anystyle_gpu_devices,
+            md,
         ]
     )
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
@@ -172,8 +175,9 @@ def _load_structured_anystyle_cached(
     pdf_path: Path,
     article_id: str,
     settings: Settings,
+    metadata: dict | None,
 ) -> StructuredExtraction:
-    key = _structured_anystyle_cache_key(pdf_path, settings)
+    key = _structured_anystyle_cache_key(pdf_path, settings, metadata)
     cache_file = _structured_anystyle_cache_dir() / f"{key}.json"
     if cache_file.exists():
         with cache_file.open("r", encoding="utf-8") as f:
@@ -185,6 +189,8 @@ def _load_structured_anystyle_cached(
             if isinstance(chunk_items, list) and isinstance(citation_items, list) and isinstance(section_items, list):
                 return StructuredExtraction(chunks=[Chunk(**x) for x in chunk_items], citations=_deserialize_citations(citation_items), reference_strings=[], sections=[Section(**x) for x in section_items])
 
+    preferred_text_path = Path(str(metadata.get('zotero_ocr_text_path') or '')).resolve() if metadata and metadata.get('zotero_ocr_text_path') else None
+    references_sidecar_path = Path(str(metadata.get('zotero_references_path') or '')).resolve() if metadata and metadata.get('zotero_references_path') else None
     structured = extract_structured_chunks_and_citations(
         pdf_path=pdf_path,
         article_id=article_id,
@@ -192,6 +198,8 @@ def _load_structured_anystyle_cached(
         chunk_size_words=settings.chunk_size_words,
         chunk_overlap_words=settings.chunk_overlap_words,
         strip_page_noise=settings.chunk_strip_page_noise,
+        preferred_text_path=preferred_text_path,
+        references_sidecar_path=references_sidecar_path,
     )
     with cache_file.open("w", encoding="utf-8") as f:
         json.dump(
@@ -211,7 +219,19 @@ def _citation_parser_mode(settings: Settings) -> str:
     mode = (settings.citation_parser or '').strip().lower()
     if mode in {'heuristic', 'builtin', 'built-in', 'default'}:
         return 'heuristic'
-    if mode in {'structured_anystyle', 'section_anystyle', 'anystyle_structured', 'qwen_anystyle', 'qwen_split_anystyle', 'qwen_refsplit_anystyle', 'qwen_section_anystyle', 'qwen_structured_anystyle'}:
+    if mode in {
+        'openclaw_refsplit_anystyle',
+        'openclaw_agent_anystyle',
+        'openclaw_structured_anystyle',
+        'structured_anystyle',
+        'section_anystyle',
+        'anystyle_structured',
+        'qwen_anystyle',
+        'qwen_split_anystyle',
+        'qwen_refsplit_anystyle',
+        'qwen_section_anystyle',
+        'qwen_structured_anystyle',
+    }:
         return 'structured_anystyle'
     return 'anystyle'
 
@@ -231,17 +251,17 @@ def _is_global_anystyle_failure(msg: str) -> bool:
 
 
 def _deserialize_article(obj: dict) -> ArticleDoc:
-    chunks = [Chunk(**c) for c in obj.get("chunks", [])]
-    citations = [Citation(**c) for c in obj.get("citations", [])]
-    sections = [Section(**s) for s in obj.get("sections", [])]
-    keywords = [Keyword(**k) for k in obj.get("keywords", [])]
+    chunks = [Chunk(**c) for c in (obj.get("chunks") or [])]
+    citations = [Citation(**c) for c in (obj.get("citations") or [])]
+    sections = [Section(**s) for s in (obj.get("sections") or [])]
+    keywords = [Keyword(**k) for k in (obj.get("keywords") or [])]
     return ArticleDoc(
         article_id=obj["article_id"],
         title=obj["title"],
         normalized_title=obj["normalized_title"],
         year=obj.get("year"),
         author=obj.get("author"),
-        authors=obj.get("authors", []),
+        authors=obj.get("authors") or [],
         citekey=obj.get("citekey"),
         paperpile_id=obj.get("paperpile_id"),
         zotero_persistent_id=obj.get("zotero_persistent_id"),
@@ -641,11 +661,16 @@ def ingest_pdfs(
     should_cancel=None,
     skip_existing: bool = True,
     progress_callback=None,
+    event_callback=None,
     citation_overrides: dict[str, list[Citation]] | None = None,
 ) -> IngestSummary:
     settings = settings or Settings()
     parser_mode = _citation_parser_mode(settings)
     metadata_index = _load_metadata_index_for_settings(settings)
+
+    def emit_event(payload: dict) -> None:
+        if event_callback:
+            event_callback(payload)
     metadata_by_pdf = {p: find_metadata_for_pdf(metadata_index, p.name, str(p)) for p in selected_pdfs}
     _require_zotero_persistent_ids(settings, metadata_by_pdf, scope_label="Ingest")
 
@@ -659,11 +684,29 @@ def ingest_pdfs(
         "title_year_key_normalized": set(),
         "file_stem": set(),
     }
-    skipped_existing = [str(p) for p in selected_pdfs if _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
+    skipped_existing_paths = [p for p in selected_pdfs if _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
+    skipped_existing = [str(p) for p in skipped_existing_paths]
+    for p in skipped_existing_paths:
+        emit_event(
+            {
+                "event": "skipped_existing",
+                "pdf": str(p),
+                "file": p.name,
+            }
+        )
     selected_pdfs = [p for p in selected_pdfs if not _is_existing_pdf(p, metadata_by_pdf.get(p), existing)]
 
     require_match = bool(settings.metadata_require_match)
-    skipped_no_metadata = [str(p) for p in selected_pdfs if require_match and not metadata_by_pdf.get(p)]
+    skipped_no_metadata_paths = [p for p in selected_pdfs if require_match and not metadata_by_pdf.get(p)]
+    skipped_no_metadata = [str(p) for p in skipped_no_metadata_paths]
+    for p in skipped_no_metadata_paths:
+        emit_event(
+            {
+                "event": "skipped_no_metadata",
+                "pdf": str(p),
+                "file": p.name,
+            }
+        )
     if require_match:
         selected_pdfs = [p for p in selected_pdfs if metadata_by_pdf.get(p)]
 
@@ -696,11 +739,23 @@ def ingest_pdfs(
             raise RuntimeError("Ingest cancelled by user.")
         if progress_callback:
             progress_callback((parse_done / total_steps) * 100.0, f"Parsing {p.name}")
+        emit_event(
+            {
+                "event": "parse_started",
+                "pdf": str(p),
+                "file": p.name,
+                "index": parse_done + 1,
+                "total": len(selected_pdfs),
+                "message": f"Parsing {p.name}",
+            }
+        )
         try:
+            prepared_meta = _prepare_metadata_for_ingest(metadata_by_pdf.get(p))
+            prepared_meta = prepare_zotero_sidecars(p, prepared_meta, settings) if prepared_meta else prepared_meta
             article = _load_article_cached(
                 pdf_path=p,
                 settings=settings,
-                metadata=_prepare_metadata_for_ingest(metadata_by_pdf.get(p)),
+                metadata=prepared_meta,
             )
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
@@ -730,6 +785,7 @@ def ingest_pdfs(
                         pdf_path=p,
                         article_id=article.article_id,
                         settings=settings,
+                        metadata=prepared_meta,
                     )
                     if structured.chunks:
                         article.chunks = structured.chunks
@@ -757,8 +813,32 @@ def ingest_pdfs(
             article.keyword_extraction_method = str(keyword_audit.get("method") or "unknown")
             article.keyword_extraction_audit = keyword_audit
             articles.append(article)
+            emit_event(
+                {
+                    "event": "parse_succeeded",
+                    "pdf": str(p),
+                    "file": p.name,
+                    "index": parse_done + 1,
+                    "total": len(selected_pdfs),
+                    "article_id": article.article_id,
+                    "chunk_count": len(article.chunks),
+                    "reference_count": len(article.citations),
+                    "message": f"Parsed {p.name}",
+                }
+            )
         except Exception as exc:
             failures.append({"pdf": str(p), "error": str(exc)})
+            emit_event(
+                {
+                    "event": "parse_failed",
+                    "pdf": str(p),
+                    "file": p.name,
+                    "index": parse_done + 1,
+                    "total": len(selected_pdfs),
+                    "error": str(exc),
+                    "message": f"Failed parsing {p.name}",
+                }
+            )
         parse_done += 1
         if progress_callback:
             progress_callback((parse_done / total_steps) * 100.0, f"Parsed {parse_done}/{len(selected_pdfs)} files")
@@ -779,11 +859,30 @@ def ingest_pdfs(
         store.setup_schema(vector_dimensions=store.embedding_dimension)
         if progress_callback:
             progress_callback((parse_done / total_steps) * 100.0, "Uploading parsed data to Neo4j")
+        emit_event(
+            {
+                "event": "upload_started",
+                "total": len(articles),
+                "message": "Uploading parsed data to Neo4j",
+            }
+        )
 
         def on_article_upload(idx: int, total_articles: int, message: str) -> None:
             if progress_callback:
                 pct = ((parse_done + idx) / total_steps) * 100.0
                 progress_callback(pct, message)
+            article = articles[idx - 1]
+            emit_event(
+                {
+                    "event": "upload_succeeded",
+                    "index": idx,
+                    "total": total_articles,
+                    "pdf": str(article.source_path),
+                    "file": Path(str(article.source_path)).name,
+                    "article_id": article.article_id,
+                    "message": message,
+                }
+            )
 
         store.ingest_articles(
             articles,
@@ -795,6 +894,12 @@ def ingest_pdfs(
 
     if progress_callback:
         progress_callback(100.0, "Ingest complete")
+    emit_event(
+        {
+            "event": "ingest_complete",
+            "message": "Ingest complete",
+        }
+    )
 
     return IngestSummary(
         ingested_articles=len(articles),

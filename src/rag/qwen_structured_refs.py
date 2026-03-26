@@ -243,7 +243,12 @@ def _extract_lines_with_page(
     *,
     settings: Settings,
     strip_page_noise: bool,
+    preferred_text_path: Path | None = None,
 ) -> list[tuple[int, str]]:
+    if preferred_text_path is not None and preferred_text_path.exists() and preferred_text_path.is_file():
+        preferred_lines = _extract_lines_with_page_from_ocr_text(preferred_text_path)
+        if preferred_lines:
+            return preferred_lines
     if settings.paddleocr_prefer_text:
         ocr_path = _locate_ocr_text(pdf_path, settings)
         if ocr_path is None:
@@ -996,11 +1001,14 @@ def extract_structured_chunks_and_citations(
     chunk_size_words: int,
     chunk_overlap_words: int,
     strip_page_noise: bool,
+    preferred_text_path: Path | None = None,
+    references_sidecar_path: Path | None = None,
 ) -> StructuredExtraction:
     lines_with_page = _extract_lines_with_page(
         pdf_path,
         settings=settings,
         strip_page_noise=strip_page_noise,
+        preferred_text_path=preferred_text_path,
     )
     if not lines_with_page:
         return StructuredExtraction(chunks=[], citations=[], reference_strings=[], sections=[])
@@ -1025,8 +1033,11 @@ def extract_structured_chunks_and_citations(
             reference_chunks.append(block)
 
     reference_strings: list[str] = []
-    for block in reference_chunks:
-        reference_strings.extend(split_reference_strings_for_anystyle(block, settings=settings))
+    if references_sidecar_path is not None and references_sidecar_path.exists() and references_sidecar_path.is_file():
+        reference_strings = [line.strip() for line in references_sidecar_path.read_text(encoding='utf-8', errors='ignore').splitlines() if line.strip()]
+    else:
+        for block in reference_chunks:
+            reference_strings.extend(split_reference_strings_for_anystyle(block, settings=settings))
 
     _write_references_sidecar(pdf_path, reference_strings)
     citations = parse_reference_strings_with_anystyle_docker(

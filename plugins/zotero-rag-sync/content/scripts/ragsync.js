@@ -97,6 +97,10 @@ var RAGSync = {
     return 'Normalize Linked PDFs To Stored Attachments';
   },
 
+  getImportPDFURLLabel() {
+    return 'Import PDF URL To Stored Attachment';
+  },
+
   setProgressWindowTerminalState(isTerminal) {
     if (!this.progressWindow) {
       return;
@@ -659,6 +663,113 @@ var RAGSync = {
     return candidates;
   },
 
+  collectSelectedParentItems(items) {
+    const parents = [];
+    const seen = new Set();
+    for (const item of items || []) {
+      if (!item) {
+        continue;
+      }
+      let candidate = null;
+      if (item.isAttachment && item.isAttachment()) {
+        if (item.parentItemID) {
+          candidate = Zotero.Items.get(item.parentItemID);
+        }
+      } else if (!item.isRegularItem || item.isRegularItem()) {
+        candidate = item;
+      }
+      if (candidate && candidate.id && !seen.has(candidate.id)) {
+        seen.add(candidate.id);
+        parents.push(candidate);
+      }
+    }
+    return parents;
+  },
+
+  promptForPDFURL(defaultValue = '') {
+    const input = { value: String(defaultValue || '') };
+    const confirmed = Services.prompt.prompt(
+      this.getMainWindow(),
+      'RAG Sync',
+      [
+        'Enter a PDF URL to import as a Zotero-managed stored attachment.',
+        '',
+        'Stored attachments are eligible for Zotero file sync/WebDAV.',
+      ].join('\n'),
+      input,
+      null,
+      {}
+    );
+    if (!confirmed) {
+      return null;
+    }
+    const value = String(input.value || '').trim();
+    return value || null;
+  },
+
+  async importPDFURLToStoredAttachment() {
+    const selectedItems = this.getSelectedItems();
+    if (!selectedItems.length) {
+      this.alert('RAG Sync', 'Select a Zotero item first. You can also select one of its child attachments.');
+      return;
+    }
+
+    const parentItems = this.collectSelectedParentItems(selectedItems);
+    if (parentItems.length !== 1) {
+      this.alert(
+        'RAG Sync',
+        'Select exactly one parent item (or one child attachment under that item) before importing a PDF URL.'
+      );
+      return;
+    }
+
+    const parentItem = parentItems[0];
+    const url = this.promptForPDFURL('https://');
+    if (!url) {
+      return;
+    }
+    if (!/^https?:\/\//i.test(url)) {
+      this.alert('RAG Sync', 'PDF URL must start with http:// or https://');
+      return;
+    }
+
+    this.openProgressWindow('Importing PDF URL as stored attachment...');
+    this.updateProgressWindow(10, 'Creating Zotero-managed stored attachment');
+    this.addProgressDetail(`Parent item: ${parentItem.getField ? parentItem.getField('title') : parentItem.key}\nURL: ${url}`);
+
+    try {
+      const attachment = await Zotero.Attachments.importFromURL({
+        url,
+        parentItemID: parentItem.id,
+        title: 'Full Text PDF',
+        contentType: 'application/pdf',
+      });
+      const attachmentKey = attachment && attachment.key ? attachment.key : 'unknown';
+      const attachmentPath = attachment && attachment.attachmentPath ? attachment.attachmentPath : 'storage attachment';
+      const message = [
+        'Imported PDF as Zotero-managed stored attachment.',
+        `Parent item: ${parentItem.getField ? parentItem.getField('title') : parentItem.key}`,
+        `Attachment key: ${attachmentKey}`,
+        `Attachment path: ${attachmentPath}`,
+        'This attachment is eligible for Zotero file sync/WebDAV.',
+      ].join('\n');
+      this.updateProgressWindow(100, 'PDF import complete');
+      this.addProgressDetail(message);
+      this.setProgressWindowTerminalState(true);
+      this.startProgressCloseTimer(10000);
+      this.alert('RAG Sync', message);
+    } catch (err) {
+      const message = String(err && err.message ? err.message : err);
+      this.updateProgressWindow(100, 'PDF import failed');
+      this.markProgressError();
+      this.addProgressDetail(message, true);
+      this.setProgressWindowTerminalState(true);
+      this.startProgressCloseTimer(12000);
+      this.alert('RAG Sync Error', message);
+      this.log(`PDF URL import failed: ${message}`);
+    }
+  },
+
   async normalizeLinkedAttachmentsToStored() {
     const selectedItems = this.getSelectedItems();
     if (!selectedItems.length) {
@@ -830,6 +941,13 @@ var RAGSync = {
     );
     popup.appendChild(
       makeItem('rag-sync-menu-show-diagnostics', 'Show Diagnostics', () => this.showDiagnostics())
+    );
+    popup.appendChild(
+      makeItem(
+        'rag-sync-menu-import-pdf-url',
+        this.getImportPDFURLLabel(),
+        () => void this.importPDFURLToStoredAttachment()
+      )
     );
     popup.appendChild(
       makeItem(

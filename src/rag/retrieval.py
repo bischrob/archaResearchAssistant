@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+import logging
+import os
 import re
+import threading
 from typing import Any
 
 from .neo4j_store import GraphStore
 from .pdf_processing import STOPWORDS
+
+LOGGER = logging.getLogger(__name__)
+_VECTOR_QUERY_TIMEOUT_SECONDS = max(0.0, float(os.getenv("RA_VECTOR_QUERY_TIMEOUT_SECONDS", "20")))
 
 INTENT_STOPWORDS = {
     "summarize",
@@ -45,6 +51,41 @@ FACET_STOPWORDS = {
     "source",
     "study",
     "substantial",
+}
+
+
+ARCHAEOLOGY_DOMAIN_TERMS = {
+    "hohokam",
+    "anasazi",
+    "mogollon",
+    "fremont",
+    "arizona",
+    "utah",
+    "sonoran",
+    "southwestern",
+    "projectile",
+    "point",
+    "points",
+    "arrowhead",
+    "arrowheads",
+    "dart",
+    "darts",
+    "lithic",
+    "typology",
+    "typological",
+    "ceramic",
+    "pottery",
+}
+
+ARCHAEOLOGY_ANCHOR_TERMS = {
+    "hohokam",
+    "anasazi",
+    "mogollon",
+    "fremont",
+    "arizona",
+    "utah",
+    "sonoran",
+    "southwestern",
 }
 
 
@@ -139,15 +180,20 @@ def parse_query_terms(query: str) -> dict[str, Any]:
     for raw in raw_terms:
         if len(raw) < 4:
             continue
-        if any(ch.isupper() for ch in raw[1:]) or raw.isupper():
-            must_terms.append(raw.lower())
+        lowered = raw.lower()
+        if any(ch.isupper() for ch in raw[1:]) or raw.isupper() or lowered in ARCHAEOLOGY_DOMAIN_TERMS:
+            must_terms.append(lowered)
     must_terms = list(dict.fromkeys(must_terms))
+    domain_terms = [token for token in dedup_tokens if token in ARCHAEOLOGY_DOMAIN_TERMS]
+    anchor_terms = [token for token in dedup_tokens if token in ARCHAEOLOGY_ANCHOR_TERMS]
     return {
         "tokens": dedup_tokens,
         "years": years,
         "phrases": phrases,
         "author_terms": author_terms,
         "must_terms": must_terms,
+        "domain_terms": domain_terms,
+        "anchor_terms": anchor_terms,
     }
 
 
@@ -327,18 +373,42 @@ def rerank_hits(query: str, hits: list[dict[str, Any]], top_k: int, plan: dict[s
             + (0.30 * phrase_match)
             + graph_bonus
         )
+        domain_terms = set(parsed.get("domain_terms") or [])
+        anchor_terms = set(parsed.get("anchor_terms") or [])
+        hay = f"{title_text} {chunk_text}".lower()
+        domain_hits = sum(1 for term in domain_terms if term in hay)
+        anchor_hits = sum(1 for term in anchor_terms if term in hay)
+        if domain_terms:
+            row["rerank_score"] += min(0.75, 0.18 * domain_hits)
+            if domain_hits == 0:
+                row["rerank_score"] -= 0.45
+        if anchor_terms:
+            row["rerank_score"] += min(0.9, 0.28 * anchor_hits)
+            if anchor_hits == 0:
+                row["rerank_score"] -= 1.1
         row["query_features"] = {
             "chunk_overlap": round(chunk_overlap, 4),
             "title_overlap": round(title_overlap, 4),
             "author_overlap": round(author_overlap, 4),
             "year_match": year_match,
             "phrase_match": round(phrase_match, 4),
+            "domain_hits": domain_hits,
+            "anchor_hits": anchor_hits,
         }
     return sorted(hits, key=lambda x: x.get("rerank_score", 0.0), reverse=True)[:top_k]
 
 
 def _row_score(row: dict[str, Any]) -> float:
     return float(row.get("rerank_score", row.get("combined_score", 0.0)))
+
+
+def _apply_score_threshold(rows: list[dict[str, Any]], score_threshold: float | None, *, fallback_limit: int) -> list[dict[str, Any]]:
+    if score_threshold is None:
+        return rows
+    kept = [row for row in rows if _row_score(row) >= float(score_threshold)]
+    if kept:
+        return kept
+    return rows[: max(1, int(fallback_limit))]
 
 
 def _article_key(row: dict[str, Any]) -> str:
@@ -394,12 +464,41 @@ def _paper_results(rows: list[dict[str, Any]], limit: int, chunks_per_paper: int
     return papers[:limit]
 
 
+def _safe_vector_query(store: GraphStore, query: str, limit: int) -> list[dict[str, Any]]:
+    if _VECTOR_QUERY_TIMEOUT_SECONDS <= 0:
+        return store.vector_query(query, limit=limit)
+
+    result_box: dict[str, Any] = {}
+    error_box: dict[str, BaseException] = {}
+
+    def _runner() -> None:
+        try:
+            result_box["rows"] = store.vector_query(query, limit=limit)
+        except BaseException as exc:  # pragma: no cover - surfaced below
+            error_box["error"] = exc
+
+    worker = threading.Thread(target=_runner, daemon=True)
+    worker.start()
+    worker.join(_VECTOR_QUERY_TIMEOUT_SECONDS)
+    if worker.is_alive():
+        LOGGER.warning(
+            "Vector query timed out after %.1fs for %r; falling back to lexical retrieval channels.",
+            _VECTOR_QUERY_TIMEOUT_SECONDS,
+            query,
+        )
+        return []
+    if "error" in error_box:
+        raise error_box["error"]
+    return list(result_box.get("rows") or [])
+
+
 def contextual_retrieve(
     store: GraphStore,
     query: str,
     limit: int = 8,
     limit_scope: str = "chunks",
     chunks_per_paper: int = 1,
+    score_threshold: float | None = None,
 ) -> list[dict[str, Any]]:
     scope = (limit_scope or "chunks").strip().lower()
     if scope not in {"chunks", "papers"}:
@@ -410,7 +509,7 @@ def contextual_retrieve(
     candidate_k = max(limit * (8 if scope == "papers" else 5), 80 if scope == "papers" else 25)
     rerank_limit = max(limit * 8, 80) if scope == "papers" else limit
 
-    vector_hits = store.vector_query(query, limit=candidate_k)
+    vector_hits = _safe_vector_query(store, query, limit=candidate_k)
     token_hits = store.token_query(plan["tokens"], limit=candidate_k)
     author_hits = store.author_query(plan["author_terms"], limit=candidate_k)
     title_hits = store.title_query(plan["tokens"], limit=candidate_k)
@@ -460,8 +559,12 @@ def contextual_retrieve(
     ranked = sorted(by_chunk.values(), key=lambda x: x.get("combined_score", 0.0), reverse=True)
 
     must_terms = plan.get("must_terms") or []
-    if must_terms:
+    domain_terms = plan.get("domain_terms") or []
+    anchor_terms = plan.get("anchor_terms") or []
+    strict_mode = len(set(domain_terms)) >= 2 or len(set(must_terms)) >= 2 or len(set(anchor_terms)) >= 2
+    if strict_mode:
         strict = []
+        required_hits = 1 if not domain_terms else min(2, len(set(domain_terms)))
         for row in ranked:
             hay = " ".join(
                 [
@@ -471,7 +574,12 @@ def contextual_retrieve(
                     str(row.get("article_citekey") or ""),
                 ]
             ).lower()
-            if any(mt in hay for mt in must_terms):
+            non_generic_must_terms = [mt for mt in must_terms if mt not in {"projectile", "point", "points", "ceramic", "pottery", "lithic", "typology", "typological"}]
+            must_hit = any(mt in hay for mt in non_generic_must_terms) if non_generic_must_terms else True
+            domain_hit_count = sum(1 for term in domain_terms if term in hay)
+            anchor_hit_count = sum(1 for term in anchor_terms if term in hay)
+            anchor_ok = True if len(set(anchor_terms)) < 2 else anchor_hit_count >= 1
+            if must_hit and anchor_ok and domain_hit_count >= required_hits:
                 strict.append(row)
         if strict:
             ranked = strict
@@ -500,5 +608,8 @@ def contextual_retrieve(
         )
 
     if scope == "papers":
-        return _paper_results(primary, limit=limit, chunks_per_paper=chunks_per_paper)
-    return primary[:limit]
+        papers = _paper_results(primary, limit=max(limit, len(primary)), chunks_per_paper=chunks_per_paper)
+        papers = _apply_score_threshold(papers, score_threshold, fallback_limit=limit)
+        return papers[:limit] if score_threshold is None else papers
+    rows = _apply_score_threshold(primary, score_threshold, fallback_limit=limit)
+    return rows[:limit] if score_threshold is None else rows

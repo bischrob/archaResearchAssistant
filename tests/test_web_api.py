@@ -45,6 +45,43 @@ def test_health_endpoint_returns_stats(monkeypatch, client):
     assert data["stats"]["articles"] == 1
 
 
+def test_zotero_items_search_runtime_errors_return_json_detail(monkeypatch, client):
+    class FakeSettings:
+        zotero_db_path = ""
+        zotero_storage_root = ""
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "_browse_zotero_pdf_items",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("Zotero DB not found: /missing/zotero.sqlite")),
+    )
+
+    resp = client.post("/api/zotero/items/search", json={"query": "", "limit": 10, "available_only": True})
+    assert resp.status_code == 400
+    assert resp.headers["content-type"].startswith("application/json")
+    assert resp.json() == {"detail": "Zotero DB not found: /missing/zotero.sqlite"}
+
+
+def test_zotero_items_search_unhandled_errors_return_json_detail(monkeypatch, client):
+    class FakeSettings:
+        zotero_db_path = "configured"
+        zotero_storage_root = "configured"
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "_browse_zotero_pdf_items",
+        lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("resolver exploded")),
+    )
+
+    error_client = TestClient(webmain.app, raise_server_exceptions=False)
+    resp = error_client.post("/api/zotero/items/search", json={"query": "", "limit": 10, "available_only": True})
+    assert resp.status_code == 500
+    assert resp.headers["content-type"].startswith("application/json")
+    assert resp.json() == {"detail": "resolver exploded"}
+
+
 def test_sync_start_status_and_stop(monkeypatch, tmp_path: Path, client):
     pdf_root = tmp_path / "pdfs"
     pdf_root.mkdir()
@@ -701,6 +738,78 @@ def test_zotero_items_search_returns_available_pdf_rows(monkeypatch, tmp_path: P
     assert row["acquisition_source"] == "zotero_storage_local"
 
 
+def test_zotero_items_search_filters_before_resolution(monkeypatch, tmp_path: Path, client):
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    storage = tmp_path / "storage"
+    storage.mkdir()
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "zotero_db_path": str(zotero_db),
+            "zotero_storage_root": str(storage),
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def existing_identity_hits(self, **kwargs):
+            assert kwargs["zotero_persistent_ids"] == {"1:AAA"}
+            return {"zotero_persistent_id": set()}
+
+        def close(self):
+            pass
+
+    resolve_calls: list[str] = []
+
+    class FakeResolver:
+        def __init__(self, settings):
+            pass
+
+        def resolve(self, row):
+            pid = row["zotero_persistent_id"]
+            resolve_calls.append(pid)
+            if pid == "1:BBB":
+                raise AssertionError("non-matching row should not be resolved")
+            return SimpleNamespace(
+                path=tmp_path / "alpha.pdf",
+                resolver="local_storage",
+                issue_code="ok",
+                detail="",
+                acquisition_source="zotero_storage_local",
+                provenance={"resolver": "local_storage"},
+            )
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "load_zotero_entries",
+        lambda *args, **kwargs: [
+            {"title": "Alpha Paper", "authors": ["Ada"], "doi": "10.1/a", "journal": None, "publisher": None, "zotero_persistent_id": "1:AAA", "zotero_item_key": "AAA", "zotero_attachment_key": "ATT1", "attachment_path_raw": "storage:a.pdf", "attachment_path": str(tmp_path / "alpha.pdf")},
+            {"title": "Beta Paper", "authors": ["Bob"], "doi": "10.1/b", "journal": None, "publisher": None, "zotero_persistent_id": "1:BBB", "zotero_item_key": "BBB", "zotero_attachment_key": "ATT2", "attachment_path_raw": "storage:b.pdf", "attachment_path": str(tmp_path / "beta.pdf")},
+        ],
+    )
+    monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", FakeResolver)
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/zotero/items/search", json={"query": "alpha", "limit": 10, "available_only": False})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 1
+    assert resolve_calls == ["1:AAA"]
+
+
 @pytest.mark.parametrize("reingest,expected_skip_existing", [(False, True), (True, False)])
 def test_zotero_items_ingest_uses_selected_persistent_ids(monkeypatch, tmp_path: Path, client, reingest, expected_skip_existing):
     zotero_db = tmp_path / "zotero.sqlite"
@@ -794,11 +903,12 @@ def test_query_validation_and_success(monkeypatch, client):
 
     captured = {}
 
-    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1):
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1, score_threshold=None):
         captured["query"] = query
         captured["limit"] = limit
         captured["limit_scope"] = limit_scope
         captured["chunks_per_paper"] = chunks_per_paper
+        captured["score_threshold"] = score_threshold
         return [{"chunk_id": "c1", "combined_score": 1.0, "article_title": "A"}]
 
     monkeypatch.setattr(
@@ -825,16 +935,18 @@ def test_query_validation_and_success(monkeypatch, client):
     assert captured["limit"] == 20
     assert captured["limit_scope"] == "papers"
     assert captured["chunks_per_paper"] == 8
+    assert captured["score_threshold"] is None
 
 
 def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     captured = {}
 
-    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1):
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1, score_threshold=None):
         captured["query"] = query
         captured["limit"] = limit
         captured["limit_scope"] = limit_scope
         captured["chunks_per_paper"] = chunks_per_paper
+        captured["score_threshold"] = score_threshold
         return [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020}]
 
     monkeypatch.setattr(
@@ -849,13 +961,17 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     )
     monkeypatch.setattr(
         webmain,
-        "ask_openai_grounded",
+        "ask_openclaw_grounded",
         lambda question, rows, model=None, enforce_citations=True: {
             "model": model or "gpt-test",
             "answer": "Answer [C1]",
             "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "citation_enforced": True,
+            "method": "openclaw_agent",
+            "synthesis_status": "succeeded",
+            "fallback_reason": None,
+            "evidence_snippets": ["[C1] supporting text"],
         },
     )
 
@@ -876,9 +992,144 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     assert len(data["used_citations"]) == 1
     assert data["search_query_used"] == "What is this? bischoff archaeology"
     assert data["query_preprocess"]["method"] == "llm_rewrite"
+    assert data["answer_method"] == "openclaw_agent"
+    assert data["synthesis_status"] == "succeeded"
+    assert data["fallback_reason"] is None
+    assert data["evidence_snippets"] == ["[C1] supporting text"]
     assert captured["query"] == "What is this? bischoff archaeology"
     assert captured["limit_scope"] == "chunks"
     assert captured["chunks_per_paper"] == 1
+    assert captured["limit"] == 3
+    assert captured["score_threshold"] is None
+    assert data["retrieval_mode"] == "fixed_top_n"
+    assert data["retrieval_pool"] == 3
+    assert data["score_threshold"] is None
+
+
+def test_ask_endpoint_surfaces_explicit_fallback_without_raw_chunk_answer(client, monkeypatch):
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1, score_threshold=None):
+        return [{"chunk_id": "c1", "chunk_text": "Raw retrieved chunk text", "article_title": "Paper A", "article_year": 2020}]
+
+    monkeypatch.setattr(webmain, "contextual_retrieve", fake_retrieve)
+    monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
+    monkeypatch.setattr(
+        webmain,
+        "ask_openclaw_grounded",
+        lambda question, rows, model=None, enforce_citations=True: {
+            "answer": "Unable to produce a synthesized grounded answer from the retrieved context. See the returned citations and evidence snippets for the supporting passages.",
+            "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "citation_enforced": True,
+            "method": "deterministic_fallback",
+            "synthesis_status": "failed",
+            "fallback_reason": "invalid_agent_response",
+            "evidence_snippets": ["[C1] Raw retrieved chunk text"],
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/ask", json={"question": "What projectile points are found in Arizona?", "rag_results": 1})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["answer_method"] == "deterministic_fallback"
+    assert data["synthesis_status"] == "failed"
+    assert data["fallback_reason"] == "invalid_agent_response"
+    assert data["answer"].startswith("Unable to produce a synthesized grounded answer")
+    assert "Raw retrieved chunk text" not in data["answer"]
+    assert data["evidence_snippets"] == ["[C1] Raw retrieved chunk text"]
+
+
+def test_ask_endpoint_returns_relevance_filtering_metadata(client, monkeypatch):
+    monkeypatch.setattr(webmain, "contextual_retrieve", lambda *args, **kwargs: [
+        {"chunk_id": "c1", "chunk_text": "Binford argued for archaeology as anthropology.", "article_title": "Paper A", "article_year": 1962},
+        {"chunk_id": "c2", "chunk_text": "Unrelated marine isotope chemistry.", "article_title": "Paper B", "article_year": 2021},
+    ])
+    monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
+    monkeypatch.setattr(
+        webmain,
+        "ask_openclaw_grounded",
+        lambda question, rows, model=None, enforce_citations=True: {
+            "answer": "Binford framed archaeology as anthropology [C1]",
+            "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "relevant_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "excluded_citations": [{"citation_id": "C2", "article_title": "Paper B"}],
+            "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}, {"citation_id": "C2", "article_title": "Paper B"}],
+            "citation_enforced": True,
+            "method": "openclaw_agent",
+            "synthesis_status": "succeeded",
+            "fallback_reason": None,
+            "evidence_snippets": ["[C1] Binford argued for archaeology as anthropology."],
+            "relevance_summary": "Used 1 of 2 retrieved results after relevance filtering.",
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/ask", json={"question": "What did Binford argue?", "rag_results": 2})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["relevance_summary"] == "Used 1 of 2 retrieved results after relevance filtering."
+    assert [c["citation_id"] for c in data["relevant_citations"]] == ["C1"]
+    assert [c["citation_id"] for c in data["excluded_citations"]] == ["C2"]
+
+
+def test_ask_endpoint_defaults_to_score_threshold_mode(monkeypatch, client):
+    captured = {}
+
+    def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1, score_threshold=None):
+        captured["limit"] = limit
+        captured["score_threshold"] = score_threshold
+        return [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020, "rerank_score": 1.2}]
+
+    monkeypatch.setattr(webmain, "contextual_retrieve", fake_retrieve)
+    monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
+    monkeypatch.setattr(
+        webmain,
+        "ask_openclaw_grounded",
+        lambda question, rows, model=None, enforce_citations=True: {
+            "answer": "Answer [C1]",
+            "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
+            "citation_enforced": True,
+            "method": "openclaw_agent",
+            "synthesis_status": "succeeded",
+            "fallback_reason": None,
+            "evidence_snippets": ["[C1] supporting text"],
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/ask", json={"question": "What is this?"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["retrieval_mode"] == "score_threshold"
+    assert data["retrieval_pool"] == webmain.DEFAULT_ASK_RETRIEVAL_POOL
+    assert data["score_threshold"] == webmain.DEFAULT_ASK_SCORE_THRESHOLD
+    assert captured["limit"] == webmain.DEFAULT_ASK_RETRIEVAL_POOL
+    assert captured["score_threshold"] == webmain.DEFAULT_ASK_SCORE_THRESHOLD
 
 
 def test_ask_export_markdown_and_csv(client):
@@ -1058,3 +1309,49 @@ def test_job_endpoints_require_bearer_token_when_set(monkeypatch, client, method
     assert missing.status_code == 401
     assert bad.status_code == 403
     assert good.status_code == 200
+
+
+def test_ask_endpoint_reports_usable_vs_excluded_rag_results(monkeypatch, client):
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            pass
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, 'GraphStore', FakeStore)
+    monkeypatch.setattr(
+        webmain,
+        'contextual_retrieve',
+        lambda *args, **kwargs: [
+            {'chunk_id': 'c1', 'chunk_text': 'Hohokam projectile point typology in Arizona.', 'article_title': 'Hohokam Lithics', 'article_year': 2020},
+            {'chunk_id': 'c2', 'chunk_text': 'General Hohokam irrigation systems.', 'article_title': 'Hohokam Water', 'article_year': 2019},
+        ],
+    )
+    monkeypatch.setattr(
+        webmain,
+        'ask_openclaw_grounded',
+        lambda question, rows, model=None, enforce_citations=True: {
+            'answer': 'Grounded answer [C1]',
+            'citation_enforced': True,
+            'method': 'openclaw_agent',
+            'synthesis_status': 'succeeded',
+            'fallback_reason': None,
+            'agent_error': None,
+            'evidence_snippets': [],
+            'relevance_summary': 'Used 1 of 1 retrieved results after hard relevance gating before synthesis.',
+            'used_citations': [{'citation_id': 'C1'}],
+            'relevant_citations': [{'citation_id': 'C1'}],
+            'excluded_citations': [],
+            'all_citations': [{'citation_id': 'C1'}],
+            'model': None,
+        },
+    )
+
+    resp = client.post('/api/ask', json={'question': 'Hohokam projectile points in Arizona', 'preprocess_search': False})
+    assert resp.status_code == 200
+    payload = resp.json()
+    assert payload['rag_results_count'] == 2
+    assert payload['usable_rag_results_count'] == 1
+    assert payload['excluded_rag_results_count'] == 1
+    assert payload['usable_rag_results'][0]['chunk_id'] == 'c1'
+    assert payload['excluded_rag_results'][0]['chunk_id'] == 'c2'

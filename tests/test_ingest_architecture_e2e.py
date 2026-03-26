@@ -9,7 +9,7 @@ from src.rag.config import Settings
 from src.rag.neo4j_store import GraphStore
 from src.rag.pdf_processing import ArticleDoc, Chunk, Citation
 from src.rag.pipeline import IngestSummary, choose_pdfs, ingest_pdfs
-from src.rag.qwen_structured_refs import SectionSpan, extract_structured_chunks_and_citations
+from src.rag.openclaw_structured_refs import SectionSpan, extract_structured_chunks_and_citations
 from webapp import main as webmain
 
 
@@ -147,9 +147,9 @@ def test_structured_reference_extraction_writes_references_sidecar(monkeypatch, 
         (1, "Jones, A. 2023. Example reference two."),
     ]
 
-    monkeypatch.setattr("src.rag.qwen_structured_refs._extract_lines_with_page", lambda *args, **kwargs: lines_with_page)
+    monkeypatch.setattr("src.rag.openclaw_structured_refs._extract_lines_with_page", lambda *args, **kwargs: lines_with_page)
     monkeypatch.setattr(
-        "src.rag.qwen_structured_refs.detect_section_plan_details_with_qwen",
+        "src.rag.openclaw_structured_refs.detect_section_plan_details",
         lambda lines, settings=None: (
             ["Introduction", "References"],
             [SectionSpan(start_line=0, end_line=1, kind="body"), SectionSpan(start_line=2, end_line=4, kind="references")],
@@ -157,7 +157,7 @@ def test_structured_reference_extraction_writes_references_sidecar(monkeypatch, 
         ),
     )
     monkeypatch.setattr(
-        "src.rag.qwen_structured_refs.parse_reference_strings_with_anystyle_docker",
+        "src.rag.openclaw_structured_refs.parse_reference_strings_with_anystyle_docker",
         lambda reference_strings, **kwargs: [
             Citation(
                 citation_id="segmented::ref::0",
