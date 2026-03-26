@@ -21,7 +21,9 @@ app.add_typer(sync_app, name="sync")
 
 ROOT = Path(__file__).resolve().parents[2]
 START_SCRIPT = ROOT / "start.sh"
-DEFAULT_BASE_URL = os.getenv("RA_BASE_URL", "http://192.168.0.37:8001").rstrip("/")
+LOCAL_DEFAULT_BASE_URL = "http://127.0.0.1:8001"
+HOME2_WSL_BASE_URL = "http://192.168.0.37:8001"
+DEFAULT_BASE_URL = os.getenv("RA_BASE_URL", LOCAL_DEFAULT_BASE_URL).rstrip("/")
 DEFAULT_TIMEOUT = float(os.getenv("RA_HTTP_TIMEOUT", "30"))
 DEFAULT_ASK_TIMEOUT = float(os.getenv("RA_ASK_TIMEOUT", "300"))
 DEFAULT_POLL_INTERVAL = float(os.getenv("RA_POLL_INTERVAL", "1.0"))

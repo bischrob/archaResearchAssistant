@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-DEFAULT_BASE_URL = "http://127.0.0.1:8000"
+DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 DEFAULT_DATASET = Path(__file__).resolve().parents[1] / "eval" / "archaeology_query_golden.json"
 
 

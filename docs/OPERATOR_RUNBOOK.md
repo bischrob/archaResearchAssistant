@@ -2,43 +2,75 @@
 
 This is the preferred daily operator path for archaResearch Assistant.
 
-## Start and verify
+## Pick the target first
+
+There are two common API targets:
+
+- **local repo-hosted service**: `http://127.0.0.1:8001`
+- **home2 service**: `http://192.168.0.37:8001`
+
+Recommended rule:
+
+- use the direct repo wrapper (`./scripts/run_ra_from_repo.sh ...`) when you want predictable local defaults
+- use the installed `ra` launcher when you want convenience, but remember that on WSL it defaults to `home2`
+- override with `RA_BASE_URL` or `--base-url` whenever the default is not the service you intend
+
+Examples:
 
 ```bash
-python scripts/ra.py start
-python scripts/ra.py status
-python scripts/ra.py diagnostics
+./scripts/run_ra_from_repo.sh --json status
+./scripts/run_ra_from_repo.sh --base-url http://192.168.0.37:8001 --json status
+ra --base-url http://127.0.0.1:8001 --json status
+```
+
+## Start and verify
+
+Local repo-hosted start:
+
+```bash
+./scripts/run_ra_from_repo.sh start
+./scripts/run_ra_from_repo.sh status
+./scripts/run_ra_from_repo.sh diagnostics
+```
+
+If you prefer the launcher but want the local service explicitly:
+
+```bash
+ra --base-url http://127.0.0.1:8001 start
+ra --base-url http://127.0.0.1:8001 status
+ra --base-url http://127.0.0.1:8001 diagnostics
 ```
 
 Notes:
-- The default ra target is the home2 service at http://192.168.0.37:8001. Use --base-url or RA_BASE_URL to point elsewhere.
+
 - `ra start` reuses `./start.sh` and writes a background log under `logs/`.
 - `ra status` checks `/api/version`, `/api/health`, `/api/diagnostics`, and async job status endpoints.
+- `ra diagnostics` is the quickest sanity check for source-mode and Zotero resolver state.
 
 ## Zotero-first ingest
 
 Preview what still needs work:
 
 ```bash
-python scripts/ra.py sync dry-run
+./scripts/run_ra_from_repo.sh sync dry-run
 ```
 
 Run the anti-join sync plus ingest:
 
 ```bash
-python scripts/ra.py sync ingest
+./scripts/run_ra_from_repo.sh sync ingest
 ```
 
 Search Zotero-backed available PDFs:
 
 ```bash
-python scripts/ra.py zotero-search "ethnography"
+./scripts/run_ra_from_repo.sh zotero-search "ethnography"
 ```
 
 Ingest one or more specific Zotero persistent IDs:
 
 ```bash
-python scripts/ra.py zotero-ingest PID1 PID2
+./scripts/run_ra_from_repo.sh zotero-ingest PID1 PID2
 ```
 
 ## Retrieval and synthesis
@@ -46,28 +78,25 @@ python scripts/ra.py zotero-ingest PID1 PID2
 Discovery query:
 
 ```bash
-python scripts/ra.py query "community archives metadata"
+./scripts/run_ra_from_repo.sh query "community archives metadata"
 ```
 
 Grounded answer synthesis:
 
 ```bash
-python scripts/ra.py ask "What are the main tradeoffs in AI-generated archival metadata?"
+./scripts/run_ra_from_repo.sh ask "What are the main tradeoffs in AI-generated archival metadata?"
 ```
 
-Inspect a known paper:
+Inspect known papers:
 
 ```bash
-ra article wiseEvaluationAIgeneratedMetadata2026
-ra articles wiseEvaluationAIgeneratedMetadata2026 shawThinkingFastSlowArtificial2026
+./scripts/run_ra_from_repo.sh article wiseEvaluationAIgeneratedMetadata2026
+./scripts/run_ra_from_repo.sh articles wiseEvaluationAIgeneratedMetadata2026 shawThinkingFastSlowArtificial2026
 ```
 
 ## Troubleshooting
 
 - If `ra start` fails early, inspect the referenced `logs/ra-start-*.log` file.
-- If `ra status` says the API is unreachable, verify Docker/Neo4j first and then retry `ra start`.
+- If `ra status` says the API is unreachable, confirm you are talking to the intended target before debugging the service.
 - If Zotero search or sync fails, re-check `.env` values for `ZOTERO_DB_PATH`, `ZOTERO_STORAGE_ROOT`, and optional WebDAV settings.
-- For deeper diagnosis, use `python scripts/ra.py diagnostics` and `docs/TROUBLESHOOTING.md`.
-UBLESHOOTING.md`.
-ostics`) and `docs/TROUBLESHOOTING.md`.
-e `python scripts/ra.py diagnostics` and `docs/TROUBLESHOOTING.md`.
+- For deeper diagnosis, use `./scripts/run_ra_from_repo.sh diagnostics` and [TROUBLESHOOTING.md](TROUBLESHOOTING.md).

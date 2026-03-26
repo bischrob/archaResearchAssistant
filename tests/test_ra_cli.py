@@ -9,6 +9,10 @@ from rag import cli as ra
 
 
 runner = CliRunner()
+API_BASE_URL = ra.DEFAULT_BASE_URL
+
+def api(path: str) -> str:
+    return f"{API_BASE_URL}{path}"
 
 
 class FakeResponse:
@@ -53,12 +57,12 @@ def test_status_reports_reachable_with_job_snapshots(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
-            ("GET", "http://127.0.0.1:8000/api/version"): FakeResponse(payload={"status": "ok", "version": "1"}),
-            ("GET", "http://127.0.0.1:8000/api/health"): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
-            ("GET", "http://127.0.0.1:8000/api/diagnostics"): FakeResponse(payload={"ok": True, "checks": []}),
-            ("GET", "http://127.0.0.1:8000/api/sync/status"): FakeResponse(payload={"status": "idle"}),
-            ("GET", "http://127.0.0.1:8000/api/ingest/status"): FakeResponse(payload={"status": "running"}),
-            ("GET", "http://127.0.0.1:8000/api/query/status"): FakeResponse(payload={"status": "completed"}),
+            ("GET", api("/api/version")): FakeResponse(payload={"status": "ok", "version": "1"}),
+            ("GET", api("/api/health")): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
+            ("GET", api("/api/diagnostics")): FakeResponse(payload={"ok": True, "checks": []}),
+            ("GET", api("/api/sync/status")): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/ingest/status")): FakeResponse(payload={"status": "running"}),
+            ("GET", api("/api/query/status")): FakeResponse(payload={"status": "completed"}),
         }
     )
 
@@ -77,7 +81,7 @@ def test_status_exits_nonzero_when_api_unreachable(fake_session_factory):
     def fail_request(**kwargs):
         raise ra.requests.ConnectionError("boom")
 
-    factory({("GET", "http://127.0.0.1:8000/api/version"): fail_request})
+    factory({("GET", api("/api/version")): fail_request})
     result = runner.invoke(ra.app, ["--json", "status"])
     assert result.exit_code == 1
     payload = json.loads(result.stdout)
@@ -89,7 +93,7 @@ def test_diagnostics_human_output_prefers_zotero_counts_over_local_pdf_match_pla
     factory, _ = fake_session_factory
     factory(
         {
-            ("GET", "http://127.0.0.1:8000/api/diagnostics"): FakeResponse(
+            ("GET", api("/api/diagnostics")): FakeResponse(
                 payload={
                     "ok": True,
                     "source_mode": "zotero_db",
@@ -114,9 +118,9 @@ def test_status_human_output_marks_filesystem_counts_as_informational_in_zotero_
     factory, _ = fake_session_factory
     factory(
         {
-            ("GET", "http://127.0.0.1:8000/api/version"): FakeResponse(payload={"status": "ok", "version": "1"}),
-            ("GET", "http://127.0.0.1:8000/api/health"): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
-            ("GET", "http://127.0.0.1:8000/api/diagnostics"): FakeResponse(
+            ("GET", api("/api/version")): FakeResponse(payload={"status": "ok", "version": "1"}),
+            ("GET", api("/api/health")): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
+            ("GET", api("/api/diagnostics")): FakeResponse(
                 payload={
                     "ok": True,
                     "source_mode": "zotero_db",
@@ -124,9 +128,9 @@ def test_status_human_output_marks_filesystem_counts_as_informational_in_zotero_
                     "filesystem": {"matched": 0, "total": 0},
                 }
             ),
-            ("GET", "http://127.0.0.1:8000/api/sync/status"): FakeResponse(payload={"status": "idle"}),
-            ("GET", "http://127.0.0.1:8000/api/ingest/status"): FakeResponse(payload={"status": "idle"}),
-            ("GET", "http://127.0.0.1:8000/api/query/status"): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/sync/status")): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/ingest/status")): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/query/status")): FakeResponse(payload={"status": "idle"}),
         }
     )
 
@@ -149,8 +153,8 @@ def test_sync_dry_run_waits_for_terminal_status(fake_session_factory):
 
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/sync"): FakeResponse(payload={"status": "running", "request_id": "abc"}),
-            ("GET", "http://127.0.0.1:8000/api/sync/status"): lambda **kwargs: next(states),
+            ("POST", api("/api/sync")): FakeResponse(payload={"status": "running", "request_id": "abc"}),
+            ("GET", api("/api/sync/status")): lambda **kwargs: next(states),
         }
     )
 
@@ -167,7 +171,7 @@ def test_sync_ingest_background_returns_initial_job_state(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/sync"): FakeResponse(payload={"status": "running", "request_id": "job-1"}),
+            ("POST", api("/api/sync")): FakeResponse(payload={"status": "running", "request_id": "job-1"}),
         }
     )
 
@@ -187,8 +191,8 @@ def test_zotero_ingest_posts_ids_and_waits(fake_session_factory):
     states = iter([FakeResponse(payload={"status": "completed", "result": {"ok": True}})])
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/zotero/items/ingest"): FakeResponse(payload={"status": "running"}),
-            ("GET", "http://127.0.0.1:8000/api/ingest/status"): lambda **kwargs: next(states),
+            ("POST", api("/api/zotero/items/ingest")): FakeResponse(payload={"status": "running"}),
+            ("GET", api("/api/ingest/status")): lambda **kwargs: next(states),
         }
     )
 
@@ -203,7 +207,7 @@ def test_query_posts_expected_payload(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/query"): FakeResponse(payload={"status": "completed", "result": {"ok": True}}),
+            ("POST", api("/api/query")): FakeResponse(payload={"status": "completed", "result": {"ok": True}}),
         }
     )
 
@@ -218,7 +222,7 @@ def test_query_posts_expected_payload(fake_session_factory):
         "limit": 5,
         "limit_scope": "chunks",
         "chunks_per_paper": 2,
-        "score_threshold": None,
+        "score_threshold": ra.DEFAULT_ASK_SCORE_THRESHOLD,
     }
 
 
@@ -226,7 +230,7 @@ def test_ask_uses_fixed_top_n_override_when_requested(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/ask"): FakeResponse(payload={"ok": True, "answer": "Grounded answer"}),
+            ("POST", api("/api/ask")): FakeResponse(payload={"ok": True, "answer": "Grounded answer"}),
         }
     )
 
@@ -248,7 +252,7 @@ def test_ask_defaults_to_score_threshold_mode(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/ask"): FakeResponse(payload={"ok": True, "answer": "Grounded answer"}),
+            ("POST", api("/api/ask")): FakeResponse(payload={"ok": True, "answer": "Grounded answer"}),
         }
     )
 
@@ -276,8 +280,8 @@ def test_query_human_output_reports_stage_changes_without_duplicate_running_line
     )
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/query"): FakeResponse(payload={"status": "running", "request_id": "job-7", "stage": "queued"}),
-            ("GET", "http://127.0.0.1:8000/api/query/status"): lambda **kwargs: next(states),
+            ("POST", api("/api/query")): FakeResponse(payload={"status": "running", "request_id": "job-7", "stage": "queued"}),
+            ("GET", api("/api/query/status")): lambda **kwargs: next(states),
         }
     )
 
@@ -293,7 +297,7 @@ def test_query_human_output_reports_stage_changes_without_duplicate_running_line
 
 def test_async_progress_reporter_stays_quiet_on_tty(monkeypatch):
     notes = []
-    cli = ra.CLIContext(base_url="http://127.0.0.1:8000", timeout=ra.DEFAULT_TIMEOUT, json_output=False)
+    cli = ra.CLIContext(base_url=api(""), timeout=ra.DEFAULT_TIMEOUT, json_output=False)
     monkeypatch.setattr(ra.sys.stderr, "isatty", lambda: True)
     monkeypatch.setattr(cli, "note", notes.append)
     reporter = ra.AsyncProgressReporter(cli, "query")
@@ -309,8 +313,8 @@ def test_query_json_output_stays_clean_without_progress_messages(fake_session_fa
     states = iter([FakeResponse(payload={"status": "completed", "result": {"ok": True}})])
     factory(
         {
-            ("POST", "http://127.0.0.1:8000/api/query"): FakeResponse(payload={"status": "running", "request_id": "job-json", "stage": "queued"}),
-            ("GET", "http://127.0.0.1:8000/api/query/status"): lambda **kwargs: next(states),
+            ("POST", api("/api/query")): FakeResponse(payload={"status": "running", "request_id": "job-json", "stage": "queued"}),
+            ("GET", api("/api/query/status")): lambda **kwargs: next(states),
         }
     )
 
@@ -324,8 +328,8 @@ def test_article_and_articles_commands_hit_expected_endpoints(fake_session_facto
     factory, created = fake_session_factory
     factory(
         {
-            ("GET", "http://127.0.0.1:8000/api/article/shaw2026"): FakeResponse(payload={"ok": True, "article": {"title": "Thinking-Fast"}}),
-            ("POST", "http://127.0.0.1:8000/api/articles/by-citekeys"): FakeResponse(payload={"ok": True, "found_count": 2}),
+            ("GET", api("/api/article/shaw2026")): FakeResponse(payload={"ok": True, "article": {"title": "Thinking-Fast"}}),
+            ("POST", api("/api/articles/by-citekeys")): FakeResponse(payload={"ok": True, "found_count": 2}),
         }
     )
 
@@ -353,7 +357,7 @@ def test_start_background_waits_for_health(monkeypatch, tmp_path: Path, fake_ses
             raise state
         return FakeResponse(payload=state)
 
-    factory({("GET", "http://127.0.0.1:8000/api/health"): health_then_ready})
+    factory({("GET", api("/api/health")): health_then_ready})
 
     class FakeProcess:
         pid = 4321
@@ -386,12 +390,12 @@ def test_api_token_is_forwarded_in_default_session(monkeypatch, fake_session_fac
     factory, created = fake_session_factory
     monkeypatch.setenv("API_BEARER_TOKEN", "secret-token")
     factory({
-        ("GET", "http://127.0.0.1:8000/api/version"): FakeResponse(payload={"status": "ok"}),
-        ("GET", "http://127.0.0.1:8000/api/health"): FakeResponse(payload={"status": "ok"}),
-        ("GET", "http://127.0.0.1:8000/api/diagnostics"): FakeResponse(payload={"ok": True}),
-        ("GET", "http://127.0.0.1:8000/api/sync/status"): FakeResponse(payload={"status": "idle"}),
-        ("GET", "http://127.0.0.1:8000/api/ingest/status"): FakeResponse(payload={"status": "idle"}),
-        ("GET", "http://127.0.0.1:8000/api/query/status"): FakeResponse(payload={"status": "idle"}),
+        ("GET", api("/api/version")): FakeResponse(payload={"status": "ok"}),
+        ("GET", api("/api/health")): FakeResponse(payload={"status": "ok"}),
+        ("GET", api("/api/diagnostics")): FakeResponse(payload={"ok": True}),
+        ("GET", api("/api/sync/status")): FakeResponse(payload={"status": "idle"}),
+        ("GET", api("/api/ingest/status")): FakeResponse(payload={"status": "idle"}),
+        ("GET", api("/api/query/status")): FakeResponse(payload={"status": "idle"}),
     })
 
     result = runner.invoke(ra.app, ["status"])
@@ -409,3 +413,4 @@ def test_scripts_ra_wrapper_delegates_to_packaged_entrypoint(monkeypatch):
     runpy.run_path(str(Path(__file__).resolve().parents[1] / "scripts" / "ra.py"), run_name="__main__")
     assert called == {"ok": True}
     assert called == {"ok": True}
+

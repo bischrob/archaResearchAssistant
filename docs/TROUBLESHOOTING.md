@@ -1,5 +1,32 @@
 # Troubleshooting
 
+## `ra` is talking to the wrong host
+
+There are two normal targets:
+
+- local service: `http://127.0.0.1:8001`
+- `home2`: `http://192.168.0.37:8001`
+
+Rules of thumb:
+
+- `python scripts/ra.py ...` defaults to the local service
+- the installed `ra` launcher defaults to `home2` when installed under WSL
+- override either one with `RA_BASE_URL` or `--base-url`
+
+Examples:
+
+```bash
+python scripts/ra.py --base-url http://192.168.0.37:8001 status
+ra --base-url http://127.0.0.1:8001 status
+RA_BASE_URL=http://127.0.0.1:8001 ra diagnostics
+```
+
+If the launcher still points somewhere unexpected, rerun:
+
+```bash
+/home/rjbischo/researchAssistant/scripts/install_wsl_ra_launcher.sh
+```
+
 ## Zotero DB path missing
 
 Set:
@@ -18,7 +45,7 @@ If the UI shows:
 
 - `JSON.parse: unexpected character at line 1 column 1 of the JSON data`
 
-the browser received a non-JSON error response from the API. The UI now handles that more cleanly, but the underlying cause is usually one of these:
+the browser received a non-JSON error response from the API. The usual causes are:
 
 - `ZOTERO_DB_PATH` is unset or points to a missing `zotero.sqlite`
 - `ZOTERO_STORAGE_ROOT` is unset or points to the wrong Zotero `storage/` directory
@@ -26,9 +53,11 @@ the browser received a non-JSON error response from the API. The UI now handles 
 
 Check:
 
-- `make preflight`
-- `echo "$ZOTERO_DB_PATH"`
-- `echo "$ZOTERO_STORAGE_ROOT"`
+```bash
+make preflight
+echo "$ZOTERO_DB_PATH"
+echo "$ZOTERO_STORAGE_ROOT"
+```
 
 Then restart the web app and retry the Zotero browser search.
 
@@ -51,8 +80,8 @@ Notes:
 
 Current behavior:
 
-- While work is running, the plugin overlay shows `Run in Background` and `Cancel Sync`
-- Once the job completes, fails, or is cancelled, the overlay shows `Close`
+- while work is running, the plugin overlay shows `Run in Background` and `Cancel Sync`
+- once the job completes, fails, or is cancelled, the overlay shows `Close`
 
 If you still do not see `Close`, restart Zotero so it reloads the latest plugin XPI.
 
@@ -71,27 +100,25 @@ Set:
 - `QWEN3_MODEL_PATH`
 - `QWEN3_CITATION_ADAPTER_PATH`
 
-See:
-
-- [Model Setup](MODEL_SETUP.md)
+See [Model Setup](MODEL_SETUP.md).
 
 ## `/api/query` looks stalled or spends a long time at startup
 
 Two different failure modes have shown up here:
 
-1. **Cold embedder startup**: creating a fresh `SentenceTransformer` for each query can make the first live query look hung.
-2. **Off-domain false positives**: the request completes, but generic `points` matches swamp archaeology-specific papers.
+1. cold embedder startup: creating a fresh `SentenceTransformer` for each query can make the first live query look hung
+2. off-domain false positives: the request completes, but generic `points` matches swamp archaeology-specific papers
 
 What changed in-repo:
 
-- `GraphStore` now reuses a cached sentence-transformer embedder for identical model/device settings.
-- Archaeology reranking now tracks `anchor_hits` and penalizes rows with no culture/place anchors when the query contains them.
-- A persistent live harness was added at `eval/archaeology_query_golden.json` and `scripts/run_live_query_golden.py`.
+- `GraphStore` now reuses a cached sentence-transformer embedder for identical model/device settings
+- archaeology reranking now tracks `anchor_hits` and penalizes rows with no culture/place anchors when the query contains them
+- a persistent live harness was added at `eval/archaeology_query_golden.json` and `scripts/run_live_query_golden.py`
 
 Check the harness against your running API:
 
 ```bash
-python3 scripts/run_live_query_golden.py --base-url http://127.0.0.1:8000
+python3 scripts/run_live_query_golden.py --base-url http://127.0.0.1:8001
 ```
 
 If the harness still shows old behavior, the running service is probably using an older environment or process image and needs to be restarted in the supported environment.
