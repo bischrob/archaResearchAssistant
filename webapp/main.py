@@ -876,15 +876,23 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     jobs.set_progress("sync", progress, f"Resolving attachment paths {idx}/{len(missing_rows)}")
                 candidate_raw = str(row.get("attachment_path") or "").strip()
                 if candidate_raw:
-                    ingest_candidates.append(resolve_input_path(candidate_raw))
-                    continue
-                issue_code = "missing_attachment_path"
-                path_issue_counts[issue_code] = path_issue_counts.get(issue_code, 0) + 1
-                detail = str(row.get("attachment_path_raw") or "").strip()
-                if detail:
-                    bucket = path_issue_samples.setdefault(issue_code, [])
-                    if len(bucket) < 10:
-                        bucket.append(detail)
+                    try:
+                        ingest_candidates.append(resolve_input_path(candidate_raw))
+                        continue
+                    except Exception as exc:
+                        issue_code = "attachment_path_resolution_error"
+                        path_issue_counts[issue_code] = path_issue_counts.get(issue_code, 0) + 1
+                        bucket = path_issue_samples.setdefault(issue_code, [])
+                        if len(bucket) < 10:
+                            bucket.append(f"{candidate_raw} :: {exc}")
+                else:
+                    issue_code = "missing_attachment_path"
+                    path_issue_counts[issue_code] = path_issue_counts.get(issue_code, 0) + 1
+                    detail = str(row.get("attachment_path_raw") or "").strip()
+                    if detail:
+                        bucket = path_issue_samples.setdefault(issue_code, [])
+                        if len(bucket) < 10:
+                            bucket.append(detail)
 
             dedup: dict[str, Path] = {}
             for p in ingest_candidates:

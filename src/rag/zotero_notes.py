@@ -10,9 +10,10 @@ from pathlib import Path
 from .path_utils import resolve_input_path
 
 
-_HTML_BREAK_RE = re.compile(r"(?i)<\s*(br|/p|/div|/li|/h[1-6])\s*/?>")
+_HTML_BREAK_RE = re.compile(r"(?i)(<\s*br\s*/?>|<\s*/\s*(p|div|li|h[1-6])\s*>)")
 _HTML_TAG_RE = re.compile(r"(?is)<[^>]+>")
 _MINERU_TITLE_HINT_RE = re.compile(r"mineru", re.IGNORECASE)
+MIN_MINERU_TEXT_LENGTH = 120
 _MINERU_MARKDOWN_HINTS = (
     re.compile(r"(?m)^\s{0,3}#{1,6}\s+\S"),
     re.compile(r"(?m)^\s{0,3}[-*+]\s+\S"),
@@ -45,7 +46,7 @@ def _extract_text_from_zotero_note(raw_note: str) -> str:
 def _looks_like_mineru_markdown(title: str | None, text: str) -> bool:
     title_hit = bool(_MINERU_TITLE_HINT_RE.search((title or "").strip()))
     marker_hits = sum(1 for rx in _MINERU_MARKDOWN_HINTS if rx.search(text or ""))
-    return title_hit and marker_hits >= 2 and len((text or "").strip()) >= 120
+    return title_hit and marker_hits >= 2 and len((text or "").strip()) >= MIN_MINERU_TEXT_LENGTH
 
 
 def _lookup_note_titles(conn: sqlite3.Connection, note_item_ids: list[int]) -> dict[int, str]:
@@ -84,11 +85,11 @@ def load_mineru_child_note_for_attachment(row: dict, *, zotero_db_path: str) -> 
     if not db_path.exists():
         raise RuntimeError(f"Zotero DB not found: {db_path}")
 
-    uri = f"file:{Path(db_path)}?mode=ro&immutable=1"
+    uri = f"file:{db_path}?mode=ro&immutable=1"
     try:
         conn = sqlite3.connect(uri, uri=True)
     except sqlite3.OperationalError:
-        conn = sqlite3.connect(f"file:{Path(db_path)}?mode=ro", uri=True)
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
         note_rows = conn.execute(

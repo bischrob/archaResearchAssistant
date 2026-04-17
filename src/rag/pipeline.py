@@ -691,7 +691,10 @@ def choose_pdfs(
             candidate_raw = str(row.get("attachment_path") or "").strip()
             if not candidate_raw:
                 continue
-            resolved_candidates.append(resolve_input_path(candidate_raw))
+            try:
+                resolved_candidates.append(resolve_input_path(candidate_raw))
+            except Exception:
+                continue
         dedup: dict[str, Path] = {}
         for p in resolved_candidates:
             dedup[str(p)] = p

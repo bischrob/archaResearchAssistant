@@ -228,7 +228,6 @@ def test_sync_zotero_mode_reports_attachment_resolver_provenance(monkeypatch, tm
             {"zotero_persistent_id": "p2", "attachment_path_raw": "missing.pdf"},
         ],
     )
-    monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", lambda settings: _Resolver(settings, resolutions))
     monkeypatch.setattr(webmain, "ingest_pdfs", lambda **kwargs: IngestSummary(ingested_articles=1, total_chunks=1, total_references=0, selected_pdfs=[str(pdf_path)], skipped_existing_pdfs=[], skipped_no_metadata_pdfs=[], failed_pdfs=[]))
 
     client = webmain.TestClient(webmain.app) if hasattr(webmain, "TestClient") else None

@@ -65,7 +65,9 @@ def graphrag_retrieve(
 
     grouped: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
-        article_id = str(row.get("article_id") or row.get("article_title") or row.get("chunk_id"))
+        article_id = str(row.get("article_id") or row.get("article_title") or "").strip()
+        if not article_id:
+            continue
         grouped.setdefault(article_id, []).append(row)
     papers: list[dict[str, Any]] = []
     for article_rows in grouped.values():
