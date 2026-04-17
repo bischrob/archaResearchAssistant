@@ -1,0 +1,68 @@
+from __future__ import annotations
+
+import sqlite3
+from pathlib import Path
+
+import pytest
+
+from src.rag.zotero_notes import load_mineru_child_note_for_attachment
+
+
+def _init_db(path: Path) -> None:
+    conn = sqlite3.connect(path)
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE items (itemID INTEGER PRIMARY KEY, key TEXT);
+            CREATE TABLE itemNotes (itemID INTEGER PRIMARY KEY, parentItemID INTEGER, note TEXT);
+            CREATE TABLE fields (fieldID INTEGER PRIMARY KEY, fieldName TEXT);
+            CREATE TABLE itemDataValues (valueID INTEGER PRIMARY KEY, value TEXT);
+            CREATE TABLE itemData (itemID INTEGER, fieldID INTEGER, valueID INTEGER);
+            """
+        )
+        conn.execute("INSERT INTO fields(fieldID, fieldName) VALUES (1, 'title')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (10, 'ATTACHKEY')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (11, 'NOTEKEY')")
+        conn.execute(
+            "INSERT INTO itemNotes(itemID, parentItemID, note) VALUES (11, 10, ?)",
+            ("<p># Intro</p><p>- bullet</p><p>| h | v |</p><p>" + ("body text " * 40) + "</p>",),
+        )
+        conn.execute("INSERT INTO itemDataValues(valueID, value) VALUES (1, 'MinerU Markdown Note')")
+        conn.execute("INSERT INTO itemData(itemID, fieldID, valueID) VALUES (11, 1, 1)")
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def test_load_mineru_child_note_for_attachment_success(tmp_path: Path) -> None:
+    db = tmp_path / "zotero.sqlite"
+    _init_db(db)
+    row = {"zotero_attachment_item_id": 10, "zotero_attachment_key": "ATTACHKEY", "zotero_item_key": "PARENTKEY"}
+    note = load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))
+    assert note.note_item_key == "NOTEKEY"
+    assert note.note_title == "MinerU Markdown Note"
+    assert "# Intro" in note.markdown_text
+    assert note.source_hash
+
+
+def test_load_mineru_child_note_for_attachment_missing_note_hard_failure(tmp_path: Path) -> None:
+    db = tmp_path / "zotero.sqlite"
+    _init_db(db)
+    row = {"zotero_attachment_item_id": 999}
+    with pytest.raises(RuntimeError, match="Missing MinerU child note"):
+        load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))
+
+
+def test_load_mineru_child_note_for_attachment_malformed_note_hard_failure(tmp_path: Path) -> None:
+    db = tmp_path / "zotero.sqlite"
+    _init_db(db)
+    conn = sqlite3.connect(db)
+    try:
+        conn.execute("UPDATE itemDataValues SET value='Random Note' WHERE valueID=1")
+        conn.execute("UPDATE itemNotes SET note='<p>plain text</p>' WHERE itemID=11")
+        conn.commit()
+    finally:
+        conn.close()
+    row = {"zotero_attachment_item_id": 10}
+    with pytest.raises(RuntimeError, match="Malformed or non-MinerU child note"):
+        load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))

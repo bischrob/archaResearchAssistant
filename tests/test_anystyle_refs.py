@@ -1,4 +1,5 @@
-from src.rag.anystyle_refs import parse_anystyle_json_payload
+from src.rag.anystyle_refs import parse_anystyle_json_payload, parse_reference_entries_resilient
+from src.rag.pdf_processing import Citation
 
 
 def test_parse_anystyle_json_payload_extracts_core_fields() -> None:
@@ -52,3 +53,28 @@ def test_parse_anystyle_json_payload_uses_raw_reference_text_when_provided() -> 
     assert len(citations) == 1
     assert citations[0].raw_text == raw_refs[0]
     assert citations[0].title_guess == "Good Entry"
+
+
+def test_parse_reference_entries_resilient_records_failures_and_continues(monkeypatch) -> None:
+    def fake_parse(references, **kwargs):
+        if "Bad" in references[0]:
+            raise RuntimeError("parse failed")
+        return [
+            Citation(
+                citation_id="x::ref::0",
+                raw_text=references[0],
+                year=2020,
+                title_guess="Good",
+                normalized_title="good",
+                source="anystyle",
+            )
+        ]
+
+    monkeypatch.setattr("src.rag.anystyle_refs.parse_reference_strings_with_anystyle_docker", fake_parse)
+    citations, failures = parse_reference_entries_resilient(
+        ["Good Ref 2020", "Bad Ref 2021", "Another Good 2022"],
+        article_id="doc",
+    )
+    assert len(citations) == 2
+    assert len(failures) == 1
+    assert "parse failed" in failures[0]["error"]

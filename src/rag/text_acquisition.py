@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-import fitz
+try:
+    import fitz
+except Exception:  # pragma: no cover - optional import for lightweight test environments
+    fitz = None
 
 from .config import Settings
 
@@ -100,6 +103,8 @@ def _summarize_ocr_quality(
 def extract_native_pdf_lines(pdf_path: Path, *, strip_page_noise: bool = True) -> list[tuple[int, str]]:
     from .pdf_processing import build_lines_with_page
 
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (fitz) is required for PDF parsing.")
     page_text: list[tuple[int, str]] = []
     with fitz.open(pdf_path) as doc:
         for idx, page in enumerate(doc):
@@ -232,6 +237,8 @@ def generate_ocr_text_sidecar(
     pdf_path: Path,
     settings: Settings,
 ) -> tuple[Path | None, str | None, str | None, str | None, str | None]:
+    if fitz is None:
+        return None, None, None, None, None
     if not settings.paddleocr_auto_generate_missing_text:
         return None, None, None, None, None
     engine, model, version = _build_paddleocr_identity(settings)
@@ -323,6 +330,8 @@ def acquire_pdf_text(
     strip_page_noise: bool = True,
     preferred_text_path: Path | None = None,
 ) -> TextAcquisitionResult:
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (fitz) is required for PDF parsing.")
     total_page_count = 0
     try:
         with fitz.open(pdf_path) as doc:

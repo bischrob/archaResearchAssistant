@@ -220,7 +220,14 @@ def test_sync_zotero_mode_reports_attachment_resolver_provenance(monkeypatch, tm
         metadata_require_match = False
 
     monkeypatch.setattr(webmain, "Settings", _FakeSettings)
-    monkeypatch.setattr(webmain, "load_zotero_entries", lambda *_args, **_kwargs: [{"zotero_persistent_id": "p1"}, {"zotero_persistent_id": "p2"}])
+    monkeypatch.setattr(
+        webmain,
+        "load_zotero_entries",
+        lambda *_args, **_kwargs: [
+            {"zotero_persistent_id": "p1", "attachment_path": str(pdf_path)},
+            {"zotero_persistent_id": "p2", "attachment_path_raw": "missing.pdf"},
+        ],
+    )
     monkeypatch.setattr(webmain, "ZoteroAttachmentResolver", lambda settings: _Resolver(settings, resolutions))
     monkeypatch.setattr(webmain, "ingest_pdfs", lambda **kwargs: IngestSummary(ingested_articles=1, total_chunks=1, total_references=0, selected_pdfs=[str(pdf_path)], skipped_existing_pdfs=[], skipped_no_metadata_pdfs=[], failed_pdfs=[]))
 
@@ -239,9 +246,9 @@ def test_sync_zotero_mode_reports_attachment_resolver_provenance(monkeypatch, tm
 
     assert status["status"] == "completed"
     source_stats = status["result"]["source_stats"]
-    assert source_stats["zotero_path_resolver_counts"] == {"attachment_path": 1}
-    assert source_stats["zotero_path_issue_counts"] == {"missing_attachment": 1}
-    assert source_stats["zotero_path_issue_samples"]["missing_attachment"] == ["missing.pdf"]
+    assert source_stats["zotero_path_resolver_counts"] == {"direct_attachment_path": 1}
+    assert source_stats["zotero_path_issue_counts"] == {"missing_attachment_path": 1}
+    assert source_stats["zotero_path_issue_samples"]["missing_attachment_path"] == ["missing.pdf"]
 
 
 def test_reference_ingest_tx_replaces_article_scoped_reference_nodes(monkeypatch) -> None:

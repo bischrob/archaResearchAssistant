@@ -340,3 +340,48 @@ def test_graph_store_reuses_cached_embedder_for_same_configuration(monkeypatch):
     finally:
         store_a.close()
         store_b.close()
+
+
+def test_ingest_article_tx_persists_note_source_chunk_metadata(monkeypatch):
+    fake_driver = _FakeDriver()
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", _FakeSentenceTransformer)
+    store = GraphStore("bolt://unused", "neo4j", "pass")
+    try:
+        article = _mk_article(
+            article_id="note_article",
+            author="Author",
+            authors=["Author"],
+            year=2024,
+            chunks=[
+                Chunk(
+                    chunk_id="note_article::note::abc::chunk::0",
+                    index=0,
+                    text="## Intro\nbody words",
+                    tokens=["intro", "body", "words"],
+                    token_counts={"intro": 1, "body": 1, "words": 1},
+                    page_start=1,
+                    page_end=1,
+                    heading_path=["Intro"],
+                    token_count=3,
+                    source_note_id="NOTEKEY",
+                    source_note_hash="abc123",
+                    embedding_model="sentence-transformers/all-MiniLM-L6-v2",
+                )
+            ],
+        )
+        article.source_note_item_id = 123
+        article.source_note_item_key = "NOTEKEY"
+        article.source_note_hash = "abc123"
+        store.ingest_articles([article])
+    finally:
+        store.close()
+
+    session = fake_driver.sessions[0]
+    article_write = next(kwargs for query, kwargs in zip(session.tx_queries, session.tx_kwargs) if "MERGE (a:Article {id: $id})" in query)
+    assert article_write["source_note_item_key"] == "NOTEKEY"
+    assert article_write["source_note_hash"] == "abc123"
+    chunk_write = next(kwargs for query, kwargs in zip(session.tx_queries, session.tx_kwargs) if "MERGE (c:Chunk {id: $id})" in query)
+    assert chunk_write["heading_path"] == ["Intro"]
+    assert chunk_write["source_note_id"] == "NOTEKEY"
+    assert chunk_write["source_note_hash"] == "abc123"

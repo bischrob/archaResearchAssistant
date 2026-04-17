@@ -8,7 +8,10 @@ from functools import lru_cache
 from pathlib import Path
 import tempfile
 
-import fitz
+try:
+    import fitz
+except Exception:  # pragma: no cover - optional import for lightweight test environments
+    fitz = None
 
 from .anystyle_refs import parse_reference_strings_with_anystyle_docker
 from .config import Settings
@@ -83,6 +86,8 @@ class SectionSpan:
 
 
 def _extract_page_text(pdf_path: Path) -> list[tuple[int, str]]:
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (fitz) is required for PDF parsing.")
     out: list[tuple[int, str]] = []
     with fitz.open(pdf_path) as doc:
         for idx, page in enumerate(doc):
@@ -195,6 +200,8 @@ def _extract_lines_from_paddle_page_payload(payload: object) -> list[str]:
 
 
 def _generate_ocr_text_with_paddle(pdf_path: Path, settings: Settings) -> str:
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (fitz) is required for OCR text generation.")
     pipeline = _build_paddleocr_pipeline(settings.paddleocr_auto_lang, settings.paddleocr_auto_device)
     dpi = max(96, int(settings.paddleocr_auto_render_dpi))
     scale = dpi / 72.0

@@ -28,7 +28,8 @@ from src.rag.path_utils import resolve_input_path
 from src.rag.zotero_attachment_resolver import ZoteroAttachmentResolver
 from src.rag.zotero_metadata import load_zotero_entries
 from src.rag.zip_pdf_source import collect_source_pdfs
-from src.rag.retrieval import article_claim_match, article_claim_match_by_article_id, contextual_retrieve
+from src.rag.retrieval import article_claim_match, article_claim_match_by_article_id
+from src.rag.search_graphrag import graphrag_retrieve
 from src.rag.report_export import citations_to_csv, markdown_to_pdf_bytes, to_markdown
 
 
@@ -864,35 +865,26 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     reconcile_summary = None
 
             ingest_candidates: list[Path] = []
-            ingest_candidate_provenance: list[dict[str, Any]] = []
             path_issue_counts: dict[str, int] = {}
             path_issue_samples: dict[str, list[str]] = {}
-            resolver_counts: dict[str, int] = {}
-            acquisition_source_counts: dict[str, int] = {}
-            resolver = ZoteroAttachmentResolver(settings)
-            try:
-                for idx, row in enumerate(missing_rows, start=1):
-                    if job.cancel_event.is_set():
-                        jobs.set_progress("sync", 0.0, "Cancelled")
-                        return {"ok": False, "cancelled": True}
-                    if missing_rows and (idx == 1 or idx % 25 == 0 or idx == len(missing_rows)):
-                        progress = 10.0 + ((idx / len(missing_rows)) * 2.0)
-                        jobs.set_progress("sync", progress, f"Resolving attachment paths {idx}/{len(missing_rows)}")
-
-                    resolution = resolver.resolve(row)
-                    if resolution.path is not None:
-                        ingest_candidates.append(resolution.path)
-                        resolver_name = resolution.resolver or "resolved"
-                        resolver_counts[resolver_name] = resolver_counts.get(resolver_name, 0) + 1
-                        continue
-
-                    path_issue_counts[resolution.issue_code] = path_issue_counts.get(resolution.issue_code, 0) + 1
-                    if resolution.detail:
-                        bucket = path_issue_samples.setdefault(resolution.issue_code, [])
-                        if len(bucket) < 10:
-                            bucket.append(resolution.detail)
-            finally:
-                resolver.close()
+            for idx, row in enumerate(missing_rows, start=1):
+                if job.cancel_event.is_set():
+                    jobs.set_progress("sync", 0.0, "Cancelled")
+                    return {"ok": False, "cancelled": True}
+                if missing_rows and (idx == 1 or idx % 25 == 0 or idx == len(missing_rows)):
+                    progress = 10.0 + ((idx / len(missing_rows)) * 2.0)
+                    jobs.set_progress("sync", progress, f"Resolving attachment paths {idx}/{len(missing_rows)}")
+                candidate_raw = str(row.get("attachment_path") or "").strip()
+                if candidate_raw:
+                    ingest_candidates.append(resolve_input_path(candidate_raw))
+                    continue
+                issue_code = "missing_attachment_path"
+                path_issue_counts[issue_code] = path_issue_counts.get(issue_code, 0) + 1
+                detail = str(row.get("attachment_path_raw") or "").strip()
+                if detail:
+                    bucket = path_issue_samples.setdefault(issue_code, [])
+                    if len(bucket) < 10:
+                        bucket.append(detail)
 
             dedup: dict[str, Path] = {}
             for p in ingest_candidates:
@@ -909,7 +901,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 "zotero_missing_in_neo4j": len(missing_rows),
                 "zotero_paths_found": len(ingest_candidates),
                 "zotero_paths_missing": sum(path_issue_counts.values()),
-                "zotero_path_resolver_counts": resolver_counts,
+                "zotero_path_resolver_counts": {"direct_attachment_path": len(ingest_candidates)},
                 "zotero_path_issue_counts": path_issue_counts,
                 "zotero_path_issue_samples": path_issue_samples,
             }
@@ -1716,10 +1708,10 @@ def query(req: QueryRequest, authorization: str | None = Header(default=None)) -
         settings = Settings()
         store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
         try:
-            rows = contextual_retrieve(
+            rows = graphrag_retrieve(
                 store,
                 req.query,
-                req.limit,
+                limit=req.limit,
                 limit_scope=req.limit_scope,
                 chunks_per_paper=req.chunks_per_paper,
                 score_threshold=req.score_threshold,
@@ -1773,7 +1765,7 @@ def ask(req: AskRequest) -> dict:
         retrieval_limit = req.rag_results or max(1, int(req.retrieval_pool))
         retrieval_threshold = None if req.rag_results is not None else req.score_threshold
         # Ask keeps chunk-mode retrieval for richer grounding context.
-        rag_rows = contextual_retrieve(
+        rag_rows = graphrag_retrieve(
             store,
             search_query_used,
             limit=retrieval_limit,
