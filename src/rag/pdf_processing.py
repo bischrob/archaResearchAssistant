@@ -6,7 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
-import fitz
+try:
+    import fitz
+except Exception:  # pragma: no cover - optional import for lightweight test environments
+    fitz = None
 
 from .config import Settings
 from .text_acquisition import acquire_pdf_text
@@ -45,6 +48,11 @@ class Chunk:
     section_type: str = 'body'
     section_id: str | None = None
     section_label: str | None = None
+    heading_path: list[str] | None = None
+    token_count: int | None = None
+    source_note_id: str | None = None
+    source_note_hash: str | None = None
+    embedding_model: str | None = None
 
 
 @dataclass
@@ -120,6 +128,10 @@ class ArticleDoc:
     ocr_quality_summary: str | None = None
     keyword_extraction_method: str | None = None
     keyword_extraction_audit: dict | None = None
+    source_note_item_id: int | None = None
+    source_note_item_key: str | None = None
+    source_note_hash: str | None = None
+    reference_parse_failures: list[dict] | None = None
 
 
 def normalize_title(text: str) -> str:
@@ -146,6 +158,8 @@ def parse_filename_metadata(pdf_path: Path) -> tuple[str, int | None, str]:
 
 
 def _extract_page_text(pdf_path: Path) -> list[tuple[int, str]]:
+    if fitz is None:
+        raise RuntimeError("PyMuPDF (fitz) is required for PDF parsing.")
     out: list[tuple[int, str]] = []
     with fitz.open(pdf_path) as doc:
         for i, page in enumerate(doc):

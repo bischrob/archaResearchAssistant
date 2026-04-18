@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 
-from .anystyle_refs import extract_citations_with_anystyle_docker
+from .anystyle_refs import extract_citations_with_anystyle_docker, parse_reference_entries_resilient
 from .config import Settings
 from .metadata_provider import MetadataIndex, find_metadata_for_pdf, load_metadata_index, metadata_title_year_key
 from .neo4j_store import GraphStore
@@ -19,9 +19,9 @@ from .zip_pdf_source import collect_source_pdfs
 from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filter_citations, load_article
 from .openclaw_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
 from .keyword_extraction import extract_keywords
-from .zotero_attachment_resolver import ZoteroAttachmentResolver
+from .markdown_ingest import chunk_markdown_by_headings, split_reference_entries
 from .zotero_metadata import load_zotero_entries
-from .zotero_sidecars import prepare_zotero_sidecars
+from .zotero_notes import load_mineru_child_note_for_attachment
 
 DOI_PREFIX_RE = re.compile(r"^https?://(dx\.)?doi\.org/", re.IGNORECASE)
 
@@ -381,6 +381,104 @@ def _prepare_metadata_for_ingest(meta: dict | None) -> dict:
     return out
 
 
+def _build_sections_from_markdown_chunks(article_id: str, chunks: list[Chunk]) -> list[Section]:
+    sections: dict[str, Section] = {}
+    for idx, chunk in enumerate(chunks):
+        label = " > ".join(chunk.heading_path or []) if chunk.heading_path else (chunk.section_label or "Body")
+        key = label.strip() or f"section-{idx}"
+        if key not in sections:
+            sections[key] = Section(
+                section_id=f"{article_id}::section::{len(sections)}",
+                kind="body",
+                start_line=chunk.index,
+                end_line=chunk.index,
+                page_start=1,
+                page_end=1,
+                heading=label,
+            )
+        else:
+            existing = sections[key]
+            existing.end_line = max(existing.end_line, chunk.index)
+    return list(sections.values())
+
+
+def _build_article_from_mineru_note(pdf_path: Path, metadata: dict, settings: Settings) -> ArticleDoc:
+    db_path = (settings.zotero_db_path or "").strip()
+    if not db_path:
+        raise RuntimeError("ZOTERO_DB_PATH is required for MinerU note ingest.")
+    note = load_mineru_child_note_for_attachment(metadata, zotero_db_path=db_path)
+    markdown_chunks = chunk_markdown_by_headings(
+        note.markdown_text,
+        min_words=max(40, int(settings.chunk_overlap_words)),
+        target_words=max(80, int(settings.chunk_size_words)),
+        max_words=max(120, int(settings.chunk_size_words) + int(settings.chunk_overlap_words)),
+    )
+    chunks: list[Chunk] = []
+    for idx, parsed in enumerate(markdown_chunks):
+        chunks.append(
+            Chunk(
+                chunk_id=f"{pdf_path.stem}::note::{note.source_hash[:12]}::chunk::{idx}",
+                index=idx,
+                text=parsed.text,
+                tokens=[],
+                token_counts={},
+                page_start=1,
+                page_end=1,
+                section_type="body",
+                section_id=f"{pdf_path.stem}::section::{idx}",
+                section_label=" > ".join(parsed.heading_path) if parsed.heading_path else "Body",
+                heading_path=parsed.heading_path,
+                token_count=parsed.token_count,
+                source_note_id=note.note_item_key,
+                source_note_hash=note.source_hash,
+                embedding_model=settings.embedding_model,
+            )
+        )
+    reference_entries = split_reference_entries(note.markdown_text)
+    citations, parse_failures = parse_reference_entries_resilient(
+        reference_entries,
+        article_id=pdf_path.stem,
+        compose_service=settings.anystyle_service,
+        timeout_seconds=settings.anystyle_timeout_seconds,
+        use_gpu=settings.anystyle_use_gpu,
+        gpu_devices=settings.anystyle_gpu_devices,
+        gpu_service=settings.anystyle_gpu_service,
+    )
+    article = ArticleDoc(
+        article_id=pdf_path.stem,
+        title=str(metadata.get("title") or pdf_path.stem),
+        normalized_title=" ".join(re.findall(r"[a-z0-9]+", str(metadata.get("title") or pdf_path.stem).lower())),
+        year=metadata.get("year"),
+        author=((metadata.get("authors") or ["Unknown Author"])[0] if (metadata.get("authors") or []) else "Unknown Author"),
+        authors=list(metadata.get("authors") or []),
+        citekey=metadata.get("citekey"),
+        paperpile_id=metadata.get("paperpile_id"),
+        doi=metadata.get("doi"),
+        journal=metadata.get("journal"),
+        publisher=metadata.get("publisher"),
+        source_path=str(pdf_path),
+        chunks=chunks,
+        citations=citations,
+        sections=_build_sections_from_markdown_chunks(pdf_path.stem, chunks),
+        zotero_persistent_id=metadata.get("zotero_persistent_id"),
+        zotero_item_key=metadata.get("zotero_item_key"),
+        zotero_attachment_key=metadata.get("zotero_attachment_key"),
+        title_year_key=metadata.get("title_year_key"),
+        metadata_source=metadata.get("metadata_source"),
+        text_acquisition_method="mineru_child_note_markdown",
+        text_acquisition_fallback_used=False,
+        text_quality_check_backend="mineru_note",
+        native_text_malformed=False,
+        native_text_malformed_reason=None,
+        native_text_char_count=len(note.markdown_text),
+        source_note_item_id=note.note_item_id,
+        source_note_item_key=note.note_item_key,
+        source_note_hash=note.source_hash,
+        reference_parse_failures=parse_failures,
+    )
+    return article
+
+
 def _require_zotero_persistent_ids(
     settings: Settings,
     metadata_by_pdf: dict[Path, dict | None],
@@ -588,15 +686,15 @@ def choose_pdfs(
                     f"{len(missing_pid_rows)} row(s) were missing it. Fix Zotero parent/attachment linkage first. "
                     f"Examples: {sample}{extra}"
                 )
-        resolver = ZoteroAttachmentResolver(cfg)
-        try:
-            resolved_candidates: list[Path] = []
-            for row in rows:
-                resolution = resolver.resolve(row)
-                if resolution.path is not None:
-                    resolved_candidates.append(resolution.path)
-        finally:
-            resolver.close()
+        resolved_candidates: list[Path] = []
+        for row in rows:
+            candidate_raw = str(row.get("attachment_path") or "").strip()
+            if not candidate_raw:
+                continue
+            try:
+                resolved_candidates.append(resolve_input_path(candidate_raw))
+            except Exception:
+                continue
         dedup: dict[str, Path] = {}
         for p in resolved_candidates:
             dedup[str(p)] = p
@@ -665,7 +763,6 @@ def ingest_pdfs(
     citation_overrides: dict[str, list[Citation]] | None = None,
 ) -> IngestSummary:
     settings = settings or Settings()
-    parser_mode = _citation_parser_mode(settings)
     metadata_index = _load_metadata_index_for_settings(settings)
 
     def emit_event(payload: dict) -> None:
@@ -751,59 +848,27 @@ def ingest_pdfs(
         )
         try:
             prepared_meta = _prepare_metadata_for_ingest(metadata_by_pdf.get(p))
-            prepared_meta = prepare_zotero_sidecars(p, prepared_meta, settings) if prepared_meta else prepared_meta
-            article = _load_article_cached(
+            if not prepared_meta:
+                raise RuntimeError(f"Missing metadata for {p.name}; item is not ingestible in MinerU note mode.")
+            article = _build_article_from_mineru_note(
                 pdf_path=p,
-                settings=settings,
                 metadata=prepared_meta,
+                settings=settings,
             )
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
                 citation_override_pdfs += 1
-            elif parser_mode == "anystyle" and not anystyle_disabled_reason:
-                anystyle_attempted += 1
-                try:
-                    extracted = _load_anystyle_citations_cached(p, settings)
-                    if extracted:
-                        article.citations = extracted
-                        anystyle_applied += 1
-                    else:
-                        anystyle_empty += 1
-                except Exception as exc:
-                    anystyle_failed += 1
-                    err = str(exc)
-                    if len(anystyle_failure_samples) < 10:
-                        anystyle_failure_samples.append(f"{p.name}: {err}")
-                    if settings.anystyle_require_success:
-                        raise
-                    if _is_global_anystyle_failure(err):
-                        anystyle_disabled_reason = err
-            elif parser_mode == 'structured_anystyle' and not anystyle_disabled_reason:
-                anystyle_attempted += 1
-                try:
-                    structured = _load_structured_anystyle_cached(
-                        pdf_path=p,
-                        article_id=article.article_id,
-                        settings=settings,
-                        metadata=prepared_meta,
+            anystyle_attempted += 1
+            if article.citations:
+                anystyle_applied += 1
+            else:
+                anystyle_empty += 1
+            if article.reference_parse_failures:
+                anystyle_failed += len(article.reference_parse_failures)
+                if len(anystyle_failure_samples) < 10:
+                    anystyle_failure_samples.append(
+                        f"{p.name}: {len(article.reference_parse_failures)} reference parse failures"
                     )
-                    if structured.chunks:
-                        article.chunks = structured.chunks
-                    article.sections = structured.sections
-                    if structured.citations:
-                        article.citations = structured.citations
-                        anystyle_applied += 1
-                    else:
-                        anystyle_empty += 1
-                except Exception as exc:
-                    err = str(exc)
-                    anystyle_failed += 1
-                    if len(anystyle_failure_samples) < 10:
-                        anystyle_failure_samples.append(f'{p.name}: {err}')
-                    if settings.anystyle_require_success:
-                        raise
-                    if _is_global_anystyle_failure(err):
-                        anystyle_disabled_reason = err
             article.citations = filter_citations(
                 article.citations,
                 min_score=settings.citation_min_quality,

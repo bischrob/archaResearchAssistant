@@ -9,7 +9,10 @@ from pathlib import Path
 import re
 from typing import Iterable
 
-import numpy as np
+try:
+    import numpy as np
+except Exception:  # pragma: no cover - optional import for lightweight test environments
+    np = None
 from neo4j import GraphDatabase
 
 from .metadata_provider import metadata_title_year_key
@@ -98,7 +101,9 @@ class SentenceTransformerEmbedder:
             convert_to_numpy=True,
             normalize_embeddings=self.normalize_embeddings,
         )
-        return vectors.astype(np.float32).tolist()
+        if np is not None:
+            return vectors.astype(np.float32).tolist()
+        return [[float(x) for x in row] for row in vectors]
 
 
 class GraphStore:
@@ -296,6 +301,10 @@ class GraphStore:
                 a.ocr_version = $ocr_version,
                 a.ocr_processed_at = $ocr_processed_at,
                 a.ocr_quality_summary = $ocr_quality_summary,
+                a.source_note_item_id = $source_note_item_id,
+                a.source_note_item_key = $source_note_item_key,
+                a.source_note_hash = $source_note_hash,
+                a.reference_parse_failures_json = $reference_parse_failures_json,
                 a.section_types = $section_types,
                 a.keywords = $keywords,
                 a.keyword_extraction_method = $keyword_extraction_method,
@@ -334,6 +343,10 @@ class GraphStore:
             ocr_version=article.ocr_version,
             ocr_processed_at=article.ocr_processed_at,
             ocr_quality_summary=article.ocr_quality_summary,
+            source_note_item_id=article.source_note_item_id,
+            source_note_item_key=article.source_note_item_key,
+            source_note_hash=article.source_note_hash,
+            reference_parse_failures_json=_json_property(article.reference_parse_failures),
             section_types=sorted({s.kind for s in (article.sections or [])}),
             keywords=[k.value for k in (article.keywords or [])],
             keyword_extraction_method=article.keyword_extraction_method,
@@ -404,9 +417,14 @@ class GraphStore:
                     c.page_start = $page_start,
                     c.page_end = $page_end,
                     c.tokens = $tokens,
+                    c.token_count = $token_count,
                     c.section_type = $section_type,
                     c.section_id = $section_id,
                     c.section_label = $section_label,
+                    c.heading_path = $heading_path,
+                    c.source_note_id = $source_note_id,
+                    c.source_note_hash = $source_note_hash,
+                    c.embedding_model = $embedding_model,
                     c.embedding = $embedding
                 WITH c
                 MATCH (a:Article {id: $article_id})
@@ -418,9 +436,14 @@ class GraphStore:
                 page_start=chunk.page_start,
                 page_end=chunk.page_end,
                 tokens=chunk.tokens,
+                token_count=chunk.token_count if chunk.token_count is not None else len(chunk.tokens or []),
                 section_type=chunk.section_type,
                 section_id=chunk.section_id,
                 section_label=chunk.section_label,
+                heading_path=chunk.heading_path or [],
+                source_note_id=chunk.source_note_id,
+                source_note_hash=chunk.source_note_hash,
+                embedding_model=chunk.embedding_model,
                 embedding=emb,
                 article_id=article.article_id,
             )

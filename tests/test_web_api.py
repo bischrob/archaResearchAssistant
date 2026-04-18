@@ -913,7 +913,7 @@ def test_query_validation_and_success(monkeypatch, client):
 
     monkeypatch.setattr(
         webmain,
-        "contextual_retrieve",
+        "graphrag_retrieve",
         fake_retrieve,
     )
 
@@ -951,7 +951,7 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
 
     monkeypatch.setattr(
         webmain,
-        "contextual_retrieve",
+        "graphrag_retrieve",
         fake_retrieve,
     )
     monkeypatch.setattr(
@@ -1010,7 +1010,7 @@ def test_ask_endpoint_surfaces_explicit_fallback_without_raw_chunk_answer(client
     def fake_retrieve(store, query, limit, limit_scope="chunks", chunks_per_paper=1, score_threshold=None):
         return [{"chunk_id": "c1", "chunk_text": "Raw retrieved chunk text", "article_title": "Paper A", "article_year": 2020}]
 
-    monkeypatch.setattr(webmain, "contextual_retrieve", fake_retrieve)
+    monkeypatch.setattr(webmain, "graphrag_retrieve", fake_retrieve)
     monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
     monkeypatch.setattr(
         webmain,
@@ -1048,7 +1048,7 @@ def test_ask_endpoint_surfaces_explicit_fallback_without_raw_chunk_answer(client
 
 
 def test_ask_endpoint_returns_relevance_filtering_metadata(client, monkeypatch):
-    monkeypatch.setattr(webmain, "contextual_retrieve", lambda *args, **kwargs: [
+    monkeypatch.setattr(webmain, "graphrag_retrieve", lambda *args, **kwargs: [
         {"chunk_id": "c1", "chunk_text": "Binford argued for archaeology as anthropology.", "article_title": "Paper A", "article_year": 1962},
         {"chunk_id": "c2", "chunk_text": "Unrelated marine isotope chemistry.", "article_title": "Paper B", "article_year": 2021},
     ])
@@ -1096,7 +1096,7 @@ def test_ask_endpoint_defaults_to_score_threshold_mode(monkeypatch, client):
         captured["score_threshold"] = score_threshold
         return [{"chunk_id": "c1", "article_title": "Paper A", "article_year": 2020, "rerank_score": 1.2}]
 
-    monkeypatch.setattr(webmain, "contextual_retrieve", fake_retrieve)
+    monkeypatch.setattr(webmain, "graphrag_retrieve", fake_retrieve)
     monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
     monkeypatch.setattr(
         webmain,
@@ -1321,7 +1321,7 @@ def test_ask_endpoint_reports_usable_vs_excluded_rag_results(monkeypatch, client
     monkeypatch.setattr(webmain, 'GraphStore', FakeStore)
     monkeypatch.setattr(
         webmain,
-        'contextual_retrieve',
+        'graphrag_retrieve',
         lambda *args, **kwargs: [
             {'chunk_id': 'c1', 'chunk_text': 'Hohokam projectile point typology in Arizona.', 'article_title': 'Hohokam Lithics', 'article_year': 2020},
             {'chunk_id': 'c2', 'chunk_text': 'General Hohokam irrigation systems.', 'article_title': 'Hohokam Water', 'article_year': 2019},

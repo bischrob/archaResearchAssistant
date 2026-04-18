@@ -325,6 +325,59 @@ def parse_reference_strings_with_anystyle_docker(
     return parse_anystyle_json_payload(payload, article_id=article_id, raw_references=cleaned)
 
 
+def parse_reference_entries_resilient(
+    references: list[str],
+    *,
+    article_id: str,
+    compose_service: str = "anystyle",
+    timeout_seconds: int = 240,
+    use_gpu: bool = False,
+    gpu_devices: str = "all",
+    gpu_service: str = "anystyle-gpu",
+    project_root: Path | None = None,
+) -> tuple[list[Citation], list[dict[str, Any]]]:
+    citations: list[Citation] = []
+    failures: list[dict[str, Any]] = []
+    for idx, raw in enumerate(references):
+        entry = " ".join((raw or "").split()).strip()
+        if not entry:
+            continue
+        try:
+            parsed = parse_reference_strings_with_anystyle_docker(
+                [entry],
+                article_id=f"{article_id}::entry{idx}",
+                compose_service=compose_service,
+                timeout_seconds=timeout_seconds,
+                use_gpu=use_gpu,
+                gpu_devices=gpu_devices,
+                gpu_service=gpu_service,
+                project_root=project_root,
+            )
+            if parsed:
+                citation = parsed[0]
+                citations.append(
+                    Citation(
+                        citation_id=f"{article_id}::ref::{len(citations)}",
+                        raw_text=entry,
+                        year=citation.year,
+                        title_guess=citation.title_guess,
+                        normalized_title=citation.normalized_title,
+                        doi=citation.doi,
+                        source=citation.source,
+                        type_guess=citation.type_guess,
+                        author_tokens=citation.author_tokens,
+                        quality_score=citation.quality_score,
+                        authors=citation.authors,
+                        bibtex=citation.bibtex,
+                    )
+                )
+            else:
+                failures.append({"index": idx, "raw_text": entry, "error": "empty_anystyle_payload"})
+        except Exception as exc:
+            failures.append({"index": idx, "raw_text": entry, "error": str(exc)})
+    return citations, failures
+
+
 def extract_citations_with_anystyle_docker(
     pdf_path: Path,
     *,
