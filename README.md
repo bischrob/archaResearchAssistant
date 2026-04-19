@@ -23,7 +23,9 @@ The current recommended workflow is:
 
 The repo now centers on the repo-native operator CLI instead of ad hoc curl calls and one-off helper scripts.
 
-- Preferred local entrypoint: `./scripts/run_ra_from_repo.sh`
+- Preferred local entrypoint: `ra`
+- Linux repo wrapper: `./scripts/run_ra_from_repo.sh`
+- PowerShell repo wrapper: `.\scripts\run_ra_from_repo.ps1`
 - Installed CLI entrypoint: `ra`
 - Default ingest mode: Zotero-backed sync (`source_mode=zotero_db`)
 - Typical daily flow: `start`, `status`, `diagnostics`, `sync dry-run`, `sync ingest`, `query`, `ask`
@@ -35,9 +37,21 @@ conda env create -f environment.yml
 conda activate researchassistant
 cp .env.example .env
 pip install -e .
-make preflight
-./scripts/run_ra_from_repo.sh start
-./scripts/run_ra_from_repo.sh status
+ra preflight
+ra start
+ra status
+```
+
+PowerShell equivalent:
+
+```powershell
+conda env create -f environment.yml
+conda activate researchassistant
+Copy-Item .env.example .env
+pip install -e .
+.\scripts\run_ra_from_repo.ps1 preflight
+.\scripts\run_ra_from_repo.ps1 start
+.\scripts\run_ra_from_repo.ps1 status
 ```
 
 Minimum `.env` values:
@@ -59,24 +73,24 @@ Optional but commonly used:
 
 ## Daily Operator Flow
 
-Use the repo wrapper when you want predictable local defaults:
+Use the repo wrapper when you want predictable local defaults, or call `ra` directly once the environment is active:
 
 ```bash
-./scripts/run_ra_from_repo.sh start
-./scripts/run_ra_from_repo.sh status
-./scripts/run_ra_from_repo.sh diagnostics
-./scripts/run_ra_from_repo.sh sync dry-run
-./scripts/run_ra_from_repo.sh sync ingest
-./scripts/run_ra_from_repo.sh query "community archives metadata"
-./scripts/run_ra_from_repo.sh ask "What are the main tradeoffs in AI-generated archival metadata?"
+ra start
+ra status
+ra diagnostics
+ra sync dry-run
+ra sync ingest
+ra query "community archives metadata"
+ra ask "What are the main tradeoffs in AI-generated archival metadata?"
 ```
 
 Useful item-level commands:
 
 ```bash
-./scripts/run_ra_from_repo.sh zotero-search "ethnography"
-./scripts/run_ra_from_repo.sh zotero-ingest PID1 PID2
-./scripts/run_ra_from_repo.sh article someCiteKey2026
+ra zotero-search "ethnography"
+ra zotero-ingest PID1 PID2
+ra article someCiteKey2026
 ```
 
 ## CLI Targets
@@ -88,21 +102,28 @@ There are two common API targets:
 
 Rules of thumb:
 
-- `./scripts/run_ra_from_repo.sh` defaults to the local service.
+- `ra` and both repo wrappers default to the local service unless you override `RA_BASE_URL`.
 - `ra` may default differently depending on environment, especially under WSL.
 - Override either path with `RA_BASE_URL` or `--base-url` when needed.
 
 Examples:
 
 ```bash
-./scripts/run_ra_from_repo.sh --json status
-./scripts/run_ra_from_repo.sh --base-url http://192.168.0.37:8001 status
+ra --json status
+ra --base-url http://192.168.0.37:8001 status
 ra --base-url http://127.0.0.1:8001 diagnostics
+```
+
+PowerShell repo wrapper examples:
+
+```powershell
+.\scripts\run_ra_from_repo.ps1 --json status
+.\scripts\run_ra_from_repo.ps1 --base-url http://192.168.0.37:8001 status
 ```
 
 ## Web UI And Plugin
 
-After startup, open the web GUI shown by `start.sh`. The main workflow is:
+After startup, open the web GUI URL printed by `ra start`. The main workflow is:
 
 1. Refresh health.
 2. Run `Sync + Ingest` in Zotero DB mode.

@@ -15,12 +15,26 @@ from typing import Any
 import requests
 import typer
 
+from rag.startup import PythonResolutionError
+from rag.startup import build_uvicorn_command
+from rag.startup import current_python_has_required_modules
+from rag.startup import default_port_from_base_url
+from rag.startup import docker_command
+from rag.startup import docker_compose_command
+from rag.startup import ensure_docker_daemon
+from rag.startup import ensure_neo4j_running
+from rag.startup import initialize_neo4j_schema
+from rag.startup import local_health_base_url
+from rag.startup import pick_open_port
+from rag.startup import prepare_runtime_env
+from rag.startup import resolve_python_interpreter
+from rag.startup import run_preflight
+
 app = typer.Typer(help="Repo-native operator CLI for archaResearch Assistant.")
 sync_app = typer.Typer(help="Sync Zotero/filesystem PDFs into the graph.")
 app.add_typer(sync_app, name="sync")
 
 ROOT = Path(__file__).resolve().parents[2]
-START_SCRIPT = ROOT / "start.sh"
 LOCAL_DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 HOME2_WSL_BASE_URL = "http://192.168.0.37:8001"
 DEFAULT_BASE_URL = os.getenv("RA_BASE_URL", LOCAL_DEFAULT_BASE_URL).rstrip("/")
@@ -446,6 +460,65 @@ def diagnostics(ctx: typer.Context) -> None:
     cli.emit_text(_format_diagnostics_summary(payload))
 
 
+@app.command("resolve-python")
+def resolve_python_command(ctx: typer.Context) -> None:
+    cli = require_ctx(ctx)
+    try:
+        python_bin = resolve_python_interpreter(ROOT)
+    except PythonResolutionError as exc:
+        if cli.json_output:
+            cli.emit({"ok": False, "error": str(exc)})
+        else:
+            cli.emit_text(str(exc))
+        raise typer.Exit(code=1) from exc
+
+    payload = {
+        "ok": True,
+        "python_bin": str(python_bin),
+        "current_python": sys.executable,
+        "current_python_ready": current_python_has_required_modules(),
+    }
+    if cli.json_output:
+        cli.emit(payload)
+        return
+    cli.emit_text(str(python_bin))
+
+
+@app.command()
+def preflight(
+    ctx: typer.Context,
+    port: int = typer.Option(8000, min=1, max=65535, help="Port to validate before start."),
+) -> None:
+    cli = require_ctx(ctx)
+    try:
+        python_bin = resolve_python_interpreter(ROOT)
+        info, warnings = run_preflight(ROOT, python_bin, port)
+    except (PythonResolutionError, RuntimeError) as exc:
+        if cli.json_output:
+            cli.emit({"ok": False, "error": str(exc)})
+        else:
+            cli.emit_text(f"Preflight failed: {exc}")
+        raise typer.Exit(code=1) from exc
+
+    payload = {
+        "ok": True,
+        "repo_root": str(ROOT),
+        "python_bin": str(python_bin),
+        "info": info,
+        "warnings": warnings,
+    }
+    if cli.json_output:
+        cli.emit(payload)
+        return
+
+    cli.emit_text(f"Running preflight checks in {ROOT}")
+    for line in info:
+        cli.emit_text(f"[OK] {line}")
+    for line in warnings:
+        cli.emit_text(f"[WARN] {line}")
+    cli.emit_text("Preflight complete.")
+
+
 @app.command()
 def start(
     ctx: typer.Context,
@@ -453,23 +526,60 @@ def start(
     wait: bool = typer.Option(True, help="Wait for the API health endpoint after launching."),
     wait_timeout: float = typer.Option(120.0, min=1.0, help="Startup wait timeout in seconds."),
     poll_interval: float = typer.Option(DEFAULT_POLL_INTERVAL, min=0.2, help="Health poll interval."),
-    port: int | None = typer.Option(None, min=1, max=65535, help="PORT override for start.sh."),
+    port: int | None = typer.Option(None, min=1, max=65535, help="Port override for the local web API."),
     host: str | None = typer.Option(None, help="HOST override for uvicorn."),
     skip_preflight: bool = typer.Option(False, help="Set RUN_PREFLIGHT=0 for this launch."),
+    reload: bool = typer.Option(False, help="Enable uvicorn reload for interactive development."),
 ) -> None:
     cli = require_ctx(ctx)
-    if not START_SCRIPT.exists():
-        raise typer.BadParameter(f"Start script not found: {START_SCRIPT}")
+    python_bin = resolve_python_interpreter(ROOT)
+    requested_port = port if port is not None else default_port_from_base_url(cli.client.base_url, fallback=8001)
+    if requested_port < 1 or requested_port > 65535:
+        raise typer.BadParameter(f"Port must be between 1 and 65535 (received {requested_port}).")
 
-    env = os.environ.copy()
-    if port is not None:
-        env["PORT"] = str(port)
-    if host:
-        env["HOST"] = host
-    if skip_preflight:
-        env["RUN_PREFLIGHT"] = "0"
+    bind_host = host or os.getenv("HOST", "0.0.0.0")
+    runtime_env = prepare_runtime_env(ROOT, python_bin)
+    if bind_host:
+        runtime_env["HOST"] = bind_host
 
-    command = ["bash", str(START_SCRIPT)]
+    run_preflight_checks = not skip_preflight and os.getenv("RUN_PREFLIGHT", "1") == "1"
+    if run_preflight_checks:
+        cli.note("Running preflight checks...")
+        info, warnings = run_preflight(ROOT, python_bin, requested_port)
+        for line in info:
+            cli.note(f"[OK] {line}")
+        for line in warnings:
+            cli.note(f"[WARN] {line}")
+
+    docker = docker_command()
+    compose_cmd = docker_compose_command()
+    ensure_docker_daemon(docker)
+    neo4j_state = ensure_neo4j_running(compose_cmd, docker)
+    if neo4j_state == "started":
+        cli.note("Starting Neo4j container...")
+    else:
+        cli.note("Neo4j container already running.")
+
+    if os.getenv("INIT_NEO4J_SCHEMA", "1") == "1":
+        cli.note("Initializing Neo4j schema...")
+        initialize_neo4j_schema(
+            ROOT,
+            python_bin,
+            wait_seconds=int(os.getenv("NEO4J_INIT_WAIT_SECONDS", "90")),
+            retry_interval=int(os.getenv("NEO4J_INIT_RETRY_INTERVAL", "2")),
+        )
+
+    selected_port = pick_open_port(requested_port)
+    if selected_port != requested_port:
+        cli.note(f"Port {requested_port} is in use. Using open port {selected_port}.")
+    else:
+        cli.note(f"Using port {selected_port}.")
+
+    runtime_env["PORT"] = str(selected_port)
+    runtime_env["UVICORN_RELOAD"] = "1" if reload else "0"
+    command = build_uvicorn_command(python_bin, host=bind_host, port=selected_port, reload_enabled=reload)
+    base_url = local_health_base_url(selected_port)
+    cli.note(f"Web GUI URL: {base_url}")
     launched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     cli.note(f"Starting archaResearch Assistant from {ROOT}")
     if background:
@@ -481,7 +591,7 @@ def start(
             proc = subprocess.Popen(
                 command,
                 cwd=ROOT,
-                env=env,
+                env=runtime_env,
                 stdout=log_handle,
                 stderr=subprocess.STDOUT,
                 start_new_session=True,
@@ -493,17 +603,20 @@ def start(
             "log_path": str(log_path),
             "command": command,
             "launched_at": launched_at,
+            "base_url": base_url,
+            "port": selected_port,
         }
         cli.note(f"Launched background process pid={proc.pid}; logging to {log_path}")
         if wait:
             deadline = time.time() + wait_timeout
             last_error = None
-            with cli.spinner(f"Waiting for API health at {cli.client.base_url}/api/health"):
+            health_client = APIClient(base_url=base_url, timeout=5)
+            with cli.spinner(f"Waiting for API health at {base_url}/api/health"):
                 while time.time() < deadline:
                     if proc.poll() is not None:
-                        raise CLIError(f"start.sh exited early with code {proc.returncode}. See {log_path}")
+                        raise CLIError(f"Web server exited early with code {proc.returncode}. See {log_path}")
                     try:
-                        payload["health"] = cli.client.get("/api/health", timeout=5)
+                        payload["health"] = health_client.get("/api/health", timeout=5)
                         payload["ready"] = True
                         break
                     except CLIError as exc:
@@ -520,8 +633,23 @@ def start(
         cli.emit(payload)
         return
 
-    cli.note("Running start.sh in the foreground; output will stream below.")
-    proc = subprocess.run(command, cwd=ROOT, env=env, check=False)
+    cli.note("Running web server in the foreground; output will stream below.")
+    proc = subprocess.run(command, cwd=ROOT, env=runtime_env, check=False)
+    raise typer.Exit(code=proc.returncode)
+
+
+@app.command("serve-web", hidden=True)
+def serve_web(
+    ctx: typer.Context,
+    host: str = typer.Option(os.getenv("HOST", "0.0.0.0"), help="Host interface for uvicorn."),
+    port: int = typer.Option(int(os.getenv("PORT", "8001")), min=1, max=65535, help="Port for uvicorn."),
+    reload: bool = typer.Option(False, help="Enable uvicorn reload."),
+) -> None:
+    _ = require_ctx(ctx)
+    command = [sys.executable, "-m", "uvicorn", "webapp.main:app", "--host", host, "--port", str(port)]
+    if reload:
+        command.append("--reload")
+    proc = subprocess.run(command, cwd=ROOT, check=False)
     raise typer.Exit(code=proc.returncode)
 
 

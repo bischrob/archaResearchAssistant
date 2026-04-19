@@ -83,12 +83,20 @@ Recommended base-model version for current repo usage:
 
 ## 4) Start services
 
-For a local repo-hosted setup, use the direct repo wrapper so the default target is local:
+For a local repo-hosted setup, use `ra` directly once the environment is active:
 
 ```bash
-make preflight
-./scripts/run_ra_from_repo.sh start
-./scripts/run_ra_from_repo.sh status
+ra preflight
+ra start
+ra status
+```
+
+If you prefer the repo wrapper from PowerShell:
+
+```powershell
+.\scripts\run_ra_from_repo.ps1 preflight
+.\scripts\run_ra_from_repo.ps1 start
+.\scripts\run_ra_from_repo.ps1 status
 ```
 
 If you prefer the installed `ra` launcher from WSL but want to target the local service explicitly:
@@ -131,16 +139,16 @@ Progress overlay behavior in the plugin:
 Preferred CLI checks:
 
 ```bash
-./scripts/run_ra_from_repo.sh status
-./scripts/run_ra_from_repo.sh diagnostics
-./scripts/run_ra_from_repo.sh sync dry-run
-./scripts/run_ra_from_repo.sh zotero-search "query text"
+ra status
+ra diagnostics
+ra sync dry-run
+ra zotero-search "query text"
 ```
 
 If you want to target `home2` explicitly:
 
 ```bash
-./scripts/run_ra_from_repo.sh --base-url http://192.168.0.37:8001 status
+ra --base-url http://192.168.0.37:8001 status
 ```
 
 Raw API checks still work when needed:

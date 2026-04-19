@@ -377,14 +377,33 @@ var RAGSync = {
       throw new Error('External bridge is disabled. Set extensions.zotero-rag-sync.externalBridgeEnabled=true');
     }
 
-    const rawData = options && options.data;
+    const candidatePayloads = [
+      options && options.data,
+      options && options.body,
+      options && options.postData,
+      options && options.dataRaw,
+    ];
     let payload = {};
-    if (typeof rawData === 'string') {
-      payload = this.parseConnectorJSON(rawData);
-    } else if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
-      payload = rawData;
-    } else {
-      payload = {};
+    for (const candidate of candidatePayloads) {
+      if (!candidate) {
+        continue;
+      }
+      if (typeof candidate === 'string') {
+        payload = this.parseConnectorJSON(candidate);
+        break;
+      }
+      if (typeof TextDecoder !== 'undefined' && ArrayBuffer.isView(candidate)) {
+        payload = this.parseConnectorJSON(new TextDecoder().decode(candidate));
+        break;
+      }
+      if (typeof TextDecoder !== 'undefined' && candidate instanceof ArrayBuffer) {
+        payload = this.parseConnectorJSON(new TextDecoder().decode(new Uint8Array(candidate)));
+        break;
+      }
+      if (typeof candidate === 'object' && !Array.isArray(candidate)) {
+        payload = candidate;
+        break;
+      }
     }
     const headers = (options && options.headers) || {};
     const headerToken = String(

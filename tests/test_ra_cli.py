@@ -6,6 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 from rag import cli as ra
+from rag import startup
 
 
 runner = CliRunner()
@@ -372,8 +373,14 @@ def test_start_background_waits_for_health(monkeypatch, tmp_path: Path, fake_ses
         return FakeProcess()
 
     monkeypatch.setattr(ra, "ROOT", tmp_path)
-    monkeypatch.setattr(ra, "START_SCRIPT", tmp_path / "start.sh")
-    (tmp_path / "start.sh").write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    monkeypatch.setattr(ra, "resolve_python_interpreter", lambda _root: tmp_path / "python.exe")
+    monkeypatch.setattr(ra, "run_preflight", lambda _root, _python, _port: (["Port 8001 is free"], []))
+    monkeypatch.setattr(ra, "docker_command", lambda: "docker")
+    monkeypatch.setattr(ra, "docker_compose_command", lambda: ["docker", "compose"])
+    monkeypatch.setattr(ra, "ensure_docker_daemon", lambda _docker: None)
+    monkeypatch.setattr(ra, "ensure_neo4j_running", lambda _compose, _docker: "already-running")
+    monkeypatch.setattr(ra, "initialize_neo4j_schema", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ra, "pick_open_port", lambda port: port)
     monkeypatch.setattr(ra.subprocess, "Popen", fake_popen)
     monkeypatch.setattr(ra.time, "sleep", lambda *_args, **_kwargs: None)
 
@@ -383,7 +390,9 @@ def test_start_background_waits_for_health(monkeypatch, tmp_path: Path, fake_ses
     assert payload["ok"] is True
     assert payload["ready"] is True
     assert payload["pid"] == 4321
-    assert popen_calls[0]["command"][0] == "bash"
+    assert popen_calls[0]["command"][0].endswith("python.exe")
+    assert popen_calls[0]["command"][1:4] == ["-m", "uvicorn", "webapp.main:app"]
+    assert payload["base_url"] == "http://127.0.0.1:8001"
 
 
 def test_api_token_is_forwarded_in_default_session(monkeypatch, fake_session_factory):
@@ -401,6 +410,102 @@ def test_api_token_is_forwarded_in_default_session(monkeypatch, fake_session_fac
     result = runner.invoke(ra.app, ["status"])
     assert result.exit_code == 0, result.stdout
     assert created[0].headers["Authorization"] == "Bearer secret-token"
+
+
+def test_resolve_python_command_reports_selected_interpreter(monkeypatch, tmp_path: Path):
+    expected = tmp_path / "python.exe"
+    monkeypatch.setattr(ra, "ROOT", tmp_path)
+    monkeypatch.setattr(ra, "resolve_python_interpreter", lambda _root: expected)
+    monkeypatch.setattr(ra, "current_python_has_required_modules", lambda: True)
+
+    result = runner.invoke(ra.app, ["--json", "resolve-python"])
+    assert result.exit_code == 0, result.stdout
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is True
+    assert payload["python_bin"] == str(expected)
+    assert payload["current_python_ready"] is True
+
+
+def test_preflight_command_emits_info_and_warnings(monkeypatch, tmp_path: Path):
+    expected = tmp_path / "python.exe"
+    monkeypatch.setattr(ra, "ROOT", tmp_path)
+    monkeypatch.setattr(ra, "resolve_python_interpreter", lambda _root: expected)
+    monkeypatch.setattr(
+        ra,
+        "run_preflight",
+        lambda _root, _python, port: ([f"Port {port} is free"], ["Neo4j container not running"]),
+    )
+
+    result = runner.invoke(ra.app, ["preflight", "--port", "8001"])
+    assert result.exit_code == 0, result.stdout
+    assert f"Running preflight checks in {tmp_path}" in result.stdout
+    assert "[OK] Port 8001 is free" in result.stdout
+    assert "[WARN] Neo4j container not running" in result.stdout
+
+
+def test_preflight_command_exits_nonzero_on_resolution_failure(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(ra, "ROOT", tmp_path)
+    monkeypatch.setattr(
+        ra,
+        "resolve_python_interpreter",
+        lambda _root: (_ for _ in ()).throw(startup.PythonResolutionError(["/missing/python"])),
+    )
+
+    result = runner.invoke(ra.app, ["--json", "preflight"])
+    assert result.exit_code == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert "/missing/python" in payload["error"]
+
+
+def test_start_foreground_runs_uvicorn_command(monkeypatch, tmp_path: Path):
+    calls = []
+
+    def fake_run(command, cwd=None, env=None, check=False):
+        calls.append({"command": command, "cwd": cwd, "env": env, "check": check})
+
+        class Result:
+            returncode = 0
+
+        return Result()
+
+    monkeypatch.setattr(ra, "ROOT", tmp_path)
+    monkeypatch.setattr(ra, "resolve_python_interpreter", lambda _root: tmp_path / "python.exe")
+    monkeypatch.setattr(ra, "docker_command", lambda: "docker")
+    monkeypatch.setattr(ra, "docker_compose_command", lambda: ["docker", "compose"])
+    monkeypatch.setattr(ra, "ensure_docker_daemon", lambda _docker: None)
+    monkeypatch.setattr(ra, "ensure_neo4j_running", lambda _compose, _docker: "started")
+    monkeypatch.setattr(ra, "initialize_neo4j_schema", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(ra, "pick_open_port", lambda port: port)
+    monkeypatch.setattr(ra.subprocess, "run", fake_run)
+
+    result = runner.invoke(ra.app, ["start", "--foreground", "--skip-preflight", "--port", "9001"])
+    assert result.exit_code == 0, result.stdout
+    assert calls[0]["command"][0].endswith("python.exe")
+    assert calls[0]["command"][1:4] == ["-m", "uvicorn", "webapp.main:app"]
+    assert "--port" in calls[0]["command"]
+    assert "9001" in calls[0]["command"]
+
+
+def test_powershell_repo_wrapper_exists() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "scripts" / "run_ra_from_repo.ps1"
+    assert wrapper.exists()
+    content = wrapper.read_text(encoding="utf-8")
+    assert "-m rag.cli" in content
+    assert "RA_BASE_URL" in content
+
+
+def test_linux_start_wrapper_delegates_to_python_cli() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "start.sh"
+    content = wrapper.read_text(encoding="utf-8")
+    assert "-m rag.cli start --foreground" in content
+
+
+def test_powershell_start_wrapper_delegates_to_repo_wrapper() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "start.ps1"
+    content = wrapper.read_text(encoding="utf-8")
+    assert "run_ra_from_repo.ps1" in content
+    assert "start --foreground" in content
 
 
 def test_scripts_ra_wrapper_delegates_to_packaged_entrypoint(monkeypatch):
