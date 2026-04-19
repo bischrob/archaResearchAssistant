@@ -11,6 +11,4 @@ if [[ ! -x "${PYTHON_BIN}" ]]; then
 fi
 
 export PYTHONPATH="${ROOT_DIR}/src${PYTHONPATH:+:${PYTHONPATH}}"
-: "${RA_BASE_URL:=http://127.0.0.1:8001}"
-export RA_BASE_URL
 exec "${PYTHON_BIN}" -m rag.cli "$@"

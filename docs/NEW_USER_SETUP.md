@@ -19,14 +19,20 @@ Related docs:
 Create the supported environment:
 
 ```bash
-conda env create -f environment.yml
+[ -d "$HOME/.conda/envs/researchassistant" ] || conda env create -f environment.yml
 conda activate researchassistant
+```
+
+If the environment already exists, refresh it with:
+
+```bash
+conda env update -n researchassistant -f environment.yml --prune
 ```
 
 ## 2) Configure `.env`
 
 ```bash
-cp .env.example .env
+[ -f .env ] || cp .env.example .env
 ```
 
 Set at minimum:
@@ -46,6 +52,8 @@ Set at minimum:
 Optional API auth:
 
 - `API_BEARER_TOKEN=<token>`
+
+Edit `.env` and set the required values before running preflight or startup.
 
 ### Zotero WebDAV fallback setup
 
@@ -92,6 +100,14 @@ ra status
 ```
 
 If you prefer the repo wrapper from PowerShell:
+
+```powershell
+.\tasks.ps1 preflight
+.\tasks.ps1 start
+.\tasks.ps1 status
+```
+
+If you want the direct repo wrapper from PowerShell:
 
 ```powershell
 .\scripts\run_ra_from_repo.ps1 preflight

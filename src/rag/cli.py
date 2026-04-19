@@ -37,7 +37,22 @@ app.add_typer(sync_app, name="sync")
 ROOT = Path(__file__).resolve().parents[2]
 LOCAL_DEFAULT_BASE_URL = "http://127.0.0.1:8001"
 HOME2_WSL_BASE_URL = "http://192.168.0.37:8001"
-DEFAULT_BASE_URL = os.getenv("RA_BASE_URL", LOCAL_DEFAULT_BASE_URL).rstrip("/")
+LAST_BASE_URL_FILE = ROOT / ".cache" / "last_base_url.txt"
+
+
+def _default_base_url() -> str:
+    env_value = os.getenv("RA_BASE_URL", "").strip()
+    if env_value:
+        return env_value.rstrip("/")
+    try:
+        cached = LAST_BASE_URL_FILE.read_text(encoding="utf-8").strip()
+        if cached:
+            return cached.rstrip("/")
+    except OSError:
+        pass
+    return LOCAL_DEFAULT_BASE_URL
+
+
 DEFAULT_TIMEOUT = float(os.getenv("RA_HTTP_TIMEOUT", "30"))
 DEFAULT_ASK_TIMEOUT = float(os.getenv("RA_ASK_TIMEOUT", "300"))
 DEFAULT_POLL_INTERVAL = float(os.getenv("RA_POLL_INTERVAL", "1.0"))
@@ -154,11 +169,11 @@ class CLIContext:
 @app.callback()
 def main(
     ctx: typer.Context,
-    base_url: str = typer.Option(DEFAULT_BASE_URL, help="API base URL."),
+    base_url: str | None = typer.Option(None, help="API base URL."),
     timeout: float = typer.Option(DEFAULT_TIMEOUT, min=1.0, help="HTTP timeout in seconds."),
     json_output: bool = typer.Option(False, "--json", help="Emit raw JSON output."),
 ) -> None:
-    ctx.obj = CLIContext(base_url=base_url, timeout=timeout, json_output=json_output)
+    ctx.obj = CLIContext(base_url=(base_url or _default_base_url()), timeout=timeout, json_output=json_output)
 
 
 def require_ctx(ctx: typer.Context) -> CLIContext:
@@ -427,6 +442,7 @@ def _job_statuses(client: APIClient) -> dict[str, Any]:
 def status(
     ctx: typer.Context,
     include_jobs: bool = typer.Option(True, help="Include async job status snapshots."),
+    include_diagnostics: bool = typer.Option(False, help="Include diagnostics (can be slower on large local libraries)."),
 ) -> None:
     cli = require_ctx(ctx)
     payload: dict[str, Any] = {
@@ -436,7 +452,8 @@ def status(
     try:
         payload["version"] = cli.client.get("/api/version")
         payload["health"] = cli.client.get("/api/health")
-        payload["diagnostics"] = cli.client.get("/api/diagnostics")
+        if include_diagnostics:
+            payload["diagnostics"] = cli.client.get("/api/diagnostics")
         if include_jobs:
             payload["jobs"] = _job_statuses(cli.client)
         payload["reachable"] = True
@@ -579,6 +596,8 @@ def start(
     runtime_env["UVICORN_RELOAD"] = "1" if reload else "0"
     command = build_uvicorn_command(python_bin, host=bind_host, port=selected_port, reload_enabled=reload)
     base_url = local_health_base_url(selected_port)
+    LAST_BASE_URL_FILE.parent.mkdir(parents=True, exist_ok=True)
+    LAST_BASE_URL_FILE.write_text(base_url, encoding="utf-8")
     cli.note(f"Web GUI URL: {base_url}")
     launched_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     cli.note(f"Starting archaResearch Assistant from {ROOT}")
@@ -610,13 +629,14 @@ def start(
         if wait:
             deadline = time.time() + wait_timeout
             last_error = None
-            health_client = APIClient(base_url=base_url, timeout=5)
+            health_timeout = max(10.0, min(30.0, wait_timeout))
+            health_client = APIClient(base_url=base_url, timeout=health_timeout)
             with cli.spinner(f"Waiting for API health at {base_url}/api/health"):
                 while time.time() < deadline:
                     if proc.poll() is not None:
                         raise CLIError(f"Web server exited early with code {proc.returncode}. See {log_path}")
                     try:
-                        payload["health"] = health_client.get("/api/health", timeout=5)
+                        payload["health"] = health_client.get("/api/health", timeout=health_timeout)
                         payload["ready"] = True
                         break
                     except CLIError as exc:

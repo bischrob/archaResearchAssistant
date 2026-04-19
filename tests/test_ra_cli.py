@@ -10,7 +10,7 @@ from rag import startup
 
 
 runner = CliRunner()
-API_BASE_URL = ra.DEFAULT_BASE_URL
+API_BASE_URL = ra.LOCAL_DEFAULT_BASE_URL
 
 def api(path: str) -> str:
     return f"{API_BASE_URL}{path}"
@@ -54,13 +54,17 @@ def fake_session_factory(monkeypatch):
     return factory, created
 
 
+@pytest.fixture(autouse=True)
+def force_default_base_url(monkeypatch):
+    monkeypatch.setenv("RA_BASE_URL", API_BASE_URL)
+
+
 def test_status_reports_reachable_with_job_snapshots(fake_session_factory):
     factory, created = fake_session_factory
     factory(
         {
             ("GET", api("/api/version")): FakeResponse(payload={"status": "ok", "version": "1"}),
             ("GET", api("/api/health")): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
-            ("GET", api("/api/diagnostics")): FakeResponse(payload={"ok": True, "checks": []}),
             ("GET", api("/api/sync/status")): FakeResponse(payload={"status": "idle"}),
             ("GET", api("/api/ingest/status")): FakeResponse(payload={"status": "running"}),
             ("GET", api("/api/query/status")): FakeResponse(payload={"status": "completed"}),
@@ -121,6 +125,23 @@ def test_status_human_output_marks_filesystem_counts_as_informational_in_zotero_
         {
             ("GET", api("/api/version")): FakeResponse(payload={"status": "ok", "version": "1"}),
             ("GET", api("/api/health")): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
+            ("GET", api("/api/sync/status")): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/ingest/status")): FakeResponse(payload={"status": "idle"}),
+            ("GET", api("/api/query/status")): FakeResponse(payload={"status": "idle"}),
+        }
+    )
+
+    result = runner.invoke(ra.app, ["status"])
+    assert result.exit_code == 0, result.stdout
+    assert "Diagnostics" not in result.stdout
+
+
+def test_status_can_include_diagnostics_when_requested(fake_session_factory):
+    factory, _ = fake_session_factory
+    factory(
+        {
+            ("GET", api("/api/version")): FakeResponse(payload={"status": "ok", "version": "1"}),
+            ("GET", api("/api/health")): FakeResponse(payload={"status": "ok", "stats": {"articles": 2}}),
             ("GET", api("/api/diagnostics")): FakeResponse(
                 payload={
                     "ok": True,
@@ -135,12 +156,11 @@ def test_status_human_output_marks_filesystem_counts_as_informational_in_zotero_
         }
     )
 
-    result = runner.invoke(ra.app, ["status"])
+    result = runner.invoke(ra.app, ["status", "--include-diagnostics"])
     assert result.exit_code == 0, result.stdout
     assert "Diagnostics (ok)" in result.stdout
     assert "Zotero attachment rows: 7" in result.stdout
     assert "Ingest candidates: 3" in result.stdout
-    assert "Filesystem local PDF match scan: 0/0 (informational only; Zotero DB is the ingest source)" in result.stdout
 
 
 def test_sync_dry_run_waits_for_terminal_status(fake_session_factory):
@@ -412,6 +432,17 @@ def test_api_token_is_forwarded_in_default_session(monkeypatch, fake_session_fac
     assert created[0].headers["Authorization"] == "Bearer secret-token"
 
 
+def test_default_base_url_prefers_cached_last_started_url(monkeypatch, tmp_path: Path):
+    cache_file = tmp_path / ".cache" / "last_base_url.txt"
+    cache_file.parent.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text("http://127.0.0.1:8002", encoding="utf-8")
+    monkeypatch.delenv("RA_BASE_URL", raising=False)
+    monkeypatch.setattr(ra, "ROOT", tmp_path)
+    monkeypatch.setattr(ra, "LAST_BASE_URL_FILE", cache_file)
+
+    assert ra._default_base_url() == "http://127.0.0.1:8002"
+
+
 def test_resolve_python_command_reports_selected_interpreter(monkeypatch, tmp_path: Path):
     expected = tmp_path / "python.exe"
     monkeypatch.setattr(ra, "ROOT", tmp_path)
@@ -492,7 +523,8 @@ def test_powershell_repo_wrapper_exists() -> None:
     assert wrapper.exists()
     content = wrapper.read_text(encoding="utf-8")
     assert "-m rag.cli" in content
-    assert "RA_BASE_URL" in content
+    assert "PYTHONPATH" in content
+    assert "RA_BASE_URL = \"http://127.0.0.1:8001\"" not in content
 
 
 def test_linux_start_wrapper_delegates_to_python_cli() -> None:
@@ -506,6 +538,22 @@ def test_powershell_start_wrapper_delegates_to_repo_wrapper() -> None:
     content = wrapper.read_text(encoding="utf-8")
     assert "run_ra_from_repo.ps1" in content
     assert "start --foreground" in content
+
+
+def test_powershell_task_runner_exists() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "tasks.ps1"
+    content = wrapper.read_text(encoding="utf-8")
+    assert "sync-example" in content
+    assert "ingest-preview-example" in content
+    assert "smoke_repo_workflow.ps1" in content
+
+
+def test_powershell_smoke_script_exists() -> None:
+    wrapper = Path(__file__).resolve().parents[1] / "scripts" / "smoke_repo_workflow.ps1"
+    content = wrapper.read_text(encoding="utf-8")
+    assert "/api/health" in content
+    assert "/api/query/status" in content
+    assert "Smoke workflow passed." in content
 
 
 def test_scripts_ra_wrapper_delegates_to_packaged_entrypoint(monkeypatch):

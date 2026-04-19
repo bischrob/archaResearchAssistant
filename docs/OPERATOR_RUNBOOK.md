@@ -15,6 +15,7 @@ Recommended rule:
 - use the direct repo wrapper when you want predictable local defaults from a shell script:
   - Linux: `./scripts/run_ra_from_repo.sh ...`
   - PowerShell: `.\scripts\run_ra_from_repo.ps1 ...`
+- use `.\tasks.ps1 ...` on Windows when you want a PowerShell-native equivalent to the Linux `Makefile`
 - use the installed `ra` launcher when you want convenience, but remember that on WSL it defaults to `home2`
 - override with `RA_BASE_URL` or `--base-url` whenever the default is not the service you intend
 
@@ -24,6 +25,13 @@ Examples:
 ra --json status
 ra --base-url http://192.168.0.37:8001 --json status
 ra --base-url http://127.0.0.1:8001 --json status
+```
+
+```powershell
+.\tasks.ps1 preflight
+.\tasks.ps1 start
+.\tasks.ps1 status
+.\tasks.ps1 smoke
 ```
 
 ## Start and verify
@@ -47,7 +55,9 @@ ra --base-url http://127.0.0.1:8001 diagnostics
 Notes:
 
 - `ra start` now performs startup orchestration in Python and writes a background log under `logs/`.
-- `ra status` checks `/api/version`, `/api/health`, `/api/diagnostics`, and async job status endpoints.
+- after `ra start` chooses an open local port, later repo-local status checks reuse that last selected local base URL unless you override it
+- `ra status` checks `/api/version`, `/api/health`, and async job status endpoints.
+- use `ra diagnostics` or `ra status --include-diagnostics` when you want the slower deep environment scan
 - `ra diagnostics` is the quickest sanity check for source-mode and Zotero resolver state.
 
 ## Zotero-first ingest

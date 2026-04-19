@@ -27,7 +27,7 @@ test-e2e:
 	RUN_E2E=1 pytest -m e2e
 
 smoke:
-	./scripts/smoke_local_workflow.sh
+	./scripts/smoke_repo_workflow.sh
 
 sync-example:
 	@bash -lc 'auth=(); \

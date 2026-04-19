@@ -33,9 +33,10 @@ The repo now centers on the repo-native operator CLI instead of ad hoc curl call
 ## Quickstart
 
 ```bash
-conda env create -f environment.yml
+[ -d "$HOME/.conda/envs/researchassistant" ] || conda env create -f environment.yml
 conda activate researchassistant
-cp .env.example .env
+[ -f .env ] || cp .env.example .env
+# edit .env and set the required values before continuing
 pip install -e .
 ra preflight
 ra start
@@ -45,9 +46,23 @@ ra status
 PowerShell equivalent:
 
 ```powershell
-conda env create -f environment.yml
+if (-not (conda env list | Select-String 'researchassistant')) { conda env create -f environment.yml }
 conda activate researchassistant
-Copy-Item .env.example .env
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# edit .env and set the required values before continuing
+pip install -e .
+.\tasks.ps1 preflight
+.\tasks.ps1 start
+.\tasks.ps1 status
+```
+
+Direct wrapper equivalent:
+
+```powershell
+if (-not (conda env list | Select-String 'researchassistant')) { conda env create -f environment.yml }
+conda activate researchassistant
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+# edit .env and set the required values before continuing
 pip install -e .
 .\scripts\run_ra_from_repo.ps1 preflight
 .\scripts\run_ra_from_repo.ps1 start
@@ -102,7 +117,9 @@ There are two common API targets:
 
 Rules of thumb:
 
-- `ra` and both repo wrappers default to the local service unless you override `RA_BASE_URL`.
+- `ra` and the repo wrappers default to the local service unless you override `RA_BASE_URL`.
+- After `ra start`, later repo-local `status` and `diagnostics` calls reuse the last local base URL that start selected.
+- `status` is the quick health/version check; use `diagnostics` or `status --include-diagnostics` for the slower deep check.
 - `ra` may default differently depending on environment, especially under WSL.
 - Override either path with `RA_BASE_URL` or `--base-url` when needed.
 
@@ -119,6 +136,14 @@ PowerShell repo wrapper examples:
 ```powershell
 .\scripts\run_ra_from_repo.ps1 --json status
 .\scripts\run_ra_from_repo.ps1 --base-url http://192.168.0.37:8001 status
+```
+
+PowerShell task runner examples:
+
+```powershell
+.\tasks.ps1 preflight
+.\tasks.ps1 smoke
+.\tasks.ps1 sync-example
 ```
 
 ## Web UI And Plugin

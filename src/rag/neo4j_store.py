@@ -107,9 +107,17 @@ class SentenceTransformerEmbedder:
 
 
 class GraphStore:
-    def __init__(self, uri: str, user: str, password: str, embedding_model: str | None = None) -> None:
+    def __init__(
+        self,
+        uri: str,
+        user: str,
+        password: str,
+        embedding_model: str | None = None,
+        *,
+        load_embedder: bool = True,
+    ) -> None:
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
-        self.embedder = self._build_embedder(embedding_model)
+        self.embedder = self._build_embedder(embedding_model) if load_embedder else None
         self._article_identity_norms_ensured = False
 
     @staticmethod
@@ -149,6 +157,8 @@ class GraphStore:
 
     @property
     def embedding_dimension(self) -> int:
+        if self.embedder is None:
+            raise RuntimeError("Embedding model was not loaded for this GraphStore instance.")
         return self.embedder.dimension
 
     def close(self) -> None:

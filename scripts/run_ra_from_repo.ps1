@@ -32,9 +32,6 @@ if (-not $PythonBin) {
 }
 
 $env:PYTHONPATH = if ($env:PYTHONPATH) { "$RootDir\src;$env:PYTHONPATH" } else { "$RootDir\src" }
-if (-not $env:RA_BASE_URL) {
-    $env:RA_BASE_URL = "http://127.0.0.1:8001"
-}
 
 if ($PythonBin -eq "py") {
     & py -3 -m rag.cli @args

@@ -24,7 +24,7 @@ RA_BASE_URL=http://127.0.0.1:8001 ra diagnostics
 If the launcher still points somewhere unexpected, rerun:
 
 ```bash
-/home/rjbischo/researchAssistant/scripts/install_wsl_ra_launcher.sh
+./scripts/install_wsl_ra_launcher.sh
 ```
 
 ## Zotero DB path missing

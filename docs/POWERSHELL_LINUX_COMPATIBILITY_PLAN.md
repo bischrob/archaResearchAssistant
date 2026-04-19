@@ -28,7 +28,7 @@ This checklist tracks the migration from bash-first workflow wrappers to shared 
 
 - [x] Keep `scripts/run_ra_from_repo.sh` thin.
 - [x] Add `scripts/run_ra_from_repo.ps1`.
-- [ ] Document `ra` as the preferred cross-platform interface.
+- [x] Document `ra` as the preferred cross-platform interface.
 
 ## Phase 4: Tests
 
@@ -39,6 +39,10 @@ This checklist tracks the migration from bash-first workflow wrappers to shared 
 
 ## Phase 5: Docs
 
-- [ ] Update README examples for Linux and PowerShell.
-- [ ] Add Windows/PowerShell setup notes to `docs/NEW_USER_SETUP.md`.
-- [ ] Update operator runbook to prefer `ra` for portable workflows.
+- [x] Update README examples for Linux and PowerShell.
+- [x] Add Windows/PowerShell setup notes to `docs/NEW_USER_SETUP.md`.
+- [x] Update operator runbook to prefer `ra` for portable workflows.
+
+## Follow-Up Completed
+
+- [x] Add a PowerShell-native task runner comparable to the Linux `Makefile`.

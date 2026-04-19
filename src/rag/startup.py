@@ -261,7 +261,13 @@ def run_preflight(repo_root: Path, python_bin: Path, port: int) -> tuple[list[st
     else:
         warnings.append(f"METADATA_BACKEND='{backend}' is not recognized (expected zotero or paperpile).")
 
-    for key in ("ZOTERO_DB_PATH", "ZOTERO_STORAGE_ROOT", "PDF_SOURCE_DIR", "PAPERPILE_JSON"):
+    path_keys = ["PDF_SOURCE_DIR"]
+    if backend == "zotero":
+        path_keys.extend(["ZOTERO_DB_PATH", "ZOTERO_STORAGE_ROOT"])
+    elif backend == "paperpile":
+        path_keys.append("PAPERPILE_JSON")
+
+    for key in path_keys:
         raw = env_values.get(key, "").strip()
         if not raw:
             continue

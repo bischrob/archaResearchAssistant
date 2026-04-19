@@ -631,7 +631,13 @@ def version_info() -> dict[str, str]:
 @app.get("/api/health")
 def health() -> dict:
     settings = Settings()
-    store = GraphStore(settings.neo4j_uri, settings.neo4j_user, settings.neo4j_password, settings.embedding_model)
+    store = GraphStore(
+        settings.neo4j_uri,
+        settings.neo4j_user,
+        settings.neo4j_password,
+        settings.embedding_model,
+        load_embedder=False,
+    )
     try:
         stats = store.graph_stats()
     finally:
