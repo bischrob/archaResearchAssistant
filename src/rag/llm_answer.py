@@ -4,7 +4,6 @@ import re
 from typing import Any
 
 from .config import Settings
-from .openclaw_agent import invoke_openclaw_agent
 
 
 STOPWORDS = {
@@ -372,27 +371,8 @@ def preprocess_search_query(
     backend: str | None = None,
     settings: Settings | None = None,
 ) -> str:
-    cfg = settings or Settings()
-    selected_backend = (backend or cfg.query_preprocess_backend or "deterministic").strip().lower()
-    text = ""
-    if selected_backend in {"openclaw", "openclaw_agent", "agent"}:
-        try:
-            response = invoke_openclaw_agent(
-                "query_preprocess",
-                {
-                    "question": question,
-                    "model": model,
-                    "instruction": "Rewrite the question into a single retrieval directive line: authors: ... | years: ... | title_terms: ... | content_terms: ...",
-                },
-                settings=cfg,
-                timeout=60,
-            )
-        except Exception:
-            response = None
-        if isinstance(response, dict):
-            text = str(response.get("directive") or response.get("text") or "").strip()
-    if not text:
-        text = _deterministic_query_directive(question)
+    _ = model, backend, settings
+    text = _deterministic_query_directive(question)
     compact = _directive_to_compact_query(text, question)
     if _rewrite_is_sane(question, compact):
         return compact
@@ -465,83 +445,8 @@ def ask_grounded(
     enforce_citations: bool = True,
     settings: Settings | None = None,
 ) -> dict[str, Any]:
-    cfg = settings or Settings()
-    fallback = _deterministic_grounded_answer(question, rows)
-
-    def _fallback(reason: str, *, agent_error: str | None = None) -> dict[str, Any]:
-        payload = dict(fallback)
-        payload["fallback_reason"] = reason
-        if agent_error:
-            payload["agent_error"] = agent_error
-        return payload
-
-    try:
-        response = invoke_openclaw_agent(
-            "grounded_answer",
-            {
-                "question": question,
-                "model": model,
-                "enforce_citations": enforce_citations,
-                "rows": rows,
-                "fallback": fallback,
-            },
-            settings=cfg,
-            timeout=300,
-        )
-    except Exception as exc:
-        return _fallback("agent_error", agent_error=str(exc))
-    if not isinstance(response, dict):
-        return _fallback("invalid_agent_response")
-    answer = str(response.get("answer") or response.get("text") or "").strip()
-    if not answer:
-        return _fallback("empty_agent_answer")
-    all_citations = fallback["all_citations"]
-    citation_by_id = {citation["citation_id"]: citation for citation in all_citations}
-    cited_ids = set(extract_used_citation_ids(answer))
-    relevant_ids = [
-        cid for cid in (response.get("relevant_citation_ids") or [])
-        if isinstance(cid, str) and cid in citation_by_id
-    ]
-    excluded_ids = [
-        cid for cid in (response.get("excluded_citation_ids") or [])
-        if isinstance(cid, str) and cid in citation_by_id and cid not in relevant_ids
-    ]
-    if cited_ids and relevant_ids and not cited_ids.issubset(set(relevant_ids)):
-        return _fallback("answer_cites_irrelevant_results")
-    if not relevant_ids:
-        relevant_ids = [cid for cid in cited_ids if cid in citation_by_id]
-    if any(cid in excluded_ids for cid in cited_ids):
-        return _fallback("answer_cites_excluded_results")
-    relevant_citations = [citation_by_id[cid] for cid in relevant_ids if cid in citation_by_id]
-    used_citations = [citation_by_id[cid] for cid in extract_used_citation_ids(answer) if cid in set(relevant_ids)]
-    excluded_citations = [citation_by_id[cid] for cid in excluded_ids if cid in citation_by_id]
-    if enforce_citations and relevant_citations and not used_citations:
-        return _fallback("missing_required_citations")
-    if not relevant_citations and cited_ids:
-        return _fallback("cited_without_relevance_judgment")
-    return {
-        "answer": answer,
-        "used_citations": used_citations,
-        "all_citations": all_citations,
-        "relevant_citations": relevant_citations,
-        "excluded_citations": excluded_citations,
-        "citation_enforced": True,
-        "method": "openclaw_agent",
-        "synthesis_status": response.get("synthesis_status") or ("irrelevant_context" if not relevant_citations else "succeeded"),
-        "fallback_reason": None,
-        "context": fallback.get("context"),
-        "evidence_snippets": fallback.get("evidence_snippets", []),
-        "relevance_summary": str(response.get("relevance_summary") or fallback.get("relevance_summary") or "").strip(),
-    }
-
-
-def ask_openclaw_grounded(
-    question: str,
-    rows: list[dict[str, Any]],
-    model: str | None = None,
-    enforce_citations: bool = True,
-) -> dict[str, Any]:
-    return ask_grounded(question, rows, model=model, enforce_citations=enforce_citations)
+    _ = model, enforce_citations, settings
+    return _deterministic_grounded_answer(question, rows)
 
 
 def ask_openai_grounded(
@@ -550,4 +455,4 @@ def ask_openai_grounded(
     model: str | None = None,
     enforce_citations: bool = True,
 ) -> dict[str, Any]:
-    return ask_openclaw_grounded(question, rows, model=model, enforce_citations=enforce_citations)
+    return ask_grounded(question, rows, model=model, enforce_citations=enforce_citations)

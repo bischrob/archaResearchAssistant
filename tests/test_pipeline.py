@@ -779,7 +779,7 @@ def test_choose_pdfs_skips_files_without_metadata_by_default(monkeypatch, tmp_pa
     assert selected == [p1]
 
 
-def test_ingest_pdfs_uses_openclaw_refsplit_anystyle_mode(monkeypatch, tmp_path: Path) -> None:
+def test_ingest_pdfs_uses_structured_anystyle_mode(monkeypatch, tmp_path: Path) -> None:
     p1 = tmp_path / 'ok.pdf'
     p1.write_text('x')
     def fake_load_article(pdf_path: Path, chunk_size_words: int, chunk_overlap_words: int, metadata=None, strip_page_noise: bool = True):
@@ -800,7 +800,7 @@ def test_ingest_pdfs_uses_openclaw_refsplit_anystyle_mode(monkeypatch, tmp_path:
     monkeypatch.setattr(pipeline, 'GraphStore', FakeStore)
     monkeypatch.setattr(pipeline, '_load_structured_anystyle_cached', lambda pdf_path, article_id, settings: pipeline.StructuredExtraction(chunks=[Chunk(chunk_id=f"{pdf_path.stem}::chunk::0", index=0, text='section chunk', tokens=['section','chunk'], token_counts={'section':1,'chunk':1}, page_start=2, page_end=3)], citations=[Citation(citation_id=f"{article_id}::ref::0", raw_text='Abbott, D. R. 1999. Example.', year=1999, title_guess='Example', normalized_title='example', source='anystyle')], reference_strings=[], sections=[]))
     monkeypatch.setattr(pipeline, 'load_paperpile_index', lambda _path: {'ok.pdf': {'title': 'From Paperpile', 'authors': ['A One']}})
-    summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(citation_parser='openclaw_refsplit_anystyle', metadata_backend='paperpile'), skip_existing=False)
+    summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(citation_parser='structured_anystyle', metadata_backend='paperpile'), skip_existing=False)
     assert summary.ingested_articles == 1
     assert summary.anystyle_attempted_pdfs == 1
     assert summary.anystyle_applied_pdfs == 1

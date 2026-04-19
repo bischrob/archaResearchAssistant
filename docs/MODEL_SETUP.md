@@ -2,20 +2,15 @@
 
 This project can run with OpenAI-backed answering alone. The active ingest parser no longer depends on local Qwen citation/refsplit runtime components.
 
-## What you need for the recommended ingest path
-
-- `OPENCLAW_AGENT_COMMAND` so the OpenClaw agent can repair ambiguous reference blocks into one-reference-per-line text
-
 ## Recommended ingest parser
 
 ```bash
-CITATION_PARSER=openclaw
+CITATION_PARSER=heuristic
 ```
 
 That parser means:
 
 - heuristics find headings and probable reference sections
-- OpenClaw resolves ambiguous or merged reference blocks
 
 ## Legacy local Qwen assets
 

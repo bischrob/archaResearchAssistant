@@ -63,12 +63,6 @@ check_env_file() {
   fi
   ok "Found .env"
 
-  if grep -Eq '^OPENCLAW_AGENT_COMMAND=.+' .env; then
-    ok "OPENCLAW_AGENT_COMMAND appears set in .env"
-  else
-    warn "OPENCLAW_AGENT_COMMAND is missing in .env. Ask / grounded-answer features will fall back without OpenClaw."
-  fi
-
   local backend
   backend="$(grep -E '^METADATA_BACKEND=' .env | tail -n1 | cut -d'=' -f2- | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]' || true)"
   if [[ -z "${backend}" ]]; then

@@ -464,7 +464,7 @@ function renderAskReport(payload) {
     <div class="kv">
       <strong>Question</strong><span>${escapeHtml(payload?.question || "")}</span>
       <strong>Search Query Used</strong><span>${escapeHtml(payload?.search_query_used || "")}</span>
-      <strong>Backend</strong><span>${escapeHtml(payload?.query_preprocess?.backend || "openclaw_agent")}</span>
+      <strong>Backend</strong><span>${escapeHtml(payload?.query_preprocess?.backend || "deterministic")}</span>
       <strong>Rewrite Mode</strong><span>${escapeHtml(payload?.query_preprocess?.method || "-")}</span>
       <strong>RAG Results</strong><span>${escapeHtml(payload?.rag_results_count ?? rag.length)}</span>
       <strong>Citations Used</strong><span>${escapeHtml(used.length)}</span>
@@ -674,7 +674,7 @@ document.getElementById("diagBtn").addEventListener("click", async () => {
 
 document.getElementById("askBtn").addEventListener("click", async () => {
   const out = document.getElementById("askResults");
-  renderSimpleMessage(out, "Grounded Answer", "running", "Calling OpenClaw...");
+  renderSimpleMessage(out, "Grounded Answer", "running", "Building grounded answer...");
   try {
     const payload = await api("/api/ask", {
       question: document.getElementById("askQuestion").value.trim(),

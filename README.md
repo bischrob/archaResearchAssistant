@@ -110,6 +110,21 @@ After startup, open the web GUI shown by `start.sh`. The main workflow is:
 
 The Zotero plugin scaffold lives in `plugins/zotero-rag-sync/` and supports the same sync-oriented workflow.
 
+## Reference Parsing
+
+The current ingest flow is Zotero-first and note-driven.
+
+1. Sync selects PDFs from Zotero metadata and attachment records.
+2. Ingest loads the linked MinerU child note markdown for each attachment rather than re-parsing references directly from the PDF during the main path.
+3. The markdown is split into body chunks by heading structure for retrieval.
+4. The references portion of that markdown is split into one entry per reference.
+5. Those entries are parsed into structured citation objects with resilient parsing logic, and parse failures are recorded on the article for auditability.
+6. Parsed citations are quality-filtered before the article, chunks, and references are written to Neo4j.
+
+In practice, that means the canonical reference source for the supported ingest path is the structured markdown/note layer associated with the Zotero item, not a standalone manual reference-extraction step from raw PDFs.
+
+The active repo workflow is centered on the Zotero attachment plus MinerU note pipeline.
+
 ## Testing
 
 Run the default non-e2e suite:

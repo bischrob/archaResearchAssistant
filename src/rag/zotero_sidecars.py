@@ -293,7 +293,7 @@ def ensure_zotero_ocr_text_attachment(pdf_path: Path, metadata: dict[str, Any] |
 
 
 def _generate_references_text_from_ocr(pdf_path: Path, ocr_text_path: Path, settings: Settings) -> Path:
-    from .openclaw_structured_refs import detect_section_plan_details, _reference_block_text, split_reference_strings_for_anystyle
+    from .qwen_structured_refs import detect_section_plan_details, _reference_block_text, split_reference_strings_for_anystyle
     from .qwen_structured_refs import _extract_lines_with_page_from_ocr_text, _write_references_sidecar
 
     lines_with_page = _extract_lines_with_page_from_ocr_text(ocr_text_path)

@@ -17,7 +17,7 @@ from .paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_i
 from .path_utils import resolve_input_path
 from .zip_pdf_source import collect_source_pdfs
 from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filter_citations, load_article
-from .openclaw_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
+from .qwen_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
 from .keyword_extraction import extract_keywords
 from .markdown_ingest import chunk_markdown_by_headings, split_reference_entries
 from .zotero_metadata import load_zotero_entries
@@ -117,7 +117,7 @@ def _anystyle_cache_key(pdf_path: Path, settings: Settings) -> str:
 
 
 def _structured_anystyle_cache_dir() -> Path:
-    p = Path('.cache') / 'openclaw_structured_refs'
+    p = Path('.cache') / 'structured_refs'
     p.mkdir(parents=True, exist_ok=True)
     return p
 
@@ -220,9 +220,6 @@ def _citation_parser_mode(settings: Settings) -> str:
     if mode in {'heuristic', 'builtin', 'built-in', 'default'}:
         return 'heuristic'
     if mode in {
-        'openclaw_refsplit_anystyle',
-        'openclaw_agent_anystyle',
-        'openclaw_structured_anystyle',
         'structured_anystyle',
         'section_anystyle',
         'anystyle_structured',

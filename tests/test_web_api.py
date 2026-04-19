@@ -961,14 +961,14 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     )
     monkeypatch.setattr(
         webmain,
-        "ask_openclaw_grounded",
+        "ask_grounded",
         lambda question, rows, model=None, enforce_citations=True: {
             "model": model or "gpt-test",
             "answer": "Answer [C1]",
             "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "citation_enforced": True,
-            "method": "openclaw_agent",
+            "method": "deterministic_fallback",
             "synthesis_status": "succeeded",
             "fallback_reason": None,
             "evidence_snippets": ["[C1] supporting text"],
@@ -992,7 +992,7 @@ def test_ask_endpoint_returns_answer_and_citations(monkeypatch, client):
     assert len(data["used_citations"]) == 1
     assert data["search_query_used"] == "What is this? bischoff archaeology"
     assert data["query_preprocess"]["method"] == "llm_rewrite"
-    assert data["answer_method"] == "openclaw_agent"
+    assert data["answer_method"] == "deterministic_fallback"
     assert data["synthesis_status"] == "succeeded"
     assert data["fallback_reason"] is None
     assert data["evidence_snippets"] == ["[C1] supporting text"]
@@ -1014,7 +1014,7 @@ def test_ask_endpoint_surfaces_explicit_fallback_without_raw_chunk_answer(client
     monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
     monkeypatch.setattr(
         webmain,
-        "ask_openclaw_grounded",
+        "ask_grounded",
         lambda question, rows, model=None, enforce_citations=True: {
             "answer": "Unable to produce a synthesized grounded answer from the retrieved context. See the returned citations and evidence snippets for the supporting passages.",
             "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
@@ -1055,7 +1055,7 @@ def test_ask_endpoint_returns_relevance_filtering_metadata(client, monkeypatch):
     monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
     monkeypatch.setattr(
         webmain,
-        "ask_openclaw_grounded",
+        "ask_grounded",
         lambda question, rows, model=None, enforce_citations=True: {
             "answer": "Binford framed archaeology as anthropology [C1]",
             "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
@@ -1063,7 +1063,7 @@ def test_ask_endpoint_returns_relevance_filtering_metadata(client, monkeypatch):
             "excluded_citations": [{"citation_id": "C2", "article_title": "Paper B"}],
             "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}, {"citation_id": "C2", "article_title": "Paper B"}],
             "citation_enforced": True,
-            "method": "openclaw_agent",
+            "method": "deterministic_fallback",
             "synthesis_status": "succeeded",
             "fallback_reason": None,
             "evidence_snippets": ["[C1] Binford argued for archaeology as anthropology."],
@@ -1100,13 +1100,13 @@ def test_ask_endpoint_defaults_to_score_threshold_mode(monkeypatch, client):
     monkeypatch.setattr(webmain, "preprocess_search_query", lambda question, model=None: question)
     monkeypatch.setattr(
         webmain,
-        "ask_openclaw_grounded",
+        "ask_grounded",
         lambda question, rows, model=None, enforce_citations=True: {
             "answer": "Answer [C1]",
             "used_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "all_citations": [{"citation_id": "C1", "article_title": "Paper A"}],
             "citation_enforced": True,
-            "method": "openclaw_agent",
+            "method": "deterministic_fallback",
             "synthesis_status": "succeeded",
             "fallback_reason": None,
             "evidence_snippets": ["[C1] supporting text"],
@@ -1329,11 +1329,11 @@ def test_ask_endpoint_reports_usable_vs_excluded_rag_results(monkeypatch, client
     )
     monkeypatch.setattr(
         webmain,
-        'ask_openclaw_grounded',
+        'ask_grounded',
         lambda question, rows, model=None, enforce_citations=True: {
             'answer': 'Grounded answer [C1]',
             'citation_enforced': True,
-            'method': 'openclaw_agent',
+            'method': 'deterministic_fallback',
             'synthesis_status': 'succeeded',
             'fallback_reason': None,
             'agent_error': None,

@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from src.rag.answer_audit import audit_answer_support
 from src.rag.config import Settings
-from src.rag.llm_answer import ask_openclaw_grounded, gate_rows_for_synthesis, preprocess_search_query
+from src.rag.llm_answer import ask_grounded, gate_rows_for_synthesis, preprocess_search_query
 from src.rag.metadata_provider import find_metadata_for_pdf, find_unmatched_pdfs, iter_pdf_files, load_metadata_index
 from src.rag.neo4j_store import GraphStore
 from src.rag.paperpile_metadata import load_paperpile_index as _legacy_load_paperpile_index
@@ -1787,7 +1787,7 @@ def ask(req: AskRequest) -> dict:
     usable_rows, excluded_rows, gate_summary = gate_rows_for_synthesis(question, rag_rows)
 
     try:
-        llm = ask_openclaw_grounded(
+        llm = ask_grounded(
             question=question,
             rows=usable_rows,
             model=req.model,

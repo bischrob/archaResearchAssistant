@@ -5,7 +5,6 @@ from dataclasses import asdict
 import re
 
 from .config import Settings
-from .openclaw_agent import invoke_openclaw_agent
 from .pdf_processing import ArticleDoc, Keyword
 
 STOP = {
@@ -102,71 +101,9 @@ def extract_keywords(article: ArticleDoc, *, settings: Settings | None = None) -
             1 for c in (article.chunks or []) if getattr(c, "section_type", "body") == "body"
         ),
     }
+    _ = _article_source_text
     out = _heuristic_keywords(article, limit)
-    source_text = _article_source_text(article, max_chars=6000)
-    if source_text:
-        try:
-            response = invoke_openclaw_agent(
-                "query_preprocess",
-                {
-                    "task": "keyword_extraction",
-                    "title": article.title,
-                    "text": source_text,
-                    "limit": limit,
-                    "instruction": "Return JSON with a keywords array of objects containing value, optional score, and optional evidence.",
-                },
-                settings=cfg,
-                timeout=60,
-            )
-        except Exception as exc:
-            audit["agent_error"] = str(exc)
-            response = None
-
-        rows = response.get("keywords") if isinstance(response, dict) else None
-        if isinstance(rows, list):
-            merged: list[Keyword] = []
-            seen: set[str] = set()
-            for row in rows:
-                if isinstance(row, str):
-                    value, score, evidence = row, None, None
-                elif isinstance(row, dict):
-                    value = str(row.get("value") or row.get("keyword") or "").strip()
-                    score = row.get("score")
-                    evidence = str(row.get("evidence") or row.get("why") or "").strip() or None
-                else:
-                    continue
-                norm = _norm(value)
-                if not norm or norm in seen or len(norm) < 3:
-                    continue
-                seen.add(norm)
-                merged.append(
-                    Keyword(
-                        value=value,
-                        normalized_value=norm,
-                        score=float(score) if isinstance(score, (int, float)) else None,
-                        source="openclaw_agent",
-                        evidence=evidence,
-                    )
-                )
-                if len(merged) >= limit:
-                    break
-
-            for kw in out:
-                if kw.normalized_value not in seen and len(merged) < limit:
-                    merged.append(kw)
-                    seen.add(kw.normalized_value)
-            if merged:
-                out = merged
-                audit.update(
-                    {
-                        "method": "openclaw_agent_plus_heuristic",
-                        "agent_used": True,
-                        "agent_keyword_count": len(rows),
-                    }
-                )
-
-    if "method" not in audit:
-        audit.update({"method": "heuristic", "agent_used": False})
+    audit.update({"method": "heuristic", "agent_used": False})
     audit["keyword_count"] = len(out)
     audit["sample"] = [asdict(k) for k in out[:8]]
     return out, audit

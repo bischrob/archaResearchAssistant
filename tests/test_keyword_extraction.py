@@ -7,5 +7,5 @@ def test_extract_keywords_has_heuristic_fallback_without_agent():
     keywords, audit = extract_keywords(article)
     assert keywords
     assert audit['keyword_count'] == len(keywords)
-    assert audit['method'] in {'heuristic', 'openclaw_agent_plus_heuristic'}
+    assert audit['method'] == 'heuristic'
     assert any(('forest' in k.normalized_value) or ('drought' in k.normalized_value) for k in keywords)
