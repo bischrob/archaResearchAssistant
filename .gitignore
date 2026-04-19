@@ -56,6 +56,7 @@ pdfs.pkl
 # Binary artifacts not typically committed
 *.pkl
 *.json
+!plugins/zotero-rag-sync/manifest.json
 *.pdf
 *.png
 *.jpg

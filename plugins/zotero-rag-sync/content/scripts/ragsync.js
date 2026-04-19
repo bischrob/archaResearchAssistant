@@ -119,6 +119,17 @@ var RAGSync = {
     return 'Show External Note Bridge Diagnostics';
   },
 
+  showExternalBridgeDiagnostics() {
+    const lines = [
+      `External note bridge enabled: ${this.isExternalBridgeEnabled() ? 'yes' : 'no'}`,
+      `External note bridge token set: ${this.getExternalBridgeToken() ? 'yes' : 'no'}`,
+      `External note bridge ping URL: http://127.0.0.1:23119${this.externalBridgePaths.ping}`,
+      `External note bridge import URL: http://127.0.0.1:23119${this.externalBridgePaths.importMineruNote}`,
+      'Scope: My Library attachments only',
+    ];
+    this.alert('RAG Sync External Note Bridge', lines.join('\n'));
+  },
+
   registerConnectorEndpoint(path, handlerCtor) {
     if (!Zotero.Server || !Zotero.Server.Endpoints) {
       throw new Error('Zotero connector HTTP server is unavailable');
@@ -262,6 +273,9 @@ var RAGSync = {
 
     if (!attachment || !attachment.isAttachment || !attachment.isAttachment()) {
       throw new Error('Matching Zotero attachment not found');
+    }
+    if (attachment.libraryID !== Zotero.Libraries.userLibraryID) {
+      throw new Error('Matching Zotero attachment not found in My Library');
     }
 
     const parentItemID = attachment.parentID && attachment.parentID > 0 ? attachment.parentID : null;
@@ -1232,7 +1246,7 @@ var RAGSync = {
       makeItem(
         'rag-sync-menu-show-external-bridge',
         this.getExternalBridgeDiagnosticsLabel(),
-        () => this.showDiagnostics()
+        () => this.showExternalBridgeDiagnostics()
       )
     );
     popup.appendChild(

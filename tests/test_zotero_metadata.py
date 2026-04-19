@@ -80,7 +80,7 @@ def test_load_zotero_entries_reads_basic_metadata(tmp_path: Path) -> None:
     assert row['zotero_item_key'] == 'PARENT1'
     assert row['zotero_attachment_key'] == 'ATTACH1'
     assert row['authors'] == ['Jane Doe']
-    assert row['attachment_path'].endswith('storage/ATTACH1/paper.pdf')
+    assert Path(row['attachment_path']).parts[-3:] == ('storage', 'ATTACH1', 'paper.pdf')
 
 
 def test_load_zotero_entries_excludes_non_pdf_storage_artifacts(tmp_path: Path) -> None:
