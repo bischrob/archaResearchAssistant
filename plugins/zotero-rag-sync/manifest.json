@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Zotero RAG Sync",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Sync Zotero-backed PDF and MinerU note changes into the Archaeological Research Assistant workflow.",
   "applications": {
     "zotero": {

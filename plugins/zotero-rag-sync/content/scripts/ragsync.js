@@ -335,33 +335,31 @@ var RAGSync = {
     function PingEndpoint() {}
     PingEndpoint.prototype = {
       supportedMethods: ['GET'],
-      init(_data, sendResponseCallback) {
-        const body = JSON.stringify({
+      init(_options) {
+        return [200, 'application/json', JSON.stringify({
           ok: true,
           plugin: 'zotero-rag-sync',
+          version: self.version || 'unknown',
           bridge_enabled: self.isExternalBridgeEnabled(),
           endpoint: self.externalBridgePaths.importMineruNote,
-        });
-        sendResponseCallback(200, 'application/json', body);
+        })];
       },
     };
 
     function ImportMineruNoteEndpoint() {}
     ImportMineruNoteEndpoint.prototype = {
       supportedMethods: ['POST'],
-      init(postData, sendResponseCallback) {
-        self
-          .handleExternalBridgeImport(postData)
-          .then((result) => {
-            sendResponseCallback(200, 'application/json', JSON.stringify(result));
-          })
-          .catch((err) => {
-            const body = JSON.stringify({
-              ok: false,
-              error: String(err && err.message ? err.message : err),
-            });
-            sendResponseCallback(400, 'application/json', body);
-          });
+      supportedDataTypes: ['application/json'],
+      async init(options) {
+        try {
+          const result = await self.handleExternalBridgeImport(options);
+          return [200, 'application/json', JSON.stringify(result)];
+        } catch (err) {
+          return [400, 'application/json', JSON.stringify({
+            ok: false,
+            error: String(err && err.message ? err.message : err),
+          })];
+        }
       },
     };
 
@@ -374,17 +372,39 @@ var RAGSync = {
     this.unregisterConnectorEndpoint(this.externalBridgePaths.importMineruNote);
   },
 
-  async handleExternalBridgeImport(postData) {
+  async handleExternalBridgeImport(options) {
     if (!this.isExternalBridgeEnabled()) {
       throw new Error('External bridge is disabled. Set extensions.zotero-rag-sync.externalBridgeEnabled=true');
     }
 
-    const payload = this.parseConnectorJSON(postData);
+    const rawData = options && options.data;
+    let payload = {};
+    if (typeof rawData === 'string') {
+      payload = this.parseConnectorJSON(rawData);
+    } else if (rawData && typeof rawData === 'object' && !Array.isArray(rawData)) {
+      payload = rawData;
+    } else {
+      payload = {};
+    }
+    const headers = (options && options.headers) || {};
+    const headerToken = String(
+      headers['X-RAG-Sync-Token'] ||
+      headers['x-rag-sync-token'] ||
+      headers.Authorization ||
+      headers.authorization ||
+      ''
+    ).trim();
+    const bearerMatch = headerToken.match(/^Bearer\s+(.+)$/i);
+    const suppliedToken = String(
+      payload.auth_token ||
+      (bearerMatch ? bearerMatch[1] : headerToken) ||
+      ''
+    ).trim();
     const configuredToken = this.getExternalBridgeToken();
     if (!configuredToken) {
       throw new Error('External bridge token is not configured');
     }
-    if (String(payload.auth_token || '').trim() !== configuredToken) {
+    if (suppliedToken !== configuredToken) {
       throw new Error('Invalid external bridge token');
     }
 

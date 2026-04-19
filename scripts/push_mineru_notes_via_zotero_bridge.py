@@ -32,7 +32,12 @@ def push_note(
         "attachment_key": md_path.stem.upper(),
         "md_content": md_path.read_text(encoding="utf-8"),
     }
-    response = client.post(endpoint, content=json.dumps(payload))
+    headers = {
+        "Content-Type": "application/json",
+        "X-RAG-Sync-Token": auth_token,
+        "Authorization": f"Bearer {auth_token}",
+    }
+    response = client.post(endpoint, content=json.dumps(payload), headers=headers)
     response.raise_for_status()
     return response.json()
 

@@ -117,6 +117,35 @@ note-first ingest path compatible with batch OCR/markdown generation that
 happens outside Zotero. See `plugins/zotero-rag-sync/README.md` and
 `scripts/push_mineru_notes_via_zotero_bridge.py`.
 
+To enable the bridge in Zotero, set both plugin prefs:
+
+- `extensions.zotero-rag-sync.externalBridgeEnabled=true`
+- `extensions.zotero-rag-sync.externalBridgeToken=<long random token>`
+
+The local bridge endpoints are:
+
+- `GET http://127.0.0.1:23119/rag-sync/bridge/ping`
+- `POST http://127.0.0.1:23119/rag-sync/bridge/import-mineru-note`
+
+The plugin package is built from:
+
+- `plugins/zotero-rag-sync/manifest.json`
+- `plugins/zotero-rag-sync/bootstrap.js`
+- `plugins/zotero-rag-sync/prefs.js`
+- `plugins/zotero-rag-sync/content/scripts/ragsync.js`
+
+Build the `.xpi` with:
+
+```bash
+INSTALL_AFTER_BUILD=0 scripts/build_zotero_plugin_xpi.sh
+```
+
+Install the built plugin into the active Windows Zotero profile with:
+
+```bash
+SOURCE_XPI=/tmp/rag-sync@rjbischo.local.xpi scripts/install_zotero_plugin_windows.sh
+```
+
 ## Reference Parsing
 
 The current ingest flow is Zotero-first and note-driven.
@@ -172,26 +201,37 @@ Resources used:
 
 - MinerU child note markdown attached to the Zotero item
 - OCR-derived `.references.txt` sidecars when needed
-- Anystyle parsing output for individual reference strings
+- the shared repo reference parser in `src/rag/reference_parsing.py`
 
 Overall process:
 
 1. Detect the references section in markdown or OCR-derived text.
 2. Split that section into one reference string per entry.
-3. Parse each entry individually with resilient Anystyle-based parsing.
+3. Parse each entry individually with deterministic heuristic parsing, confidence scoring, and optional bounded LLM repair in `hybrid_llm` or `llm` modes.
 4. Build a structured `Citation` object with:
    - `raw_text`
+   - `raw_text_original`
    - `title_guess`
    - `normalized_title`
    - `year`
    - `doi`
    - `author_tokens`
    - `authors`
-   - `bibtex`
+   - `parse_method`
+   - `parse_confidence`
+   - `split_confidence`
+   - `needs_review`
 5. Score each parsed citation with a simple quality heuristic.
-6. Drop citations that fail the quality threshold before writing them to Neo4j.
+6. Reject clearly invalid entries such as DOI-only artifacts and mark low-confidence entries with `needs_review=true`.
+7. Drop citations that fail the quality threshold before writing them to Neo4j.
 
 When stored in Neo4j, each parsed citation becomes a `Reference` node linked from its source article by `(:Article)-[:CITES_REFERENCE]->(:Reference)`.
+
+Supported parser modes:
+
+- `CITATION_PARSER=heuristic`
+- `CITATION_PARSER=hybrid_llm`
+- `CITATION_PARSER=llm`
 
 ### 3. Resolving parsed references back to known articles
 
@@ -268,7 +308,7 @@ Only unique matches are accepted. If a candidate key points to multiple existing
 Run the default non-e2e suite:
 
 ```bash
-pytest -m "not e2e"
+.\.venv\Scripts\python.exe -m pytest -m "not e2e"
 ```
 
 Common shortcuts:
@@ -279,14 +319,42 @@ make test-e2e
 make smoke
 ```
 
+Useful focused checks:
+
+```bash
+.\.venv\Scripts\python.exe -m pytest tests/test_zotero_notes.py tests/test_zotero_metadata.py tests/test_web_api.py -k zotero -q
+```
+
 ## Project Layout
 
 - `src/rag/`: application package and CLI implementation
-- `scripts/`: operational scripts and maintenance utilities
+- `scripts/`: operational scripts and maintenance utilities, including:
+- `scripts/push_mineru_notes_via_zotero_bridge.py`
+- `scripts/merge_author_nodes.py`
+- `scripts/cleanup_isolated_authors.py`
 - `webapp/`: FastAPI entrypoint and static UI
 - `tests/`: automated tests
 - `docs/`: setup and operator documentation
 - `plugins/`: Zotero plugin scaffold
+
+## Graph Maintenance
+
+The graph now includes two small review-first maintenance helpers for author cleanup:
+
+- `scripts/merge_author_nodes.py`
+  - lists likely duplicate `Author` nodes with `candidates`
+  - dry-runs a merge by default and only writes with `--apply`
+- `scripts/cleanup_isolated_authors.py`
+  - lists zero-edge `Author` nodes by default
+  - deletes them only with `--apply`
+
+Examples:
+
+```bash
+.\.venv\Scripts\python.exe scripts/merge_author_nodes.py --neo4j-password "$NEO4J_PASSWORD" candidates --min-score 0.85 --limit 20
+.\.venv\Scripts\python.exe scripts/merge_author_nodes.py --neo4j-password "$NEO4J_PASSWORD" merge --source Brandsen --target "Alex Brandsen"
+.\.venv\Scripts\python.exe scripts/cleanup_isolated_authors.py --neo4j-password "$NEO4J_PASSWORD"
+```
 
 ## Included vs Excluded
 
