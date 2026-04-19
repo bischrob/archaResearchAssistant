@@ -85,14 +85,6 @@ Current behavior:
 
 If you still do not see `Close`, restart Zotero so it reloads the latest plugin XPI.
 
-## Anystyle not running
-
-Start it with:
-
-```bash
-docker compose up -d anystyle
-```
-
 ## Qwen model or LoRA not found
 
 Set:

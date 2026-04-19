@@ -6,7 +6,6 @@ Related docs:
 
 - [Documentation Index](INDEX.md)
 - [Model Setup](MODEL_SETUP.md)
-- [Anystyle Setup](ANYSTYLE_SETUP.md)
 - [Citation Lookup Guide](CITATION_LOOKUP.md)
 - [WSL Launcher](WSL_LAUNCHER.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
@@ -82,11 +81,7 @@ Recommended base-model version for current repo usage:
 
 - `Qwen/Qwen3-4B-Instruct-2507`
 
-## 4) Install and enable Anystyle
-
-Use the build, runtime, and fallback guidance in [Anystyle Setup](ANYSTYLE_SETUP.md).
-
-## 5) Start services
+## 4) Start services
 
 For a local repo-hosted setup, use the direct repo wrapper so the default target is local:
 
@@ -103,7 +98,7 @@ ra --base-url http://127.0.0.1:8001 start
 ra --base-url http://127.0.0.1:8001 status
 ```
 
-## 6) Use the web GUI
+## 5) Use the web GUI
 
 1. In **System**, enter a bearer token only if backend auth is enabled.
 2. Click **Refresh Health**.
@@ -131,7 +126,7 @@ Progress overlay behavior in the plugin:
 - while running: `Run in Background` and `Cancel Sync`
 - after completion/failure/cancel: `Close`
 
-## 7) Quick checks
+## 6) Quick checks
 
 Preferred CLI checks:
 

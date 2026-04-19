@@ -5,19 +5,17 @@ This project can run with OpenAI-backed answering alone. The active ingest parse
 ## What you need for the recommended ingest path
 
 - `OPENCLAW_AGENT_COMMAND` so the OpenClaw agent can repair ambiguous reference blocks into one-reference-per-line text
-- Docker + Anystyle for structured citation parsing
 
 ## Recommended ingest parser
 
 ```bash
-CITATION_PARSER=openclaw_refsplit_anystyle
+CITATION_PARSER=openclaw
 ```
 
 That parser means:
 
 - heuristics find headings and probable reference sections
 - OpenClaw resolves ambiguous or merged reference blocks
-- Anystyle parses the resulting one-line references into structured citation fields
 
 ## Legacy local Qwen assets
 

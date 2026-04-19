@@ -6,7 +6,6 @@ Start here based on your role.
 
 - [New User Setup](NEW_USER_SETUP.md)
 - [Model Setup](MODEL_SETUP.md)
-- [Anystyle Setup](ANYSTYLE_SETUP.md)
 
 ## Operator
 

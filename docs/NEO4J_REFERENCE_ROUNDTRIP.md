@@ -33,16 +33,6 @@ python scripts/neo4j_reference_roundtrip.py import \
   --dry-run
 ```
 
-Write parsed references using Anystyle:
-
-```bash
-python scripts/neo4j_reference_roundtrip.py import \
-  abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert \
-  .cache/reference_roundtrip/abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert.references.cleaned.txt \
-  --article-id-out abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert::manual-demo \
-  --parse-with-anystyle
-```
-
 ## Caveats
 
 - This is evaluation tooling, not a broad ingest refactor.
