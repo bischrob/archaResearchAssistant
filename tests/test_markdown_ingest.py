@@ -27,3 +27,20 @@ def test_split_reference_entries_splits_one_per_entry() -> None:
     md = "# Intro\nBody\n## References\nSmith, J. 2020. One.\nJones, A. 2021. Two.\n"
     entries = split_reference_entries(md)
     assert len(entries) == 2
+
+
+def test_chunk_markdown_by_headings_excludes_multiple_reference_sections_but_keeps_later_body() -> None:
+    md = (
+        "# Chapter One\n"
+        + ("alpha beta " * 40)
+        + "\n## References\nSmith, J. 2020. One.\n"
+        + "# Chapter Two\n"
+        + ("gamma delta " * 40)
+        + "\n## Bibliography\nJones, A. 2021. Two.\n"
+    )
+    chunks = chunk_markdown_by_headings(md, min_words=20, target_words=40, max_words=80)
+    joined = "\n".join(chunk.text for chunk in chunks)
+    assert "alpha beta" in joined
+    assert "gamma delta" in joined
+    assert "Smith, J. 2020. One." not in joined
+    assert "Jones, A. 2021. Two." not in joined

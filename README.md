@@ -117,11 +117,12 @@ The current ingest flow is Zotero-first and note-driven.
 1. Sync selects PDFs from Zotero metadata and attachment records.
 2. Ingest loads the linked MinerU child note markdown for each attachment rather than re-parsing references directly from the PDF during the main path.
 3. The markdown is split into body chunks by heading structure for retrieval.
-4. The references portion of that markdown is split into one entry per reference.
-5. Those entries are parsed into structured citation objects with resilient parsing logic, and parse failures are recorded on the article for auditability.
-6. Parsed citations are quality-filtered before the article, chunks, and references are written to Neo4j.
+4. One or more reference sections are detected in that markdown, including repeated bibliography blocks such as chapter-level reference sections in edited volumes.
+5. Each detected reference block is split into one entry per reference, with continuation lines such as DOI-only lines merged back into the preceding entry.
+6. Those entries are parsed into structured citation objects with confidence-aware parsing logic, and parse failures are recorded on the article for auditability.
+7. Parsed citations are quality-filtered before the article, chunks, and references are written to Neo4j.
 
-In practice, that means the canonical reference source for the supported ingest path is the structured markdown/note layer associated with the Zotero item, not a standalone manual reference-extraction step from raw PDFs.
+In practice, that means the canonical reference source for the supported ingest path is the structured markdown/note layer associated with the Zotero item, not a standalone manual reference-extraction step from raw PDFs. The parser is designed to handle both single bibliography tails and multiple chapter-level reference sections in the same note.
 
 The active repo workflow is centered on the Zotero attachment plus MinerU note pipeline.
 

@@ -242,7 +242,7 @@ Convert the Zotero-first ingest checklist into concrete implementation tasks for
 ### Task G1 — Extend `Reference` schema with provenance/versioning
 **Likely files:**
 - `src/rag/neo4j_store.py`
-- `scripts/neo4j_reference_roundtrip.py`
+- `scripts/sync_reference_roundtrip.py`
 - `Vault/10_Backend/05_graph_store_module.md`
 
 **Fields to add or formalize:**

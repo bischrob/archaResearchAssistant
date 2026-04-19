@@ -46,6 +46,14 @@ class ReferenceSectionDetection:
 
 
 @dataclass(frozen=True)
+class ReferenceSectionSpan:
+    start_line: int
+    end_line: int
+    method: str
+    confidence: float
+
+
+@dataclass(frozen=True)
 class ReferenceSplitResult:
     entries: list[str]
     method: str
@@ -108,17 +116,36 @@ def _is_continuation_line(line: str) -> bool:
     return False
 
 
-def detect_reference_section_from_lines(lines: list[str]) -> ReferenceSectionDetection:
+def detect_reference_sections_from_lines(lines: list[str]) -> list[ReferenceSectionSpan]:
     if not lines:
-        return ReferenceSectionDetection(None, None, "none", 0.0)
+        return []
+    markdown_headings: list[tuple[int, int, str]] = []
     for idx, raw in enumerate(lines):
         heading = HEADING_RE.match(raw)
-        if heading and normalize_heading_text(heading.group(2)) in REFERENCE_HEADING_VARIANTS:
-            return ReferenceSectionDetection(idx, len(lines) - 1, "heading", 0.98)
-    for idx, raw in enumerate(lines):
-        if normalize_heading_text(raw) in REFERENCE_HEADING_VARIANTS:
-            return ReferenceSectionDetection(idx, len(lines) - 1, "plain_heading", 0.92)
-
+        if not heading:
+            continue
+        markdown_headings.append((idx, len(heading.group(1)), normalize_heading_text(heading.group(2))))
+    out: list[ReferenceSectionSpan] = []
+    for pos, (idx, level, norm) in enumerate(markdown_headings):
+        if norm not in REFERENCE_HEADING_VARIANTS:
+            continue
+        end = len(lines) - 1
+        for next_idx, next_level, _next_norm in markdown_headings[pos + 1 :]:
+            if next_level <= level:
+                end = next_idx - 1
+                break
+        if end >= idx:
+            out.append(ReferenceSectionSpan(idx, end, "heading", 0.98))
+    if out:
+        return out
+    plain_heading_indices = [idx for idx, raw in enumerate(lines) if normalize_heading_text(raw) in REFERENCE_HEADING_VARIANTS]
+    if plain_heading_indices:
+        spans: list[ReferenceSectionSpan] = []
+        for pos, idx in enumerate(plain_heading_indices):
+            end = (plain_heading_indices[pos + 1] - 1) if (pos + 1) < len(plain_heading_indices) else (len(lines) - 1)
+            if end >= idx:
+                spans.append(ReferenceSectionSpan(idx, end, "plain_heading", 0.92))
+        return spans
     tail_start = max(0, len(lines) - 80)
     for idx in range(tail_start, len(lines)):
         if not _looks_like_reference_lead(lines[idx]):
@@ -133,43 +160,61 @@ def detect_reference_section_from_lines(lines: list[str]) -> ReferenceSectionDet
                 continuation_hits += 1
         if lead_hits >= 3 and (lead_hits + continuation_hits) >= 3:
             confidence = 0.78 if idx >= max(0, len(lines) - 50) else 0.7
-            return ReferenceSectionDetection(idx, len(lines) - 1, "tail_cluster", confidence)
-    return ReferenceSectionDetection(None, None, "none", 0.0)
+            return [ReferenceSectionSpan(idx, len(lines) - 1, "tail_cluster", confidence)]
+    return []
 
 
-def split_references_from_lines(lines: list[str], *, section_detection: ReferenceSectionDetection | None = None) -> ReferenceSplitResult:
-    detection = section_detection or detect_reference_section_from_lines(lines)
-    if detection.start_line is None or detection.end_line is None:
+def detect_reference_section_from_lines(lines: list[str]) -> ReferenceSectionDetection:
+    spans = detect_reference_sections_from_lines(lines)
+    if not spans:
+        return ReferenceSectionDetection(None, None, "none", 0.0)
+    first = spans[0]
+    return ReferenceSectionDetection(first.start_line, first.end_line, first.method, first.confidence)
+
+
+def split_references_from_lines(
+    lines: list[str],
+    *,
+    section_detection: ReferenceSectionDetection | None = None,
+    section_spans: list[ReferenceSectionSpan] | None = None,
+) -> ReferenceSplitResult:
+    spans = section_spans or ([
+        ReferenceSectionSpan(section_detection.start_line, section_detection.end_line, section_detection.method, section_detection.confidence)
+    ] if section_detection and section_detection.start_line is not None and section_detection.end_line is not None else detect_reference_sections_from_lines(lines))
+    if not spans:
         return ReferenceSplitResult([], "none", 0.0, [])
-
-    rows = lines[detection.start_line : detection.end_line + 1]
-    if rows and HEADING_RE.match(rows[0]):
-        rows = rows[1:]
-
     entries: list[str] = []
-    current: list[str] = []
     failures: list[dict[str, Any]] = []
     merge_events = 0
-    for raw in rows:
-        clean = _clean_line(raw)
-        if not clean:
-            continue
-        if _looks_like_reference_lead(clean):
+    methods: list[str] = []
+    confidences: list[float] = []
+    for span in spans:
+        methods.append(span.method)
+        confidences.append(span.confidence)
+        rows = lines[span.start_line : span.end_line + 1]
+        if rows and HEADING_RE.match(rows[0]):
+            rows = rows[1:]
+        current: list[str] = []
+        for raw in rows:
+            clean = _clean_line(raw)
+            if not clean:
+                continue
+            if _looks_like_reference_lead(clean):
+                if current:
+                    entries.append(" ".join(current).strip())
+                current = [clean]
+                continue
+            if current and _is_continuation_line(clean):
+                current.append(clean)
+                merge_events += 1
+                continue
             if current:
-                entries.append(" ".join(current).strip())
-            current = [clean]
-            continue
-        if current and _is_continuation_line(clean):
-            current.append(clean)
-            merge_events += 1
-            continue
+                current.append(clean)
+                failures.append({"kind": "suspicious_continuation", "line": clean, "section_start": span.start_line})
+            else:
+                failures.append({"kind": "orphan_line", "line": clean, "section_start": span.start_line})
         if current:
-            current.append(clean)
-            failures.append({"kind": "suspicious_continuation", "line": clean})
-        else:
-            failures.append({"kind": "orphan_line", "line": clean})
-    if current:
-        entries.append(" ".join(current).strip())
+            entries.append(" ".join(current).strip())
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -180,8 +225,10 @@ def split_references_from_lines(lines: list[str], *, section_detection: Referenc
         seen.add(key)
         deduped.append(entry)
 
-    confidence = min(0.98, max(0.35, detection.confidence + (0.05 if merge_events else 0.0) - (0.05 * min(3, len(failures)))))
-    return ReferenceSplitResult(deduped, detection.method, confidence, failures)
+    base_confidence = sum(confidences) / max(1, len(confidences))
+    method = methods[0] if len(set(methods)) == 1 else "multi_section"
+    confidence = min(0.98, max(0.35, base_confidence + (0.05 if merge_events else 0.0) - (0.05 * min(3, len(failures)))))
+    return ReferenceSplitResult(deduped, method, confidence, failures)
 
 
 def detect_references_section(markdown_text: str) -> tuple[int | None, int | None]:

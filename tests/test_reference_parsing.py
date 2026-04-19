@@ -3,6 +3,7 @@ from __future__ import annotations
 from src.rag.config import Settings
 from src.rag.reference_parsing import (
     detect_reference_section_from_lines,
+    detect_reference_sections_from_lines,
     parse_reference_entries,
     split_references_from_lines,
 )
@@ -66,3 +67,35 @@ def test_hybrid_llm_mode_falls_back_without_api_key(monkeypatch) -> None:
     )
     assert len(citations) == 1
     assert any(f["error"] == "missing_openai_api_key" for f in failures)
+
+
+def test_detect_multiple_reference_sections_in_edited_volume() -> None:
+    lines = [
+        "# Chapter One",
+        "Body text",
+        "## References",
+        "Smith, J. 2020. One.",
+        "# Chapter Two",
+        "More body",
+        "## Bibliography",
+        "Jones, A. 2021. Two.",
+    ]
+    spans = detect_reference_sections_from_lines(lines)
+    assert [(s.start_line, s.end_line) for s in spans] == [(2, 3), (6, 7)]
+
+
+def test_split_references_collects_multiple_reference_sections() -> None:
+    lines = [
+        "# Chapter One",
+        "Body text",
+        "## References",
+        "Smith, J. 2020. One.",
+        "# Chapter Two",
+        "More body",
+        "## Bibliography",
+        "Jones, A. 2021. Two.",
+    ]
+    split = split_references_from_lines(lines)
+    assert len(split.entries) == 2
+    assert split.entries[0] == "Smith, J. 2020. One."
+    assert split.entries[1] == "Jones, A. 2021. Two."

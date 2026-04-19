@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
-from .reference_parsing import detect_references_section, split_reference_entries
+from .reference_parsing import detect_reference_sections_from_lines, detect_references_section, split_reference_entries
 
 
 HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$")
@@ -166,9 +166,15 @@ def chunk_markdown_by_headings(
     target_words: int = 220,
     max_words: int = 360,
 ) -> list[MarkdownChunk]:
-    ref_start, _ = detect_references_section(markdown_text)
     lines = markdown_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    body_text = "\n".join(lines[:ref_start] if ref_start is not None else lines)
+    spans = detect_reference_sections_from_lines(lines)
+    if spans:
+        excluded: set[int] = set()
+        for span in spans:
+            excluded.update(range(span.start_line, span.end_line + 1))
+        body_text = "\n".join(line for idx, line in enumerate(lines) if idx not in excluded)
+    else:
+        body_text = "\n".join(lines)
     sections = _build_sections(body_text)
     merged_sections: list[MarkdownSection] = []
     for section in sections:
