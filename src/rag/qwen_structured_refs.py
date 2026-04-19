@@ -549,6 +549,25 @@ def _heuristic_reference_starts(lines: list[str]) -> list[int]:
         if REFERENCE_HEADING_RE.match(clean) and not _is_toc_reference_heading(lines, idx) and idx not in seen:
             seen.add(idx)
             out.append(idx)
+    # Fallback for note-first/OCR text that has a bibliography tail without an explicit heading.
+    # Require a run of likely author-year reference starts near the end of the document so body
+    # prose with citations does not get misclassified as a references block.
+    tail_start = max(0, len(lines) - 80)
+    for idx in range(tail_start, len(lines)):
+        clean = " ".join((lines[idx] or "").split()).strip()
+        if idx in seen or not clean:
+            continue
+        if not (REFERENCE_START_RE.match(clean) or _looks_like_author_year_start(clean)):
+            continue
+        window_hits = 0
+        for look_ahead in range(idx, min(len(lines), idx + 12)):
+            probe = " ".join((lines[look_ahead] or "").split()).strip()
+            if REFERENCE_START_RE.match(probe) or _looks_like_author_year_start(probe):
+                window_hits += 1
+        if window_hits >= 3:
+            seen.add(idx)
+            out.append(idx)
+            break
     return out
 
 
