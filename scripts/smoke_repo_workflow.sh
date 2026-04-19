@@ -9,7 +9,7 @@ API_BEARER_TOKEN_SMOKE="${API_BEARER_TOKEN_SMOKE:-${API_BEARER_TOKEN:-}}"
 
 usage() {
   cat <<USAGE
-Usage: scripts/smoke_local_workflow.sh [--base-url URL] [--timeout seconds] [--skip-diagnostics]
+Usage: scripts/smoke_repo_workflow.sh [--base-url URL] [--timeout seconds] [--skip-diagnostics]
 
 Checks:
   1) GET /api/health

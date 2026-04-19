@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Submit from project root on SOL:
-#   sbatch --array=0-15%6 scripts/sbatch_sol_reocr_pdfs_paddleocr.sh
+#   sbatch --array=0-15%6 scripts/sbatch_reocr_pdfs.sh
 #
 # Optional overrides:
 #   PDF_DIR='\\192.168.0.37\pooled\media\Books\pdfs' \
@@ -8,7 +8,7 @@
 #   BACKEND=paddleocr-vl \
 #   VL_MODEL_DIR=/scratch/$USER/researchAssistant/models/PaddleOCR-VL-1.5 \
 #   OCR_DEVICE=cpu OVERWRITE=0 \
-#   sbatch --array=0-15%6 scripts/sbatch_sol_reocr_pdfs_paddleocr.sh
+#   sbatch --array=0-15%6 scripts/sbatch_reocr_pdfs.sh
 
 #SBATCH -c 4
 #SBATCH --mem=24G
@@ -48,7 +48,7 @@ else
   PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 fi
 
-PY_SCRIPT="${PROJECT_ROOT}/scripts/reocr_pdfs_paddleocr.py"
+PY_SCRIPT="${PROJECT_ROOT}/scripts/reocr_pdfs.py"
 PDF_DIR="${PDF_DIR:-${PDF_SOURCE_DIR:-\\\\192.168.0.37\\pooled\\media\\Books\\pdfs}}"
 OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_ROOT}/data/ocr/paddleocr}"
 SUMMARY_DIR="${SUMMARY_DIR:-${OUTPUT_DIR}/summaries}"

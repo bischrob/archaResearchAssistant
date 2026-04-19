@@ -235,6 +235,8 @@ class GraphStore:
             "CREATE TEXT INDEX reference_title_norm_text IF NOT EXISTS FOR (r:Reference) ON (r.title_norm)",
             "CREATE TEXT INDEX reference_doi_text IF NOT EXISTS FOR (r:Reference) ON (r.doi)",
             "CREATE TEXT INDEX reference_source_text IF NOT EXISTS FOR (r:Reference) ON (r.source)",
+            "CREATE INDEX reference_needs_review IF NOT EXISTS FOR (r:Reference) ON (r.needs_review)",
+            "CREATE INDEX reference_parse_confidence IF NOT EXISTS FOR (r:Reference) ON (r.parse_confidence)",
             "CREATE TEXT INDEX section_kind_text IF NOT EXISTS FOR (s:Section) ON (s.kind)",
             "CREATE TEXT INDEX keyword_value_text IF NOT EXISTS FOR (k:Keyword) ON (k.value)",
         ]
@@ -514,6 +516,10 @@ class GraphStore:
             OPTIONAL MATCH (a)-[out:CITES]->(:Article)
             DELETE out
             WITH a
+            OPTIONAL MATCH (:Author)-[rw:WROTE]->(r:Reference)
+            WHERE r.id STARTS WITH $ref_prefix
+            DELETE rw
+            WITH a
             OPTIONAL MATCH (a)-[:CITES_REFERENCE]->(r:Reference)
             WHERE r.id STARTS WITH $ref_prefix
             DETACH DELETE r
@@ -530,6 +536,7 @@ class GraphStore:
                 """
                 MERGE (r:Reference {id: $id})
                 SET r.raw_text = $raw_text,
+                    r.raw_text_original = $raw_text_original,
                     r.year = $year,
                     r.title_guess = $title_guess,
                     r.title_norm = $title_norm,
@@ -539,13 +546,18 @@ class GraphStore:
                     r.source = $source,
                     r.type_guess = $type_guess,
                     r.quality_score = $quality_score,
-                    r.bibtex = $bibtex
+                    r.bibtex = $bibtex,
+                    r.parse_method = $parse_method,
+                    r.parse_confidence = $parse_confidence,
+                    r.split_confidence = $split_confidence,
+                    r.needs_review = $needs_review
                 WITH r
                 MATCH (a:Article {id: $article_id})
                 MERGE (a)-[:CITES_REFERENCE]->(r)
                 """,
                 id=citation.citation_id,
                 raw_text=citation.raw_text,
+                raw_text_original=citation.raw_text_original,
                 year=citation.year,
                 title_guess=citation.title_guess,
                 title_norm=citation.normalized_title,
@@ -556,6 +568,10 @@ class GraphStore:
                 type_guess=citation.type_guess,
                 quality_score=citation.quality_score,
                 bibtex=citation.bibtex,
+                parse_method=citation.parse_method,
+                parse_confidence=citation.parse_confidence,
+                split_confidence=citation.split_confidence,
+                needs_review=bool(citation.needs_review),
                 article_id=article.article_id,
             )
             for pos, author_name in enumerate(citation.authors or []):

@@ -221,7 +221,7 @@ def _locate_local_ocr_text(pdf_path: Path, settings: Settings) -> Path | None:
 
 def _generate_cpu_ocr_text(pdf_path: Path, settings: Settings) -> Path:
     repo_root = Path(__file__).resolve().parents[2]
-    script_path = repo_root / "scripts" / "reocr_pdfs_paddleocr.py"
+    script_path = repo_root / "scripts" / "reocr_pdfs.py"
     if not script_path.exists():
         raise RuntimeError(f"Missing OCR helper script: {script_path}")
 

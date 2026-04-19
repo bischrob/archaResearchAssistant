@@ -104,4 +104,4 @@ fi
 echo "Web GUI URL: http://localhost:${SELECTED_PORT}"
 export PORT="${SELECTED_PORT}"
 
-exec "${ROOT_DIR}/scripts/run_web_gui.sh"
+exec "${ROOT_DIR}/scripts/run_web_app.sh"

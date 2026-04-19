@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Submit from project root on SOL:
-#   sbatch scripts/sbatch_sol_qwen3_reference_split_dataset.sh
+#   sbatch scripts/sbatch_reference_split_train.sh
 #
 # Optional overrides:
 #   TRAIN_JSONL=/scratch/$USER/researchAssistant/data/qwen3_reference_audit/reference_split_local_500_20260317_train_eval/train.jsonl \
 #   EVAL_JSONL=/scratch/$USER/researchAssistant/data/qwen3_reference_audit/reference_split_local_500_20260317_train_eval/eval.jsonl \
 #   OUTPUT_DIR=/scratch/$USER/researchAssistant/models/qwen3-reference-split-500_${SLURM_JOB_ID:-manual} \
-#   sbatch scripts/sbatch_sol_qwen3_reference_split_dataset.sh
+#   sbatch scripts/sbatch_reference_split_train.sh
 
 #SBATCH -c 8
 #SBATCH --mem=28G
@@ -41,7 +41,7 @@ PYTHON_BIN="${PYTHON_BIN:-${MAMBA_ENV_PATH}/bin/python}"
 ENV_READY_MARKER="${MAMBA_ENV_PATH}/.catmapper_qwen3_ref_env_ready"
 ENV_SETUP_LOCK="${MAMBA_ENV_PATH}/.setup.lock"
 PYTHON_SHIM_DIR="${PROJECT_ROOT}/python_bootstrap"
-TRAIN_SCRIPT="${PROJECT_ROOT}/scripts/train_qwen_reference_lora.py"
+TRAIN_SCRIPT="${PROJECT_ROOT}/scripts/train_reference_lora.py"
 
 MODEL_PATH="${MODEL_PATH:-${PROJECT_ROOT}/models/base/Qwen3-4B-Instruct-2507}"
 TRAIN_JSONL="${TRAIN_JSONL:-${PROJECT_ROOT}/data/qwen3_reference_audit/reference_split_local_500_20260317_train_eval/train.jsonl}"

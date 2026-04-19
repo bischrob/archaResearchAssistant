@@ -3,21 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 import re
 
+from .reference_parsing import detect_references_section, split_reference_entries
+
 
 HEADING_RE = re.compile(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$")
 WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'/-]*")
-REFERENCE_HEADING_VARIANTS = {
-    "references",
-    "bibliography",
-    "works cited",
-    "references cited",
-    "literature cited",
-    "cited references",
-    "reference list",
-}
-REFERENCE_ENTRY_START_RE = re.compile(
-    r"^\s*(?:\[\d+\]|\d+[.)])?\s*(?:[A-Z][A-Za-z'`-]+(?:,\s*[A-Z][A-Za-z'`-]+)*|\w.+?)\s*(?:\(|,)?\s*(?:19|20)\d{2}\b"
-)
 
 
 @dataclass(frozen=True)
@@ -91,24 +81,6 @@ def _build_sections(markdown_text: str) -> list[MarkdownSection]:
         current_lines.append(raw)
     flush(len(lines) - 1)
     return sections
-
-
-def detect_references_section(markdown_text: str) -> tuple[int | None, int | None]:
-    lines = markdown_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
-    for idx, raw in enumerate(lines):
-        m = HEADING_RE.match(raw)
-        if not m:
-            continue
-        norm = normalize_heading_text(m.group(2))
-        if norm in REFERENCE_HEADING_VARIANTS:
-            return idx, len(lines) - 1
-    for idx, raw in enumerate(lines):
-        norm = normalize_heading_text(raw)
-        if norm in REFERENCE_HEADING_VARIANTS:
-            return idx, len(lines) - 1
-    return None, None
-
-
 def _to_semantic_blocks(lines: list[str]) -> list[list[str]]:
     blocks: list[list[str]] = []
     current: list[str] = []
@@ -249,34 +221,3 @@ def chunk_markdown_by_headings(
                 )
             )
     return out
-
-
-def split_reference_entries(markdown_text: str) -> list[str]:
-    start, end = detect_references_section(markdown_text)
-    if start is None or end is None:
-        return []
-    lines = markdown_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")[start : end + 1]
-    if lines and HEADING_RE.match(lines[0]):
-        lines = lines[1:]
-    entries: list[str] = []
-    current: list[str] = []
-    for line in lines:
-        clean = " ".join((line or "").split()).strip()
-        if not clean:
-            continue
-        if REFERENCE_ENTRY_START_RE.match(clean) and current:
-            entries.append(" ".join(current).strip())
-            current = [clean]
-        else:
-            current.append(clean)
-    if current:
-        entries.append(" ".join(current).strip())
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for entry in entries:
-        key = entry.lower()
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(entry)
-    return deduped

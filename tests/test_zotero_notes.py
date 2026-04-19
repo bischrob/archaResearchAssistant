@@ -66,3 +66,49 @@ def test_load_mineru_child_note_for_attachment_malformed_note_hard_failure(tmp_p
     row = {"zotero_attachment_item_id": 10}
     with pytest.raises(RuntimeError, match="Malformed or non-MinerU child note"):
         load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))
+
+
+def test_load_mineru_child_note_for_parent_item_with_body_marker(tmp_path: Path) -> None:
+    db = tmp_path / "zotero.sqlite"
+    conn = sqlite3.connect(db)
+    try:
+        conn.executescript(
+            """
+            CREATE TABLE items (itemID INTEGER PRIMARY KEY, key TEXT);
+            CREATE TABLE itemNotes (itemID INTEGER PRIMARY KEY, parentItemID INTEGER, note TEXT);
+            CREATE TABLE fields (fieldID INTEGER PRIMARY KEY, fieldName TEXT);
+            CREATE TABLE itemDataValues (valueID INTEGER PRIMARY KEY, value TEXT);
+            CREATE TABLE itemData (itemID INTEGER, fieldID INTEGER, valueID INTEGER);
+            """
+        )
+        conn.execute("INSERT INTO fields(fieldID, fieldName) VALUES (1, 'title')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (20, 'PARENTKEY')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (21, 'ATTACHKEY')")
+        conn.execute("INSERT INTO items(itemID, key) VALUES (22, 'NOTEKEY')")
+        note_body = (
+            "<p>LLM_FOR_ZOTERO_MINERU_NOTE_V1</p>"
+            "<p>attachment_id=21</p>"
+            "<p>parent_item_id=20</p>"
+            "<p># Abstract</p>"
+            f"<p>{'body text ' * 40}</p>"
+            "<p>- bullet</p>"
+            "<p>| h | v |</p>"
+        )
+        conn.execute(
+            "INSERT INTO itemNotes(itemID, parentItemID, note) VALUES (22, 20, ?)",
+            (note_body,),
+        )
+        conn.execute("INSERT INTO itemDataValues(valueID, value) VALUES (1, 'Child Note')")
+        conn.execute("INSERT INTO itemData(itemID, fieldID, valueID) VALUES (22, 1, 1)")
+        conn.commit()
+    finally:
+        conn.close()
+    row = {
+        "zotero_attachment_item_id": 21,
+        "zotero_parent_item_id": 20,
+        "zotero_attachment_key": "ATTACHKEY",
+        "zotero_item_key": "PARENTKEY",
+    }
+    note = load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))
+    assert note.note_item_key == "NOTEKEY"
+    assert "LLM_FOR_ZOTERO_MINERU_NOTE_V1" in note.markdown_text

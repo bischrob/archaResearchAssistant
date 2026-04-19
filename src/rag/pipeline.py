@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
 
-from .anystyle_refs import extract_citations_with_anystyle_docker, parse_reference_entries_resilient
 from .config import Settings
 from .metadata_provider import MetadataIndex, find_metadata_for_pdf, load_metadata_index, metadata_title_year_key
 from .neo4j_store import GraphStore
@@ -20,6 +19,7 @@ from .pdf_processing import ArticleDoc, Chunk, Citation, Keyword, Section, filte
 from .qwen_structured_refs import StructuredExtraction, extract_structured_chunks_and_citations
 from .keyword_extraction import extract_keywords
 from .markdown_ingest import chunk_markdown_by_headings, split_reference_entries
+from .reference_parsing import parse_reference_entries
 from .zotero_metadata import load_zotero_entries
 from .zotero_notes import load_mineru_child_note_for_attachment
 
@@ -219,6 +219,12 @@ def _citation_parser_mode(settings: Settings) -> str:
     mode = (settings.citation_parser or '').strip().lower()
     if mode in {'heuristic', 'builtin', 'built-in', 'default'}:
         return 'heuristic'
+    if mode in {'hybrid_llm', 'hybrid-llm', 'llm_hybrid'}:
+        return 'hybrid_llm'
+    if mode in {'llm', 'openai'}:
+        return 'llm'
+    if mode in {'anystyle'}:
+        return 'legacy_anystyle'
     if mode in {
         'structured_anystyle',
         'section_anystyle',
@@ -230,7 +236,7 @@ def _citation_parser_mode(settings: Settings) -> str:
         'qwen_structured_anystyle',
     }:
         return 'structured_anystyle'
-    return 'anystyle'
+    return 'heuristic'
 
 
 def _is_global_anystyle_failure(msg: str) -> bool:
@@ -432,14 +438,12 @@ def _build_article_from_mineru_note(pdf_path: Path, metadata: dict, settings: Se
             )
         )
     reference_entries = split_reference_entries(note.markdown_text)
-    citations, parse_failures = parse_reference_entries_resilient(
+    citations, parse_failures = parse_reference_entries(
         reference_entries,
         article_id=pdf_path.stem,
-        compose_service=settings.anystyle_service,
-        timeout_seconds=settings.anystyle_timeout_seconds,
-        use_gpu=settings.anystyle_use_gpu,
-        gpu_devices=settings.anystyle_gpu_devices,
-        gpu_service=settings.anystyle_gpu_service,
+        settings=settings,
+        parser_mode=_citation_parser_mode(settings),
+        split_confidence=0.8,
     )
     article = ArticleDoc(
         article_id=pdf_path.stem,
@@ -473,6 +477,30 @@ def _build_article_from_mineru_note(pdf_path: Path, metadata: dict, settings: Se
         source_note_hash=note.source_hash,
         reference_parse_failures=parse_failures,
     )
+    return article
+
+
+def _build_article_legacy(pdf_path: Path, metadata: dict | None, settings: Settings) -> ArticleDoc:
+    article = _load_article_cached(pdf_path, settings, metadata)
+    mode = _citation_parser_mode(settings)
+    if mode == "structured_anystyle":
+        try:
+            structured = _load_structured_anystyle_cached(pdf_path, article.article_id, settings, metadata)
+        except TypeError as exc:
+            if "positional arguments" not in str(exc):
+                raise
+            structured = _load_structured_anystyle_cached(pdf_path, article.article_id, settings)  # type: ignore[misc]
+        if structured.chunks:
+            article.chunks = structured.chunks
+        if structured.citations:
+            article.citations = structured.citations
+            article.sections = structured.sections
+        return article
+    if mode == "legacy_anystyle":
+        try:
+            article.citations = _load_anystyle_citations_cached(pdf_path, settings)
+        except Exception as exc:
+            article.reference_parse_failures = [{"index": None, "raw_text": None, "error": str(exc), "parser_mode": "legacy_anystyle"}]
     return article
 
 
@@ -847,21 +875,36 @@ def ingest_pdfs(
             prepared_meta = _prepare_metadata_for_ingest(metadata_by_pdf.get(p))
             if not prepared_meta:
                 raise RuntimeError(f"Missing metadata for {p.name}; item is not ingestible in MinerU note mode.")
-            article = _build_article_from_mineru_note(
-                pdf_path=p,
-                metadata=prepared_meta,
-                settings=settings,
-            )
+            if (settings.metadata_backend or "").strip().lower() == "zotero":
+                article = _build_article_from_mineru_note(
+                    pdf_path=p,
+                    metadata=prepared_meta,
+                    settings=settings,
+                )
+            else:
+                article = _build_article_legacy(
+                    pdf_path=p,
+                    metadata=prepared_meta,
+                    settings=settings,
+                )
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
                 citation_override_pdfs += 1
             anystyle_attempted += 1
-            if article.citations:
+            applied_sources = {str(c.source or "").strip().lower() for c in article.citations}
+            anystyle_effective = "anystyle" in applied_sources or "legacy_anystyle" in applied_sources
+            if article.citations and anystyle_effective:
                 anystyle_applied += 1
             else:
                 anystyle_empty += 1
             if article.reference_parse_failures:
                 anystyle_failed += len(article.reference_parse_failures)
+                if anystyle_disabled_reason is None:
+                    for failure in article.reference_parse_failures:
+                        msg = str((failure or {}).get("error") or "")
+                        if _is_global_anystyle_failure(msg):
+                            anystyle_disabled_reason = msg
+                            break
                 if len(anystyle_failure_samples) < 10:
                     anystyle_failure_samples.append(
                         f"{p.name}: {len(article.reference_parse_failures)} reference parse failures"

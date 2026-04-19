@@ -13,9 +13,9 @@ try:
 except Exception:  # pragma: no cover - optional import for lightweight test environments
     fitz = None
 
-from .anystyle_refs import parse_reference_strings_with_anystyle_docker
 from .config import Settings
 from .pdf_processing import Chunk, Citation, Section, STOPWORDS, TOKEN_RE, build_lines_with_page
+from .reference_parsing import detect_reference_section_from_lines, parse_reference_entries, split_references_from_lines
 
 
 REFERENCE_HEADING_RE = re.compile(
@@ -1059,22 +1059,25 @@ def extract_structured_chunks_and_citations(
             reference_chunks.append(block)
 
     reference_strings: list[str] = []
+    parse_failures: list[dict[str, object]] = []
     if references_sidecar_path is not None and references_sidecar_path.exists() and references_sidecar_path.is_file():
         reference_strings = [line.strip() for line in references_sidecar_path.read_text(encoding='utf-8', errors='ignore').splitlines() if line.strip()]
     else:
         for block in reference_chunks:
-            reference_strings.extend(split_reference_strings_for_anystyle(block, settings=settings))
+            split_result = split_references_from_lines(block.splitlines(), section_detection=detect_reference_section_from_lines(block.splitlines()))
+            reference_strings.extend(split_result.entries)
+            parse_failures.extend(split_result.failures)
 
     _write_references_sidecar(pdf_path, reference_strings)
-    citations = parse_reference_strings_with_anystyle_docker(
+    parser_mode = (settings.citation_parser or "").strip().lower()
+    citations, citation_failures = parse_reference_entries(
         reference_strings,
         article_id=article_id,
-        compose_service=settings.anystyle_service,
-        timeout_seconds=settings.anystyle_timeout_seconds,
-        use_gpu=settings.anystyle_use_gpu,
-        gpu_devices=settings.anystyle_gpu_devices,
-        gpu_service=settings.anystyle_gpu_service,
+        settings=settings,
+        parser_mode=parser_mode,
+        split_confidence=0.8,
     )
+    _ = parse_failures + citation_failures
     return StructuredExtraction(
         chunks=chunks,
         citations=citations,

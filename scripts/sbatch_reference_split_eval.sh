@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Submit from project root on SOL:
-#   sbatch scripts/sbatch_sol_qwen3_reference_eval.sh
+#   sbatch scripts/sbatch_reference_split_eval.sh
 #
 # Minimal-resource evaluation for latest Qwen3 reference adapter.
 
@@ -32,7 +32,7 @@ fi
 
 MAMBA_MODULE="${MAMBA_MODULE:-mamba/latest}"
 MAMBA_ENV_PATH="${MAMBA_ENV_PATH:-${HOME}/.conda/envs/catmapper-qwen3-ref}"
-EVAL_SCRIPT="${PROJECT_ROOT}/scripts/eval_qwen_reference_adapter_accuracy.py"
+EVAL_SCRIPT="${PROJECT_ROOT}/scripts/evaluate_reference_splitter_adapter.py"
 
 BASE_MODEL_PATH="${BASE_MODEL_PATH:-${PROJECT_ROOT}/models/base/Qwen3-4B-Instruct-2507}"
 ADAPTER_PATH="${ADAPTER_PATH:-${PROJECT_ROOT}/models/qwen3-reference-split-500-cpu_49006992}"

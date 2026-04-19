@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Submit from project root on SOL:
-#   sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
+#   sbatch scripts/sbatch_reference_lora_curriculum.sh
 #
 # Optional overrides:
 #   MODEL_PATH=/path/to/Qwen3-4B-Instruct-2507 \
 #   OUTPUT_ROOT=/path/to/output \
-#   sbatch scripts/sbatch_sol_qwen3_reference_curriculum.sh
+#   sbatch scripts/sbatch_reference_lora_curriculum.sh
 
 #SBATCH -c 8
 #SBATCH --mem=28G
@@ -45,8 +45,8 @@ ENV_READY_MARKER="${MAMBA_ENV_PATH}/.catmapper_qwen3_ref_env_ready"
 ENV_SETUP_LOCK="${MAMBA_ENV_PATH}/.setup.lock"
 PYTHON_SHIM_DIR="${PROJECT_ROOT}/python_bootstrap"
 
-PREP_SCRIPT="${PROJECT_ROOT}/scripts/prepare_qwen_reference_curriculum.py"
-TRAIN_SCRIPT="${PROJECT_ROOT}/scripts/train_qwen_reference_lora.py"
+PREP_SCRIPT="${PROJECT_ROOT}/scripts/prepare_reference_lora_curriculum.py"
+TRAIN_SCRIPT="${PROJECT_ROOT}/scripts/train_reference_lora.py"
 
 CURRICULUM_DIR="${CURRICULUM_DIR:-${PROJECT_ROOT}/data/reference_lora_curriculum}"
 GOLD_JSON="${GOLD_JSON:-${PROJECT_ROOT}/data/reference_lora_gold_articles.json}"

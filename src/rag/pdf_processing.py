@@ -89,6 +89,11 @@ class Citation:
     quality_score: float | None = None
     authors: list[str] | None = None
     bibtex: str | None = None
+    parse_method: str | None = None
+    parse_confidence: float | None = None
+    split_confidence: float | None = None
+    needs_review: bool = False
+    raw_text_original: str | None = None
 
 
 @dataclass
@@ -353,7 +358,10 @@ def is_citation_quality_acceptable(citation: Citation, min_score: float = 0.35) 
 def filter_citations(citations: list[Citation], min_score: float = 0.35) -> list[Citation]:
     out: list[Citation] = []
     for citation in citations:
-        citation.quality_score = citation_quality_score(citation)
+        if citation.quality_score is None:
+            citation.quality_score = citation_quality_score(citation)
+        if citation.parse_confidence is None:
+            citation.parse_confidence = citation.quality_score
         if is_citation_quality_acceptable(citation, min_score=min_score):
             out.append(citation)
     return out

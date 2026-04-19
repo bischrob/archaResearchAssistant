@@ -4,7 +4,7 @@ Minimal tooling to test whether chunk text already stored in Neo4j can drive the
 
 ## What it does
 
-`scripts/neo4j_reference_roundtrip.py` supports two subcommands:
+`scripts/sync_reference_roundtrip.py` supports two subcommands:
 
 - `export`: fetch one article's chunk text from Neo4j, guess where the reference section starts, and write:
   - `<article>.article.json`
@@ -18,7 +18,7 @@ To avoid clobbering a live article during evaluation, `import` can target a sepa
 ## Export example
 
 ```bash
-python scripts/neo4j_reference_roundtrip.py export abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert
+python scripts/sync_reference_roundtrip.py export abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert
 ```
 
 ## Import example
@@ -26,7 +26,7 @@ python scripts/neo4j_reference_roundtrip.py export abbott2007-BallcourtsCeramics
 Dry run only:
 
 ```bash
-python scripts/neo4j_reference_roundtrip.py import \
+python scripts/sync_reference_roundtrip.py import \
   abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert \
   tmp/reference_roundtrip/abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert.references.draft.txt \
   --article-id-out abbott2007-BallcourtsCeramics-CaseHohokamMarketplacesInArizonaDesert::manual-demo \

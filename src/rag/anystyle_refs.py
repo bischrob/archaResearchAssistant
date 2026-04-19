@@ -9,11 +9,13 @@ import tempfile
 from typing import Any
 
 from .pdf_processing import Citation, normalize_title
+from .reference_parsing import parse_reference_entries as _parse_reference_entries_shared
 
 
 YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 DOI_RE = re.compile(r"\b10\.\d{4,9}/[-._;()/:A-Z0-9]+\b", re.IGNORECASE)
 ANYSTYLE_BIN = "/usr/local/bundle/bin/anystyle"
+TITLE_SPLIT_RE = re.compile(r"\.\s+")
 
 
 def _project_root() -> Path:
@@ -115,6 +117,85 @@ def _extract_author_tokens(entry: dict[str, Any]) -> list[str]:
         if tokens:
             out.append(tokens[-1])
     return list(dict.fromkeys(out))
+
+
+def _extract_year_from_text(text: str) -> int | None:
+    match = YEAR_RE.search(text or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(0))
+    except Exception:
+        return None
+
+
+def _extract_doi_from_text(text: str) -> str | None:
+    match = DOI_RE.search(text or "")
+    if not match:
+        return None
+    return match.group(0).rstrip(".;,")
+
+
+def _extract_authors_from_text(text: str) -> list[str]:
+    prefix = (text or "").strip()
+    year_match = YEAR_RE.search(prefix)
+    if year_match:
+        prefix = prefix[: year_match.start()].strip(" .,;:-")
+    if not prefix:
+        return []
+    prefix = re.sub(r"\bet al\.?$", "", prefix, flags=re.IGNORECASE).strip(" ,;")
+    parts = re.split(r"\s+(?:and|&)\s+|,\s+(?=[A-Z][A-Za-z'`-]+(?:\s+[A-Z][A-Za-z'`.-]+)*)", prefix)
+    authors: list[str] = []
+    for part in parts:
+        clean = " ".join((part or "").split()).strip(" ,;")
+        if not clean:
+            continue
+        if re.search(r"[A-Za-z]", clean):
+            authors.append(clean)
+    return list(dict.fromkeys(authors))
+
+
+def _extract_author_tokens_from_text(text: str) -> list[str]:
+    out: list[str] = []
+    for author in _extract_authors_from_text(text):
+        tokens = re.findall(r"[A-Za-z][A-Za-z'-]+", author.lower())
+        if tokens:
+            out.append(tokens[-1])
+    return list(dict.fromkeys(out))
+
+
+def _extract_title_from_text(text: str) -> str:
+    clean = " ".join((text or "").split()).strip()
+    if not clean:
+        return ""
+    year_match = YEAR_RE.search(clean)
+    if year_match:
+        remainder = clean[year_match.end() :].strip(" .,:;")
+    else:
+        pieces = TITLE_SPLIT_RE.split(clean, maxsplit=2)
+        remainder = pieces[1].strip(" .,:;") if len(pieces) > 1 else clean
+    remainder = DOI_RE.sub("", remainder).strip(" .,:;")
+    pieces = TITLE_SPLIT_RE.split(remainder, maxsplit=1)
+    candidate = pieces[0].strip(" .,:;") if pieces else remainder
+    if candidate:
+        return candidate[:240]
+    return clean[:240]
+
+
+def parse_reference_strings_heuristic(
+    references: list[str],
+    *,
+    article_id: str,
+) -> list[Citation]:
+    from .config import Settings
+
+    citations, _ = _parse_reference_entries_shared(
+        references,
+        article_id=article_id,
+        settings=Settings(),
+        parser_mode="heuristic",
+    )
+    return citations
 
 
 def _bibtex_escape(value: str) -> str:
@@ -329,6 +410,7 @@ def parse_reference_entries_resilient(
     references: list[str],
     *,
     article_id: str,
+    parser_mode: str = "anystyle",
     compose_service: str = "anystyle",
     timeout_seconds: int = 240,
     use_gpu: bool = False,
@@ -336,6 +418,16 @@ def parse_reference_entries_resilient(
     gpu_service: str = "anystyle-gpu",
     project_root: Path | None = None,
 ) -> tuple[list[Citation], list[dict[str, Any]]]:
+    from .config import Settings
+
+    mode = (parser_mode or "").strip().lower()
+    if mode in {"heuristic", "hybrid_llm", "llm"}:
+        return _parse_reference_entries_shared(
+            references,
+            article_id=article_id,
+            settings=Settings(),
+            parser_mode=mode,
+        )
     citations: list[Citation] = []
     failures: list[dict[str, Any]] = []
     for idx, raw in enumerate(references):
