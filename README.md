@@ -125,6 +125,136 @@ In practice, that means the canonical reference source for the supported ingest 
 
 The active repo workflow is centered on the Zotero attachment plus MinerU note pipeline.
 
+## Reference Matching
+
+Reference matching in this repo happens in three separate layers, each using different resources and keys.
+
+### 1. Metadata matching for the source article
+
+Before reference-to-article matching even starts, the system has to decide which Zotero metadata record belongs to the PDF being ingested.
+
+Resources used:
+
+- Zotero attachment metadata from `zotero.sqlite`
+- Zotero attachment paths and attachment identifiers
+- local path hints from the resolved PDF file
+
+Matching order for article metadata lookup:
+
+1. normalized full attachment path
+2. basename of the PDF filename
+3. normalized basename fallback
+
+Important identity fields stored on the `Article` node:
+
+- `zotero_persistent_id`
+- `zotero_item_key`
+- `zotero_attachment_key`
+- `doi`
+- `title_year_key`
+- normalized source path and normalized filename stem
+
+The `title_year_key` is built as a diacritic-folded, lowercased alphanumeric title plus publication year, for example `some normalized title|2024`.
+
+### 2. Parsing raw references into structured `Reference` nodes
+
+Once the source article is identified, the ingest path extracts references from the attached MinerU markdown note or a generated `.references.txt` sidecar.
+
+Resources used:
+
+- MinerU child note markdown attached to the Zotero item
+- OCR-derived `.references.txt` sidecars when needed
+- Anystyle parsing output for individual reference strings
+
+Overall process:
+
+1. Detect the references section in markdown or OCR-derived text.
+2. Split that section into one reference string per entry.
+3. Parse each entry individually with resilient Anystyle-based parsing.
+4. Build a structured `Citation` object with:
+   - `raw_text`
+   - `title_guess`
+   - `normalized_title`
+   - `year`
+   - `doi`
+   - `author_tokens`
+   - `authors`
+   - `bibtex`
+5. Score each parsed citation with a simple quality heuristic.
+6. Drop citations that fail the quality threshold before writing them to Neo4j.
+
+When stored in Neo4j, each parsed citation becomes a `Reference` node linked from its source article by `(:Article)-[:CITES_REFERENCE]->(:Reference)`.
+
+### 3. Resolving parsed references back to known articles
+
+After articles and references are ingested, the graph layer tries to turn a parsed bibliography entry into an article-to-article citation edge.
+
+Resources used:
+
+- parsed reference DOI
+- parsed reference normalized title
+- parsed reference author tokens
+- parsed reference year
+- all ingested `Article` nodes already in the current batch
+
+Primary resolution algorithm:
+
+1. If the reference DOI exactly matches a target article DOI, the match is accepted immediately.
+   Method recorded: `reference_doi_match`
+2. Otherwise, compare the reference `normalized_title` to every candidate article `title_norm` using `difflib.SequenceMatcher`.
+3. Compute author overlap from parsed `author_tokens` against the target article author-token set.
+4. Treat the year as compatible if either side is missing or the years are within `+/-1`.
+5. Score the candidate as:
+   - `0.80 * title_score`
+   - `0.15 * author_overlap`
+   - `0.05` bonus for year compatibility
+6. Accept the best candidate if one of these thresholds is met:
+   - DOI exact match
+   - score `>= 0.62`, title similarity `>= 0.55`, and year compatible
+   - title similarity `>= 0.80`
+
+If accepted, the repo creates:
+
+- `(:Article)-[:CITES {match_score, method}]->(:Article)`
+- `(:Reference)-[:RESOLVES_TO]->(:Article)` when the edge came from a specific parsed reference
+
+### 4. Fallback citation-link heuristics
+
+If structured reference matching does not produce a link, the graph layer still has two fallback heuristics for connecting articles inside the same ingest batch.
+
+Fallback 1: in-text author-year mention
+
+- scan the source article chunk text
+- if the target article's primary author surname and publication year both appear in the text, create a `CITES` edge
+- stored with method `in_text_author_year` and score `0.55`
+
+Fallback 2: same-author prior-work heuristic
+
+- if two articles share the same primary author surname
+- and the source article is newer than the target article
+- create a low-confidence `CITES` edge
+- stored with method `same_author_prior_work` and score `0.35`
+
+### 5. Matching existing graph records during Zotero reconciliation
+
+Separately from bibliography matching, the repo also reconciles newly seen Zotero rows against already ingested `Article` nodes so it can attach missing Zotero IDs without full re-ingest.
+
+Resources used:
+
+- `zotero_item_key`
+- `zotero_attachment_key`
+- normalized DOI
+- `title_year_key`
+
+Reconciliation order:
+
+1. `zotero_item_key`
+2. `zotero_attachment_key`
+3. DOI
+4. `title_year_key`
+
+Only unique matches are accepted. If a candidate key points to multiple existing articles, that case is marked ambiguous and skipped rather than guessed.
+
 ## Testing
 
 Run the default non-e2e suite:

@@ -13,6 +13,8 @@ from .path_utils import resolve_input_path
 _HTML_BREAK_RE = re.compile(r"(?i)(<\s*br\s*/?>|<\s*/\s*(p|div|li|h[1-6])\s*>)")
 _HTML_TAG_RE = re.compile(r"(?is)<[^>]+>")
 _MINERU_TITLE_HINT_RE = re.compile(r"mineru", re.IGNORECASE)
+_MINERU_BODY_MARKER_RE = re.compile(r"(?m)^\s*LLM_FOR_ZOTERO_MINERU_NOTE_V\d+\s*$")
+_MINERU_ATTACHMENT_ID_RE = re.compile(r"(?m)^\s*attachment_id\s*=\s*(\d+)\s*$")
 MIN_MINERU_TEXT_LENGTH = 120
 _MINERU_MARKDOWN_HINTS = (
     re.compile(r"(?m)^\s{0,3}#{1,6}\s+\S"),
@@ -45,8 +47,24 @@ def _extract_text_from_zotero_note(raw_note: str) -> str:
 
 def _looks_like_mineru_markdown(title: str | None, text: str) -> bool:
     title_hit = bool(_MINERU_TITLE_HINT_RE.search((title or "").strip()))
+    body_marker_hit = bool(_MINERU_BODY_MARKER_RE.search(text or ""))
+    attachment_id_hit = _extract_mineru_attachment_id(text) is not None
     marker_hits = sum(1 for rx in _MINERU_MARKDOWN_HINTS if rx.search(text or ""))
-    return title_hit and marker_hits >= 2 and len((text or "").strip()) >= MIN_MINERU_TEXT_LENGTH
+    if len((text or "").strip()) < MIN_MINERU_TEXT_LENGTH:
+        return False
+    if body_marker_hit and attachment_id_hit:
+        return True
+    return title_hit and marker_hits >= 2
+
+
+def _extract_mineru_attachment_id(text: str) -> int | None:
+    match = _MINERU_ATTACHMENT_ID_RE.search(text or "")
+    if not match:
+        return None
+    try:
+        return int(match.group(1))
+    except Exception:
+        return None
 
 
 def _lookup_note_titles(conn: sqlite3.Connection, note_item_ids: list[int]) -> dict[int, str]:
@@ -78,6 +96,7 @@ def _lookup_note_titles(conn: sqlite3.Connection, note_item_ids: list[int]) -> d
 
 def load_mineru_child_note_for_attachment(row: dict, *, zotero_db_path: str) -> MinerUChildNote:
     attachment_item_id = int(row.get("zotero_attachment_item_id") or 0)
+    parent_item_id = int(row.get("zotero_parent_item_id") or 0)
     if attachment_item_id <= 0:
         raise RuntimeError("Attachment row is missing zotero_attachment_item_id; cannot resolve MinerU child note.")
 
@@ -92,15 +111,19 @@ def load_mineru_child_note_for_attachment(row: dict, *, zotero_db_path: str) -> 
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     try:
+        candidate_parent_ids = [attachment_item_id]
+        if parent_item_id > 0 and parent_item_id != attachment_item_id:
+            candidate_parent_ids.append(parent_item_id)
+        placeholders = ",".join("?" for _ in candidate_parent_ids)
         note_rows = conn.execute(
-            """
-            SELECT n.itemID AS note_item_id, i.key AS note_item_key, n.note AS note_html
+            f"""
+            SELECT n.itemID AS note_item_id, i.key AS note_item_key, n.note AS note_html, n.parentItemID AS parent_item_id
             FROM itemNotes n
             JOIN items i ON i.itemID = n.itemID
-            WHERE n.parentItemID = ?
+            WHERE n.parentItemID IN ({placeholders})
             ORDER BY n.itemID ASC
             """,
-            (attachment_item_id,),
+            candidate_parent_ids,
         ).fetchall()
         if not note_rows:
             raise RuntimeError(
@@ -116,6 +139,10 @@ def load_mineru_child_note_for_attachment(row: dict, *, zotero_db_path: str) -> 
             note_title = titles.get(note_item_id)
             markdown_text = _extract_text_from_zotero_note(str(note_row["note_html"] or ""))
             if not _looks_like_mineru_markdown(note_title, markdown_text):
+                continue
+            note_parent_item_id = int(note_row["parent_item_id"] or 0)
+            referenced_attachment_id = _extract_mineru_attachment_id(markdown_text)
+            if note_parent_item_id == parent_item_id and referenced_attachment_id not in {None, attachment_item_id}:
                 continue
             source_hash = hashlib.sha256(markdown_text.encode("utf-8")).hexdigest()
             return MinerUChildNote(
