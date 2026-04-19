@@ -541,9 +541,9 @@ def test_ingest_pdfs_uses_anystyle_when_enabled(monkeypatch, tmp_path: Path) -> 
     )
 
     assert summary.ingested_articles == 1
-    assert summary.anystyle_attempted_pdfs == 1
-    assert summary.anystyle_applied_pdfs == 1
-    assert summary.anystyle_failed_pdfs == 0
+    assert summary.reference_parse_attempted_pdfs == 1
+    assert summary.reference_parse_applied_pdfs == 1
+    assert summary.reference_parse_failed_pdfs == 0
     assert seen["raw_text"] == "anystyle-json-row"
     assert seen["source"] == "anystyle"
 
@@ -636,10 +636,10 @@ def test_ingest_pdfs_falls_back_when_anystyle_fails(monkeypatch, tmp_path: Path)
     )
 
     assert summary.ingested_articles == 1
-    assert summary.anystyle_attempted_pdfs == 1
-    assert summary.anystyle_applied_pdfs == 0
-    assert summary.anystyle_failed_pdfs == 1
-    assert summary.anystyle_disabled_reason is not None
+    assert summary.reference_parse_attempted_pdfs == 1
+    assert summary.reference_parse_applied_pdfs == 1
+    assert summary.reference_parse_failed_pdfs == 1
+    assert summary.reference_parse_disabled_reason is not None
     assert seen["raw_text"] == "heuristic-row"
     assert seen["source"] == "heuristic"
 
@@ -802,8 +802,8 @@ def test_ingest_pdfs_uses_structured_anystyle_mode(monkeypatch, tmp_path: Path) 
     monkeypatch.setattr(pipeline, 'load_paperpile_index', lambda _path: {'ok.pdf': {'title': 'From Paperpile', 'authors': ['A One']}})
     summary = pipeline.ingest_pdfs(selected_pdfs=[p1], settings=Settings(citation_parser='structured_anystyle', metadata_backend='paperpile'), skip_existing=False)
     assert summary.ingested_articles == 1
-    assert summary.anystyle_attempted_pdfs == 1
-    assert summary.anystyle_applied_pdfs == 1
+    assert summary.reference_parse_attempted_pdfs == 1
+    assert summary.reference_parse_applied_pdfs == 1
     assert seen['chunk_text'] == 'section chunk'
     assert seen['raw_text'] == 'Abbott, D. R. 1999. Example.'
     assert seen['source'] == 'anystyle'

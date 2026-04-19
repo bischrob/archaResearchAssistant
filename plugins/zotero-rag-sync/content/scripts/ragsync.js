@@ -16,9 +16,15 @@ var RAGSync = {
   prefSourceMode: 'extensions.zotero-rag-sync.sourceMode',
   prefSourceDir: 'extensions.zotero-rag-sync.sourceDir',
   prefPaused: 'extensions.zotero-rag-sync.paused',
+  prefExternalBridgeEnabled: 'extensions.zotero-rag-sync.externalBridgeEnabled',
+  prefExternalBridgeToken: 'extensions.zotero-rag-sync.externalBridgeToken',
   syncPollIntervalMS: 700,
   syncPollTimeoutMS: 60 * 60 * 1000,
   overlayDismissed: false,
+  externalBridgePaths: {
+    ping: '/rag-sync/bridge/ping',
+    importMineruNote: '/rag-sync/bridge/import-mineru-note',
+  },
 
   log(msg) {
     Zotero.debug('RAG Sync: ' + String(msg || ''));
@@ -54,6 +60,14 @@ var RAGSync = {
 
   getBearerToken() {
     return this.getStringPref(this.prefBearerToken, '');
+  },
+
+  isExternalBridgeEnabled() {
+    return this.getBoolPref(this.prefExternalBridgeEnabled, false);
+  },
+
+  getExternalBridgeToken() {
+    return this.getStringPref(this.prefExternalBridgeToken, '');
   },
 
   getSourceDir() {
@@ -99,6 +113,273 @@ var RAGSync = {
 
   getImportPDFURLLabel() {
     return 'Import PDF URL To Stored Attachment';
+  },
+
+  getExternalBridgeDiagnosticsLabel() {
+    return 'Show External Note Bridge Diagnostics';
+  },
+
+  registerConnectorEndpoint(path, handlerCtor) {
+    if (!Zotero.Server || !Zotero.Server.Endpoints) {
+      throw new Error('Zotero connector HTTP server is unavailable');
+    }
+    Zotero.Server.Endpoints[path] = handlerCtor;
+  },
+
+  unregisterConnectorEndpoint(path) {
+    if (!Zotero.Server || !Zotero.Server.Endpoints) {
+      return;
+    }
+    delete Zotero.Server.Endpoints[path];
+  },
+
+  parseConnectorJSON(postData) {
+    const raw = typeof postData === 'string' ? postData.trim() : '';
+    if (!raw) {
+      return {};
+    }
+    return JSON.parse(raw);
+  },
+
+  escapeHTML(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  renderMineruBridgeNoteText(params) {
+    const parentText = params.parentItemId ? String(params.parentItemId) : 'none';
+    return [
+      'LLM_FOR_ZOTERO_MINERU_NOTE_V1',
+      `attachment_id=${params.attachmentId}`,
+      `parent_item_id=${parentText}`,
+      `parsed_at=${params.parsedAt}`,
+      'mineru_version=pipeline',
+      `content_hash=${params.contentHash}`,
+      '',
+      '---',
+      '',
+      params.mdContent,
+    ].join('\n');
+  },
+
+  renderMineruBridgeNoteHtml(noteText) {
+    return `<pre>${this.escapeHTML(noteText)}</pre>`;
+  },
+
+  hashMineruBridgeContent(mdContent) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < mdContent.length; i++) {
+      hash ^= mdContent.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, '0');
+  },
+
+  noteHtmlToText(noteHTML) {
+    try {
+      const parsed = new DOMParser().parseFromString(String(noteHTML || ''), 'text/html');
+      return typeof parsed.body.textContent === 'string' ? parsed.body.textContent : String(noteHTML || '');
+    } catch (_err) {
+      return String(noteHTML || '');
+    }
+  },
+
+  parseExistingMineruBridgeHeader(noteText) {
+    const match = String(noteText || '').match(
+      /LLM_FOR_ZOTERO_MINERU_NOTE_V1[\s\S]*?attachment_id=(\d+)[\s\S]*?parent_item_id=(\d+|none)[\s\S]*?content_hash=([a-f0-9]{8,64})/i
+    );
+    if (!match) {
+      return null;
+    }
+    const attachmentId = Number(match[1]);
+    const parentRaw = String(match[2] || '').trim().toLowerCase();
+    const contentHash = String(match[3] || '').trim().toLowerCase();
+    if (!Number.isFinite(attachmentId) || attachmentId <= 0) {
+      return null;
+    }
+    return {
+      attachmentId,
+      parentItemId: parentRaw === 'none' ? null : Number(parentRaw) || null,
+      contentHash,
+    };
+  },
+
+  async findExistingMineruBridgeNote(attachmentID, parentItemID, libraryID) {
+    let candidateIDs = [];
+    if (parentItemID) {
+      const parentItem = Zotero.Items.get(parentItemID);
+      if (parentItem && parentItem.isRegularItem && parentItem.isRegularItem()) {
+        candidateIDs = (parentItem.getNotes() || []).slice();
+      }
+    }
+
+    if (!candidateIDs.length) {
+      const search = new Zotero.Search({ libraryID });
+      search.addCondition('itemType', 'is', 'note');
+      search.addCondition('quicksearch-everything', 'contains', 'LLM_FOR_ZOTERO_MINERU_NOTE_V1');
+      candidateIDs = await search.search();
+    }
+
+    let fallback = null;
+    for (const noteID of candidateIDs || []) {
+      const noteItem = Zotero.Items.get(noteID);
+      if (!noteItem || !noteItem.isNote || !noteItem.isNote()) {
+        continue;
+      }
+      const header = this.parseExistingMineruBridgeHeader(this.noteHtmlToText(noteItem.getNote()));
+      if (!header || header.attachmentId !== attachmentID) {
+        continue;
+      }
+      if ((header.parentItemId || null) === (parentItemID || null)) {
+        return noteItem;
+      }
+      if (!fallback) {
+        fallback = noteItem;
+      }
+    }
+    return fallback;
+  },
+
+  async importExternalMineruNote(payload) {
+    const attachmentKey = String(payload.attachment_key || '').trim().toUpperCase();
+    const attachmentID = Number(payload.attachment_id || 0);
+    const mdContent = String(payload.md_content || payload.note_markdown || '').trim();
+
+    if (!mdContent) {
+      throw new Error('md_content is required');
+    }
+
+    let attachment = null;
+    if (attachmentKey) {
+      attachment = Zotero.Items.getByLibraryAndKey(Zotero.Libraries.userLibraryID, attachmentKey);
+    } else if (Number.isFinite(attachmentID) && attachmentID > 0) {
+      attachment = Zotero.Items.get(attachmentID);
+    }
+
+    if (!attachment || !attachment.isAttachment || !attachment.isAttachment()) {
+      throw new Error('Matching Zotero attachment not found');
+    }
+
+    const parentItemID = attachment.parentID && attachment.parentID > 0 ? attachment.parentID : null;
+    const parsedAt = String(payload.parsed_at || new Date().toISOString());
+    const contentHash = this.hashMineruBridgeContent(mdContent);
+    const noteText = this.renderMineruBridgeNoteText({
+      attachmentId: attachment.id,
+      parentItemId: parentItemID,
+      parsedAt,
+      contentHash,
+      mdContent,
+    });
+    const noteHTML = this.renderMineruBridgeNoteHtml(noteText);
+    const existing = await this.findExistingMineruBridgeNote(attachment.id, parentItemID, attachment.libraryID);
+
+    if (existing) {
+      const header = this.parseExistingMineruBridgeHeader(this.noteHtmlToText(existing.getNote()));
+      if (header && header.contentHash === contentHash) {
+        return {
+          status: 'unchanged',
+          attachment_key: attachment.key,
+          attachment_id: attachment.id,
+          parent_item_id: parentItemID,
+          note_item_id: existing.id,
+        };
+      }
+      existing.setNote(noteHTML);
+      await existing.saveTx();
+      return {
+        status: 'updated',
+        attachment_key: attachment.key,
+        attachment_id: attachment.id,
+        parent_item_id: parentItemID,
+        note_item_id: existing.id,
+      };
+    }
+
+    const note = new Zotero.Item('note');
+    note.libraryID = attachment.libraryID;
+    if (parentItemID) {
+      note.parentID = parentItemID;
+    }
+    note.setNote(noteHTML);
+    const noteID = await note.saveTx();
+    return {
+      status: 'created',
+      attachment_key: attachment.key,
+      attachment_id: attachment.id,
+      parent_item_id: parentItemID,
+      note_item_id: noteID || note.id,
+    };
+  },
+
+  registerExternalBridge() {
+    const self = this;
+
+    function PingEndpoint() {}
+    PingEndpoint.prototype = {
+      supportedMethods: ['GET'],
+      init(_data, sendResponseCallback) {
+        const body = JSON.stringify({
+          ok: true,
+          plugin: 'zotero-rag-sync',
+          bridge_enabled: self.isExternalBridgeEnabled(),
+          endpoint: self.externalBridgePaths.importMineruNote,
+        });
+        sendResponseCallback(200, 'application/json', body);
+      },
+    };
+
+    function ImportMineruNoteEndpoint() {}
+    ImportMineruNoteEndpoint.prototype = {
+      supportedMethods: ['POST'],
+      init(postData, sendResponseCallback) {
+        self
+          .handleExternalBridgeImport(postData)
+          .then((result) => {
+            sendResponseCallback(200, 'application/json', JSON.stringify(result));
+          })
+          .catch((err) => {
+            const body = JSON.stringify({
+              ok: false,
+              error: String(err && err.message ? err.message : err),
+            });
+            sendResponseCallback(400, 'application/json', body);
+          });
+      },
+    };
+
+    this.registerConnectorEndpoint(this.externalBridgePaths.ping, PingEndpoint);
+    this.registerConnectorEndpoint(this.externalBridgePaths.importMineruNote, ImportMineruNoteEndpoint);
+  },
+
+  unregisterExternalBridge() {
+    this.unregisterConnectorEndpoint(this.externalBridgePaths.ping);
+    this.unregisterConnectorEndpoint(this.externalBridgePaths.importMineruNote);
+  },
+
+  async handleExternalBridgeImport(postData) {
+    if (!this.isExternalBridgeEnabled()) {
+      throw new Error('External bridge is disabled. Set extensions.zotero-rag-sync.externalBridgeEnabled=true');
+    }
+
+    const payload = this.parseConnectorJSON(postData);
+    const configuredToken = this.getExternalBridgeToken();
+    if (!configuredToken) {
+      throw new Error('External bridge token is not configured');
+    }
+    if (String(payload.auth_token || '').trim() !== configuredToken) {
+      throw new Error('Invalid external bridge token');
+    }
+
+    const result = await this.importExternalMineruNote(payload);
+    return {
+      ok: true,
+      endpoint: this.externalBridgePaths.importMineruNote,
+      ...result,
+    };
   },
 
   setProgressWindowTerminalState(isTerminal) {
@@ -593,6 +874,10 @@ var RAGSync = {
       `Source dir: ${this.getSourceDir()}`,
       `Bearer token set: ${this.getBearerToken() ? 'yes' : 'no'}`,
       `Paused: ${this.isPaused() ? 'yes' : 'no'}`,
+      `External note bridge enabled: ${this.isExternalBridgeEnabled() ? 'yes' : 'no'}`,
+      `External note bridge token set: ${this.getExternalBridgeToken() ? 'yes' : 'no'}`,
+      `External note bridge ping URL: http://127.0.0.1:23119${this.externalBridgePaths.ping}`,
+      `External note bridge import URL: http://127.0.0.1:23119${this.externalBridgePaths.importMineruNote}`,
       `Sync running: ${this.syncInProgress ? 'yes' : 'no'}`,
       `Last sync status: ${this.lastSyncStatus}`,
       `Last sync finished: ${this.formatEpochSeconds(this.lastSyncFinishedAt)}`,
@@ -887,6 +1172,7 @@ var RAGSync = {
     this.id = id;
     this.version = version;
     this.rootURI = rootURI;
+    this.registerExternalBridge();
     this.injectToolsMenu();
     this.updateMenuState();
 
@@ -944,6 +1230,13 @@ var RAGSync = {
     );
     popup.appendChild(
       makeItem(
+        'rag-sync-menu-show-external-bridge',
+        this.getExternalBridgeDiagnosticsLabel(),
+        () => this.showDiagnostics()
+      )
+    );
+    popup.appendChild(
+      makeItem(
         'rag-sync-menu-import-pdf-url',
         this.getImportPDFURLLabel(),
         () => void this.importPDFURLToStoredAttachment()
@@ -976,6 +1269,7 @@ var RAGSync = {
       }
     }
     this.closeProgressWindow();
+    this.unregisterExternalBridge();
 
     this.initialized = false;
     this.id = null;

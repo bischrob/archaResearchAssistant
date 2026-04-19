@@ -349,12 +349,12 @@ jobs = JobManager()
 def _summary_optional_fields(summary: Any) -> dict[str, Any]:
     return {
         "citation_override_pdfs": getattr(summary, "citation_override_pdfs", 0),
-        "anystyle_attempted_pdfs": getattr(summary, "anystyle_attempted_pdfs", 0),
-        "anystyle_applied_pdfs": getattr(summary, "anystyle_applied_pdfs", 0),
-        "anystyle_empty_pdfs": getattr(summary, "anystyle_empty_pdfs", 0),
-        "anystyle_failed_pdfs": getattr(summary, "anystyle_failed_pdfs", 0),
-        "anystyle_disabled_reason": getattr(summary, "anystyle_disabled_reason", None),
-        "anystyle_failure_samples": list(getattr(summary, "anystyle_failure_samples", []) or []),
+        "reference_parse_attempted_pdfs": getattr(summary, "reference_parse_attempted_pdfs", getattr(summary, "anystyle_attempted_pdfs", 0)),
+        "reference_parse_applied_pdfs": getattr(summary, "reference_parse_applied_pdfs", getattr(summary, "anystyle_applied_pdfs", 0)),
+        "reference_parse_empty_pdfs": getattr(summary, "reference_parse_empty_pdfs", getattr(summary, "anystyle_empty_pdfs", 0)),
+        "reference_parse_failed_pdfs": getattr(summary, "reference_parse_failed_pdfs", getattr(summary, "anystyle_failed_pdfs", 0)),
+        "reference_parse_disabled_reason": getattr(summary, "reference_parse_disabled_reason", getattr(summary, "anystyle_disabled_reason", None)),
+        "reference_parse_failure_samples": list(getattr(summary, "reference_parse_failure_samples", getattr(summary, "anystyle_failure_samples", [])) or []),
         "qwen_attempted_pdfs": getattr(summary, "qwen_attempted_pdfs", 0),
         "qwen_applied_pdfs": getattr(summary, "qwen_applied_pdfs", 0),
         "qwen_empty_pdfs": getattr(summary, "qwen_empty_pdfs", 0),
@@ -1382,12 +1382,12 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
             "skipped_no_metadata_pdfs": [],
             "failed_pdfs": [],
             "citation_override_pdfs": 0,
-            "anystyle_attempted_pdfs": 0,
-            "anystyle_applied_pdfs": 0,
-            "anystyle_empty_pdfs": 0,
-            "anystyle_failed_pdfs": 0,
-            "anystyle_disabled_reason": None,
-            "anystyle_failure_samples": [],
+            "reference_parse_attempted_pdfs": 0,
+            "reference_parse_applied_pdfs": 0,
+            "reference_parse_empty_pdfs": 0,
+            "reference_parse_failed_pdfs": 0,
+            "reference_parse_disabled_reason": None,
+            "reference_parse_failure_samples": [],
             "qwen_attempted_pdfs": 0,
             "qwen_applied_pdfs": 0,
             "qwen_empty_pdfs": 0,
@@ -1430,7 +1430,7 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                     "failed_count": len(summary.failed_pdfs),
                     "skipped_existing_count": len(summary.skipped_existing_pdfs),
                     "skipped_no_metadata_count": len(summary.skipped_no_metadata_pdfs),
-                    **{k: v for k, v in optional.items() if k not in {"anystyle_disabled_reason", "anystyle_failure_samples", "qwen_disabled_reason", "qwen_failure_samples"}},
+                    **{k: v for k, v in optional.items() if k not in {"reference_parse_disabled_reason", "reference_parse_failure_samples", "qwen_disabled_reason", "qwen_failure_samples"}},
                 }
             )
             agg["ingested_articles"] += summary.ingested_articles
@@ -1441,14 +1441,14 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
             agg["skipped_no_metadata_pdfs"].extend(summary.skipped_no_metadata_pdfs)
             agg["failed_pdfs"].extend(summary.failed_pdfs)
             agg["citation_override_pdfs"] += optional["citation_override_pdfs"]
-            agg["anystyle_attempted_pdfs"] += optional["anystyle_attempted_pdfs"]
-            agg["anystyle_applied_pdfs"] += optional["anystyle_applied_pdfs"]
-            agg["anystyle_empty_pdfs"] += optional["anystyle_empty_pdfs"]
-            agg["anystyle_failed_pdfs"] += optional["anystyle_failed_pdfs"]
-            if optional["anystyle_disabled_reason"] and not agg["anystyle_disabled_reason"]:
-                agg["anystyle_disabled_reason"] = optional["anystyle_disabled_reason"]
-            if optional["anystyle_failure_samples"]:
-                agg["anystyle_failure_samples"].extend(optional["anystyle_failure_samples"])
+            agg["reference_parse_attempted_pdfs"] += optional["reference_parse_attempted_pdfs"]
+            agg["reference_parse_applied_pdfs"] += optional["reference_parse_applied_pdfs"]
+            agg["reference_parse_empty_pdfs"] += optional["reference_parse_empty_pdfs"]
+            agg["reference_parse_failed_pdfs"] += optional["reference_parse_failed_pdfs"]
+            if optional["reference_parse_disabled_reason"] and not agg["reference_parse_disabled_reason"]:
+                agg["reference_parse_disabled_reason"] = optional["reference_parse_disabled_reason"]
+            if optional["reference_parse_failure_samples"]:
+                agg["reference_parse_failure_samples"].extend(optional["reference_parse_failure_samples"])
             agg["qwen_attempted_pdfs"] += optional["qwen_attempted_pdfs"]
             agg["qwen_applied_pdfs"] += optional["qwen_applied_pdfs"]
             agg["qwen_empty_pdfs"] += optional["qwen_empty_pdfs"]
@@ -1471,12 +1471,12 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                 "skipped_no_metadata_pdfs": list(agg["skipped_no_metadata_pdfs"]),
                 "failed_pdfs": list(agg["failed_pdfs"]),
                 "citation_override_pdfs": agg["citation_override_pdfs"],
-                "anystyle_attempted_pdfs": agg["anystyle_attempted_pdfs"],
-                "anystyle_applied_pdfs": agg["anystyle_applied_pdfs"],
-                "anystyle_empty_pdfs": agg["anystyle_empty_pdfs"],
-                "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
-                "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
-                "anystyle_failure_samples": list(agg["anystyle_failure_samples"])[:30],
+                "reference_parse_attempted_pdfs": agg["reference_parse_attempted_pdfs"],
+                "reference_parse_applied_pdfs": agg["reference_parse_applied_pdfs"],
+                "reference_parse_empty_pdfs": agg["reference_parse_empty_pdfs"],
+                "reference_parse_failed_pdfs": agg["reference_parse_failed_pdfs"],
+                "reference_parse_disabled_reason": agg["reference_parse_disabled_reason"],
+                "reference_parse_failure_samples": list(agg["reference_parse_failure_samples"])[:30],
                 "qwen_attempted_pdfs": agg["qwen_attempted_pdfs"],
                 "qwen_applied_pdfs": agg["qwen_applied_pdfs"],
                 "qwen_empty_pdfs": agg["qwen_empty_pdfs"],
@@ -1511,12 +1511,12 @@ def ingest(req: IngestRequest, authorization: str | None = Header(default=None))
                 "skipped_no_metadata_pdfs": agg["skipped_no_metadata_pdfs"],
                 "failed_pdfs": agg["failed_pdfs"],
                 "citation_override_pdfs": agg["citation_override_pdfs"],
-                "anystyle_attempted_pdfs": agg["anystyle_attempted_pdfs"],
-                "anystyle_applied_pdfs": agg["anystyle_applied_pdfs"],
-                "anystyle_empty_pdfs": agg["anystyle_empty_pdfs"],
-                "anystyle_failed_pdfs": agg["anystyle_failed_pdfs"],
-                "anystyle_disabled_reason": agg["anystyle_disabled_reason"],
-                "anystyle_failure_samples": agg["anystyle_failure_samples"][:30],
+                "reference_parse_attempted_pdfs": agg["reference_parse_attempted_pdfs"],
+                "reference_parse_applied_pdfs": agg["reference_parse_applied_pdfs"],
+                "reference_parse_empty_pdfs": agg["reference_parse_empty_pdfs"],
+                "reference_parse_failed_pdfs": agg["reference_parse_failed_pdfs"],
+                "reference_parse_disabled_reason": agg["reference_parse_disabled_reason"],
+                "reference_parse_failure_samples": agg["reference_parse_failure_samples"][:30],
                 "qwen_attempted_pdfs": agg["qwen_attempted_pdfs"],
                 "qwen_applied_pdfs": agg["qwen_applied_pdfs"],
                 "qwen_empty_pdfs": agg["qwen_empty_pdfs"],

@@ -99,3 +99,30 @@ def test_split_references_collects_multiple_reference_sections() -> None:
     assert len(split.entries) == 2
     assert split.entries[0] == "Smith, J. 2020. One."
     assert split.entries[1] == "Jones, A. 2021. Two."
+
+
+def test_split_references_splits_inline_numbered_references_and_strips_figure_noise() -> None:
+    lines = [
+        "## References",
+        "![img](images/foo.png)",
+        "Figure 1. Not a citation.",
+        "[6] Smith, J. 2020. One. [7] Jones, A. 2021. Two.",
+    ]
+    split = split_references_from_lines(lines)
+    assert split.entries == ["[6] Smith, J. 2020. One.", "[7] Jones, A. 2021. Two."]
+
+
+def test_parse_reference_entries_splits_merged_author_year_entries() -> None:
+    citations, failures = parse_reference_entries(
+        [
+            "Brandsen, Alex. 2024. First Title. https://doi.org/10.1000/first Carroll, Sarah. 2025. Second Title. https://doi.org/10.1000/second"
+        ],
+        article_id="doc",
+        settings=Settings(citation_parser="heuristic"),
+        parser_mode="heuristic",
+        split_confidence=0.75,
+    )
+    assert len(citations) == 2
+    assert citations[0].title_guess == "First Title"
+    assert citations[1].title_guess == "Second Title"
+    assert any(f["kind"] == "split_merged_author_year_entry" for f in failures)

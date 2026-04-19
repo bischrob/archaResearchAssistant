@@ -4,3 +4,5 @@ pref("extensions.zotero-rag-sync.sourceMode", "zotero_db");
 pref("extensions.zotero-rag-sync.sourceDir", "");
 pref("extensions.zotero-rag-sync.debounceSeconds", "15");
 pref("extensions.zotero-rag-sync.paused", false);
+pref("extensions.zotero-rag-sync.externalBridgeEnabled", false);
+pref("extensions.zotero-rag-sync.externalBridgeToken", "");

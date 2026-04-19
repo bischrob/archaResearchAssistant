@@ -17,6 +17,7 @@ This plugin watches **My Library** item changes, ensures a Better BibTeX citatio
   - `RAG Sync: Retry Failed`
   - `RAG Sync: Pause/Resume`
   - `RAG Sync: Show Diagnostics`
+  - `RAG Sync: Show External Note Bridge Diagnostics`
   - `RAG Sync: Normalize Linked PDFs To Stored Attachments`
 - `Sync Now` now opens a centered in-app progress overlay and shows an explicit error alert if backend sync fails.
 - `Sync Now` now polls `/api/sync/status` and displays live progress updates from backend status messages (including current filename when provided).
@@ -31,6 +32,54 @@ This plugin watches **My Library** item changes, ensures a Better BibTeX citatio
   3. Let Zotero finish its normal file sync to WebDAV.
   4. Run `Sync Now` to ingest from Zotero-managed storage/WebDAV rather than external UNC paths.
 
+## External note bridge
+
+The plugin now registers local Zotero connector endpoints so outside tools can push
+MinerU markdown into Zotero as structured child notes.
+
+Endpoints on the local Zotero connector server:
+
+- `GET http://127.0.0.1:23119/rag-sync/bridge/ping`
+- `POST http://127.0.0.1:23119/rag-sync/bridge/import-mineru-note`
+
+Security model:
+
+- The bridge is disabled by default.
+- You must set both:
+  - `extensions.zotero-rag-sync.externalBridgeEnabled=true`
+  - `extensions.zotero-rag-sync.externalBridgeToken=<long random token>`
+- Requests must include `auth_token` in the JSON body.
+
+Minimal POST payload:
+
+```json
+{
+  "auth_token": "set-this-in-zotero-prefs",
+  "attachment_key": "23LHAREP",
+  "md_content": "# Parsed markdown\n..."
+}
+```
+
+Behavior:
+
+- `attachment_key` is matched against the Zotero attachment item key in `My Library`
+- the plugin creates or updates a child note on the parent item
+- note content is wrapped in the same MinerU metadata header format used by the repo's
+  note-first ingest path (`LLM_FOR_ZOTERO_MINERU_NOTE_V1`, `attachment_id`,
+  `parent_item_id`, `parsed_at`, `mineru_version`, `content_hash`)
+
+Repo helper:
+
+- `scripts/push_mineru_notes_via_zotero_bridge.py`
+
+Example:
+
+```bash
+python scripts/push_mineru_notes_via_zotero_bridge.py \
+  "C:\\Users\\rjbischo\\Nextcloud\\zotero" \
+  --token "your-bridge-token"
+```
+
 ## Required backend env
 
 - `API_BEARER_TOKEN` (optional; if set, plugin must send matching bearer token)
@@ -43,6 +92,8 @@ This plugin watches **My Library** item changes, ensures a Better BibTeX citatio
 - `extensions.zotero-rag-sync.sourceDir` (default empty; set this only for filesystem mode)
 - `extensions.zotero-rag-sync.debounceSeconds` (default `15`)
 - `extensions.zotero-rag-sync.paused` (default `false`)
+- `extensions.zotero-rag-sync.externalBridgeEnabled` (default `false`)
+- `extensions.zotero-rag-sync.externalBridgeToken` (default empty)
 
 ## Notes
 

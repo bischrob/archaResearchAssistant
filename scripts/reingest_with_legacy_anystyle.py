@@ -294,10 +294,10 @@ def main() -> int:
             ingested_articles += summary.ingested_articles
             total_chunks += summary.total_chunks
             total_references += summary.total_references
-            anystyle_attempted += summary.anystyle_attempted_pdfs
-            anystyle_applied += summary.anystyle_applied_pdfs
-            anystyle_empty += summary.anystyle_empty_pdfs
-            anystyle_failed += summary.anystyle_failed_pdfs
+            anystyle_attempted += summary.reference_parse_attempted_pdfs
+            anystyle_applied += summary.reference_parse_applied_pdfs
+            anystyle_empty += summary.reference_parse_empty_pdfs
+            anystyle_failed += summary.reference_parse_failed_pdfs
 
             for item in summary.failed_pdfs[:100]:
                 failure_lines.append(f"{item['pdf']}: {item['error']}")
@@ -308,8 +308,8 @@ def main() -> int:
                     f"{utc_now()} | Batch {batch_number}/{total_batches} complete. "
                     f"Processed {processed}/{total_selected}. Remaining {remaining}. "
                     f"Ingested {summary.ingested_articles}/{len(batch)}. "
-                    f"Anystyle applied {summary.anystyle_applied_pdfs}, "
-                    f"empty {summary.anystyle_empty_pdfs}, failed {summary.anystyle_failed_pdfs}."
+                    f"Reference parse applied {summary.reference_parse_applied_pdfs}, "
+                    f"empty {summary.reference_parse_empty_pdfs}, failed {summary.reference_parse_failed_pdfs}."
                 )
                 while next_report <= processed:
                     next_report += report_every

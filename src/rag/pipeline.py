@@ -54,12 +54,36 @@ class IngestSummary:
     skipped_no_metadata_pdfs: list[str]
     failed_pdfs: list[dict]
     citation_override_pdfs: int = 0
-    anystyle_attempted_pdfs: int = 0
-    anystyle_applied_pdfs: int = 0
-    anystyle_empty_pdfs: int = 0
-    anystyle_failed_pdfs: int = 0
-    anystyle_disabled_reason: str | None = None
-    anystyle_failure_samples: list[str] = field(default_factory=list)
+    reference_parse_attempted_pdfs: int = 0
+    reference_parse_applied_pdfs: int = 0
+    reference_parse_empty_pdfs: int = 0
+    reference_parse_failed_pdfs: int = 0
+    reference_parse_disabled_reason: str | None = None
+    reference_parse_failure_samples: list[str] = field(default_factory=list)
+
+    @property
+    def anystyle_attempted_pdfs(self) -> int:
+        return self.reference_parse_attempted_pdfs
+
+    @property
+    def anystyle_applied_pdfs(self) -> int:
+        return self.reference_parse_applied_pdfs
+
+    @property
+    def anystyle_empty_pdfs(self) -> int:
+        return self.reference_parse_empty_pdfs
+
+    @property
+    def anystyle_failed_pdfs(self) -> int:
+        return self.reference_parse_failed_pdfs
+
+    @property
+    def anystyle_disabled_reason(self) -> str | None:
+        return self.reference_parse_disabled_reason
+
+    @property
+    def anystyle_failure_samples(self) -> list[str]:
+        return self.reference_parse_failure_samples
 
 
 def _cache_dir() -> Path:
@@ -848,12 +872,12 @@ def ingest_pdfs(
     articles = []
     failures: list[dict] = []
     citation_override_pdfs = 0
-    anystyle_attempted = 0
-    anystyle_applied = 0
-    anystyle_empty = 0
-    anystyle_failed = 0
-    anystyle_failure_samples: list[str] = []
-    anystyle_disabled_reason: str | None = None
+    reference_parse_attempted = 0
+    reference_parse_applied = 0
+    reference_parse_empty = 0
+    reference_parse_failed = 0
+    reference_parse_failure_samples: list[str] = []
+    reference_parse_disabled_reason: str | None = None
     total_steps = max(1, len(selected_pdfs) * 2)
     parse_done = 0
     for p in selected_pdfs:
@@ -890,23 +914,25 @@ def ingest_pdfs(
             if citation_overrides and article.article_id in citation_overrides:
                 article.citations = citation_overrides[article.article_id]
                 citation_override_pdfs += 1
-            anystyle_attempted += 1
+            reference_parse_attempted += 1
             applied_sources = {str(c.source or "").strip().lower() for c in article.citations}
-            anystyle_effective = "anystyle" in applied_sources or "legacy_anystyle" in applied_sources
-            if article.citations and anystyle_effective:
-                anystyle_applied += 1
+            reference_parse_effective = "anystyle" in applied_sources or "legacy_anystyle" in applied_sources
+            if article.citations and reference_parse_effective:
+                reference_parse_applied += 1
+            elif article.citations:
+                reference_parse_applied += 1
             else:
-                anystyle_empty += 1
+                reference_parse_empty += 1
             if article.reference_parse_failures:
-                anystyle_failed += len(article.reference_parse_failures)
-                if anystyle_disabled_reason is None:
+                reference_parse_failed += len(article.reference_parse_failures)
+                if reference_parse_disabled_reason is None:
                     for failure in article.reference_parse_failures:
                         msg = str((failure or {}).get("error") or "")
                         if _is_global_anystyle_failure(msg):
-                            anystyle_disabled_reason = msg
+                            reference_parse_disabled_reason = msg
                             break
-                if len(anystyle_failure_samples) < 10:
-                    anystyle_failure_samples.append(
+                if len(reference_parse_failure_samples) < 10:
+                    reference_parse_failure_samples.append(
                         f"{p.name}: {len(article.reference_parse_failures)} reference parse failures"
                     )
             article.citations = filter_citations(
@@ -1015,10 +1041,10 @@ def ingest_pdfs(
         skipped_no_metadata_pdfs=skipped_no_metadata,
         failed_pdfs=failures,
         citation_override_pdfs=citation_override_pdfs,
-        anystyle_attempted_pdfs=anystyle_attempted,
-        anystyle_applied_pdfs=anystyle_applied,
-        anystyle_empty_pdfs=anystyle_empty,
-        anystyle_failed_pdfs=anystyle_failed,
-        anystyle_disabled_reason=anystyle_disabled_reason,
-        anystyle_failure_samples=anystyle_failure_samples,
+        reference_parse_attempted_pdfs=reference_parse_attempted,
+        reference_parse_applied_pdfs=reference_parse_applied,
+        reference_parse_empty_pdfs=reference_parse_empty,
+        reference_parse_failed_pdfs=reference_parse_failed,
+        reference_parse_disabled_reason=reference_parse_disabled_reason,
+        reference_parse_failure_samples=reference_parse_failure_samples,
     )

@@ -110,6 +110,13 @@ After startup, open the web GUI shown by `start.sh`. The main workflow is:
 
 The Zotero plugin scaffold lives in `plugins/zotero-rag-sync/` and supports the same sync-oriented workflow.
 
+It also now includes a local Zotero connector bridge for outside note producers.
+That bridge lets external scripts push MinerU-style markdown into Zotero as
+structured child notes keyed by Zotero attachment key, which keeps the repo's
+note-first ingest path compatible with batch OCR/markdown generation that
+happens outside Zotero. See `plugins/zotero-rag-sync/README.md` and
+`scripts/push_mineru_notes_via_zotero_bridge.py`.
+
 ## Reference Parsing
 
 The current ingest flow is Zotero-first and note-driven.

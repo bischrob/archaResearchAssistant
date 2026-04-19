@@ -35,6 +35,12 @@ CONTINUATION_HINT_RE = re.compile(
     r"^(?:https?://|doi:|10\.\d{4,9}/|pp?\.\s*\d|vol\.|no\.|issue\s+\d|journal\b|proceedings\b|press\b|university\b|publisher\b)",
     re.IGNORECASE,
 )
+NUMBERED_INLINE_REF_RE = re.compile(r"(?<!\w)(\[\d+\]|\d{1,3}[)])\s+")
+IMAGE_ARTIFACT_RE = re.compile(r"!\[[^\]]*\]\([^)]+\)")
+FIGURE_ARTIFACT_RE = re.compile(r"^(?:figure|fig\.)\s*\d+\b", re.IGNORECASE)
+EMBEDDED_AUTHOR_YEAR_START_RE = re.compile(
+    r"(?:[A-Z][A-Za-z'`.-]+(?:,\s*[A-Z][A-Za-z'`.-]+(?:\s+[A-Z][A-Za-z'`.-]+)*){0,4}\.?\s+(?:19|20)\d{2}\.)"
+)
 
 
 @dataclass(frozen=True)
@@ -69,6 +75,16 @@ def normalize_heading_text(text: str) -> str:
 
 def _clean_line(line: str) -> str:
     return " ".join((line or "").split()).strip()
+
+
+def _normalize_reference_row(line: str) -> str:
+    clean = _clean_line(IMAGE_ARTIFACT_RE.sub(" ", line or ""))
+    clean = re.sub(r"\s+", " ", clean).strip()
+    if not clean:
+        return ""
+    if FIGURE_ARTIFACT_RE.match(clean):
+        return ""
+    return clean
 
 
 def _lead_word_count(line: str) -> int:
@@ -114,6 +130,64 @@ def _is_continuation_line(line: str) -> bool:
     if clean[:1].islower():
         return True
     return False
+
+
+def _split_inline_numbered_references(text: str) -> list[str]:
+    clean = _clean_line(text)
+    if not clean:
+        return []
+    matches = list(NUMBERED_INLINE_REF_RE.finditer(clean))
+    if len(matches) < 2:
+        return [clean]
+    parts: list[str] = []
+    for idx, match in enumerate(matches):
+        start = match.start()
+        end = matches[idx + 1].start() if (idx + 1) < len(matches) else len(clean)
+        chunk = clean[start:end].strip()
+        if chunk:
+            parts.append(chunk)
+    return parts or [clean]
+
+
+def _split_merged_author_year_entry(text: str) -> list[str]:
+    clean = _clean_line(text)
+    if not clean:
+        return []
+    starts = [0]
+    for match in EMBEDDED_AUTHOR_YEAR_START_RE.finditer(clean):
+        start = match.start()
+        if start == 0:
+            continue
+        prefix = clean[:start].rstrip()
+        if not prefix:
+            continue
+        if DOI_RE.search(prefix) or URL_RE.search(prefix) or prefix.endswith("."):
+            starts.append(start)
+    starts = sorted(set(starts))
+    if len(starts) <= 1:
+        return [clean]
+    out: list[str] = []
+    for idx, start in enumerate(starts):
+        end = starts[idx + 1] if (idx + 1) < len(starts) else len(clean)
+        chunk = _clean_line(clean[start:end])
+        if chunk:
+            out.append(chunk)
+    return out or [clean]
+
+
+def _expand_candidate_entries(entries: list[str]) -> tuple[list[str], list[dict[str, Any]]]:
+    expanded: list[str] = []
+    failures: list[dict[str, Any]] = []
+    for entry in entries:
+        numbered_parts = _split_inline_numbered_references(entry)
+        if len(numbered_parts) > 1:
+            failures.append({"kind": "split_inline_numbered_references", "raw_text": entry, "count": len(numbered_parts)})
+        for part in numbered_parts:
+            author_parts = _split_merged_author_year_entry(part)
+            if len(author_parts) > 1:
+                failures.append({"kind": "split_merged_author_year_entry", "raw_text": part, "count": len(author_parts)})
+            expanded.extend(author_parts)
+    return expanded, failures
 
 
 def detect_reference_sections_from_lines(lines: list[str]) -> list[ReferenceSectionSpan]:
@@ -196,7 +270,7 @@ def split_references_from_lines(
             rows = rows[1:]
         current: list[str] = []
         for raw in rows:
-            clean = _clean_line(raw)
+            clean = _normalize_reference_row(raw)
             if not clean:
                 continue
             if _looks_like_reference_lead(clean):
@@ -215,6 +289,9 @@ def split_references_from_lines(
                 failures.append({"kind": "orphan_line", "line": clean, "section_start": span.start_line})
         if current:
             entries.append(" ".join(current).strip())
+
+    entries, expansion_failures = _expand_candidate_entries(entries)
+    failures.extend(expansion_failures)
 
     deduped: list[str] = []
     seen: set[str] = set()
@@ -307,6 +384,10 @@ def _looks_invalid_reference_text(text: str) -> bool:
     url_only = URL_RE.fullmatch(clean) is not None
     if doi_only or url_only:
         return True
+    if IMAGE_ARTIFACT_RE.search(clean):
+        return True
+    if FIGURE_ARTIFACT_RE.match(clean):
+        return True
     if len(WORD_RE.findall(clean)) > 70 and YEAR_RE.search(clean):
         return True
     return False
@@ -387,9 +468,10 @@ def parse_reference_strings_heuristic(
     article_id: str,
     split_confidence: float = 0.8,
 ) -> tuple[list[Citation], list[dict[str, Any]]]:
+    expanded_references, expansion_failures = _expand_candidate_entries(references)
     citations: list[Citation] = []
-    failures: list[dict[str, Any]] = []
-    for idx, raw in enumerate(references):
+    failures: list[dict[str, Any]] = list(expansion_failures)
+    for idx, raw in enumerate(expanded_references):
         text = _clean_line(raw)
         if not text:
             continue

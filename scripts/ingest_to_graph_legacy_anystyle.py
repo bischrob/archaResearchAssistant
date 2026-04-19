@@ -124,19 +124,19 @@ def main() -> None:
     print(f"Ingested articles: {summary.ingested_articles}")
     print(f"Total chunks: {summary.total_chunks}")
     print(f"Total extracted references: {summary.total_references}")
-    print(f"Anystyle attempted PDFs: {summary.anystyle_attempted_pdfs}")
-    print(f"Anystyle applied PDFs: {summary.anystyle_applied_pdfs}")
-    print(f"Anystyle empty PDFs: {summary.anystyle_empty_pdfs}")
-    print(f"Anystyle failed PDFs: {summary.anystyle_failed_pdfs}")
-    if summary.anystyle_disabled_reason:
-        print(f"Anystyle disabled during run: {summary.anystyle_disabled_reason}")
+    print(f"Reference parse attempted PDFs: {summary.reference_parse_attempted_pdfs}")
+    print(f"Reference parse applied PDFs: {summary.reference_parse_applied_pdfs}")
+    print(f"Reference parse empty PDFs: {summary.reference_parse_empty_pdfs}")
+    print(f"Reference parse failures: {summary.reference_parse_failed_pdfs}")
+    if summary.reference_parse_disabled_reason:
+        print(f"Reference parsing disabled during run: {summary.reference_parse_disabled_reason}")
     if summary.skipped_existing_pdfs:
         print(f"Skipped existing PDFs: {len(summary.skipped_existing_pdfs)}")
     if summary.skipped_no_metadata_pdfs:
         print(f"Skipped no-metadata PDFs: {len(summary.skipped_no_metadata_pdfs)}")
-    if summary.anystyle_failure_samples:
-        print(f"Anystyle failure samples: {len(summary.anystyle_failure_samples)}")
-        for item in summary.anystyle_failure_samples[:20]:
+    if summary.reference_parse_failure_samples:
+        print(f"Reference parse failure samples: {len(summary.reference_parse_failure_samples)}")
+        for item in summary.reference_parse_failure_samples[:20]:
             print(f" - {item}")
     if summary.failed_pdfs:
         print(f"Failed PDFs during ingest: {len(summary.failed_pdfs)}")
