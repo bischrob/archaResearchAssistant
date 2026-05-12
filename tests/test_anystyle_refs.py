@@ -1,4 +1,4 @@
-from src.rag.anystyle_refs import parse_anystyle_json_payload, parse_reference_entries_resilient
+from src.rag.anystyle_refs import _extract_authors_from_text, parse_anystyle_json_payload, parse_reference_entries_resilient
 from src.rag.pdf_processing import Citation
 
 
@@ -78,3 +78,45 @@ def test_parse_reference_entries_resilient_records_failures_and_continues(monkey
     assert len(citations) == 2
     assert len(failures) == 1
     assert "parse failed" in failures[0]["error"]
+
+
+def test_anystyle_author_extraction_normalizes_inverted_single_author_name() -> None:
+    authors = _extract_authors_from_text(
+        "Morss, Noel 1931 The Ancient Culture of the Fremont River in Utah."
+    )
+    assert authors == ["Noel Morss"]
+
+
+def test_anystyle_author_extraction_handles_multiple_inverted_authors_with_initials() -> None:
+    authors = _extract_authors_from_text(
+        "Linse, Angela R., Reilly, Michael V., Kohler, Timothy A., 1992. Excavations in Area 1 of Burnt Mesa Pueblo."
+    )
+    assert authors == [
+        "Angela R. Linse",
+        "Michael V. Reilly",
+        "Timothy A Kohler",
+    ]
+
+
+def test_anystyle_author_extraction_stops_before_place_publisher_leakage() -> None:
+    authors = _extract_authors_from_text(
+        "[55] Gardin, J.-C., Archaeological constructs : an aspect of theoretical archaeology, Cambridge; New York: Cambridge University Press, 1980"
+    )
+    assert authors == ["J.-C. Gardin"]
+
+
+def test_anystyle_author_extraction_keeps_multiple_initial_authors_before_title_text() -> None:
+    authors = _extract_authors_from_text(
+        "[44] Viola, P., Jones, M.: Rapid object detection using a boosted cascade of simple features. Int. J. Comput. Vis. 57(2), 137-154 (2004)."
+    )
+    assert authors == [
+        "P. Viola",
+        "M. Jones",
+    ]
+
+
+def test_anystyle_author_extraction_keeps_direct_initials_name_before_title_and_publisher() -> None:
+    authors = _extract_authors_from_text(
+        "[120] D.W. Thompson, On Growth and Form, Cambridge University Press, Cambridge, 1917."
+    )
+    assert authors == ["D.W. Thompson"]

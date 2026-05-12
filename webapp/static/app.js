@@ -237,6 +237,9 @@ function renderSyncJob(job) {
   const remainingAfterIngest = sourceStats.zotero_missing_in_neo4j_after_ingest ?? unresolvedAfterReconcile;
   const ingestCandidates = result.ingest_candidate_count ?? sourceStats.zotero_paths_found ?? "-";
   const failedPdfs = Array.isArray(ingest.failed_pdfs) ? ingest.failed_pdfs.length : 0;
+  const mineruAttached = sourceStats.zotero_mineru_notes_attached ?? "-";
+  const mineruMissing = sourceStats.zotero_mineru_notes_missing ?? "-";
+  const mineruAttachedCandidates = sourceStats.zotero_mineru_notes_attached_for_ingest_candidates ?? "-";
   out.innerHTML = `
     ${statusHeader(job, "PDF Sync")}
     ${progressBlock(job)}
@@ -249,6 +252,9 @@ function renderSyncJob(job) {
       <strong>Already In Neo4j (Linked Now)</strong><span>${escapeHtml(reconciledExisting)}</span>
       <strong>Ambiguous Existing Matches</strong><span>${escapeHtml(ambiguousExistingMatches)}</span>
       <strong>Need Ingest</strong><span>${escapeHtml(ingestCandidates)}</span>
+      <strong>MinerU Notes Attached</strong><span>${escapeHtml(mineruAttached)}</span>
+      <strong>MinerU Notes Missing</strong><span>${escapeHtml(mineruMissing)}</span>
+      <strong>MinerU Notes On Ingest Candidates</strong><span>${escapeHtml(mineruAttachedCandidates)}</span>
       <strong>Ingest Ran</strong><span>${escapeHtml(result.ingest_ran ?? false)}</span>
       <strong>Ingested Articles</strong><span>${escapeHtml(ingest.ingested_articles ?? "-")}</span>
       <strong>Ingest Failed PDFs</strong><span>${escapeHtml(failedPdfs)}</span>

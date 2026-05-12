@@ -6,6 +6,7 @@ import html
 import re
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 from .path_utils import resolve_input_path
 
@@ -92,6 +93,108 @@ def _lookup_note_titles(conn: sqlite3.Connection, note_item_ids: list[int]) -> d
         if title:
             out[item_id] = title
     return out
+
+
+def _matching_mineru_note_keys_by_attachment(
+    rows: list[dict[str, Any]],
+    *,
+    zotero_db_path: str,
+) -> dict[int, str]:
+    if not rows:
+        return {}
+
+    attachment_ids: set[int] = set()
+    parent_ids: set[int] = set()
+    row_by_attachment: dict[int, dict[str, Any]] = {}
+    for row in rows:
+        attachment_item_id = int(row.get("zotero_attachment_item_id") or 0)
+        parent_item_id = int(row.get("zotero_parent_item_id") or 0)
+        if attachment_item_id <= 0:
+            continue
+        attachment_ids.add(attachment_item_id)
+        parent_ids.add(attachment_item_id)
+        if parent_item_id > 0:
+            parent_ids.add(parent_item_id)
+        row_by_attachment[attachment_item_id] = row
+
+    if not attachment_ids:
+        return {}
+
+    db_path = resolve_input_path(zotero_db_path)
+    if not db_path.exists():
+        raise RuntimeError(f"Zotero DB not found: {db_path}")
+
+    uri = f"file:{db_path}?mode=ro&immutable=1"
+    try:
+        conn = sqlite3.connect(uri, uri=True)
+    except sqlite3.OperationalError:
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        placeholders = ",".join("?" for _ in parent_ids)
+        note_rows = conn.execute(
+            f"""
+            SELECT n.itemID AS note_item_id, i.key AS note_item_key, n.note AS note_html, n.parentItemID AS parent_item_id
+            FROM itemNotes n
+            JOIN items i ON i.itemID = n.itemID
+            WHERE n.parentItemID IN ({placeholders})
+            ORDER BY n.itemID ASC
+            """,
+            list(parent_ids),
+        ).fetchall()
+        if not note_rows:
+            return {}
+
+        titles = _lookup_note_titles(conn, [int(r["note_item_id"]) for r in note_rows if r["note_item_id"] is not None])
+        by_parent: dict[int, list[sqlite3.Row]] = {}
+        for note_row in note_rows:
+            by_parent.setdefault(int(note_row["parent_item_id"] or 0), []).append(note_row)
+
+        matches: dict[int, str] = {}
+        for attachment_item_id in attachment_ids:
+            row = row_by_attachment[attachment_item_id]
+            parent_item_id = int(row.get("zotero_parent_item_id") or 0)
+            candidate_note_rows = list(by_parent.get(attachment_item_id, []))
+            if parent_item_id > 0 and parent_item_id != attachment_item_id:
+                candidate_note_rows.extend(by_parent.get(parent_item_id, []))
+            for note_row in candidate_note_rows:
+                note_item_id = int(note_row["note_item_id"])
+                note_item_key = str(note_row["note_item_key"] or "").strip()
+                if not note_item_key:
+                    continue
+                note_title = titles.get(note_item_id)
+                markdown_text = _extract_text_from_zotero_note(str(note_row["note_html"] or ""))
+                if not _looks_like_mineru_markdown(note_title, markdown_text):
+                    continue
+                note_parent_item_id = int(note_row["parent_item_id"] or 0)
+                referenced_attachment_id = _extract_mineru_attachment_id(markdown_text)
+                if note_parent_item_id == parent_item_id and referenced_attachment_id not in {None, attachment_item_id}:
+                    continue
+                matches[attachment_item_id] = note_item_key
+                break
+        return matches
+    finally:
+        conn.close()
+
+
+def summarize_mineru_notes_for_rows(
+    rows: list[dict[str, Any]],
+    *,
+    zotero_db_path: str,
+) -> dict[str, Any]:
+    matches = _matching_mineru_note_keys_by_attachment(rows, zotero_db_path=zotero_db_path)
+    attachment_ids = [
+        int(row.get("zotero_attachment_item_id") or 0)
+        for row in rows
+        if int(row.get("zotero_attachment_item_id") or 0) > 0
+    ]
+    matched_ids = {attachment_id for attachment_id in attachment_ids if attachment_id in matches}
+    return {
+        "rows_checked": len(rows),
+        "attachments_checked": len(attachment_ids),
+        "mineru_notes_attached": len(matched_ids),
+        "mineru_notes_missing": max(0, len(attachment_ids) - len(matched_ids)),
+    }
 
 
 def load_mineru_child_note_for_attachment(row: dict, *, zotero_db_path: str) -> MinerUChildNote:

@@ -421,6 +421,97 @@ def test_sync_defaults_to_zotero_db_when_source_mode_omitted(monkeypatch, tmp_pa
     assert final["result"]["source_mode"] == "zotero_db"
 
 
+def test_sync_reports_mineru_note_counts_for_zotero_rows(monkeypatch, tmp_path: Path, client):
+    zotero_db = tmp_path / "zotero.sqlite"
+    zotero_db.write_text("stub", encoding="utf-8")
+    storage = tmp_path / "storage"
+    storage.mkdir()
+    pdf_path = tmp_path / "a.pdf"
+    pdf_path.write_bytes(b"%PDF-1.7\n")
+
+    FakeSettings = type(
+        "FakeSettings",
+        (),
+        {
+            "zotero_db_path": str(zotero_db),
+            "zotero_storage_root": str(storage),
+            "neo4j_uri": "bolt://example:7687",
+            "neo4j_user": "neo4j",
+            "neo4j_password": "pass",
+            "embedding_model": "model",
+            "zotero_require_persistent_id": True,
+            "metadata_backend": "zotero",
+            "pdf_source_dir": ".",
+        },
+    )
+
+    class FakeStore:
+        def __init__(self, *args, **kwargs):
+            self.driver = self
+
+        def session(self):
+            return self
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def run(self, query):
+            return []
+
+        def close(self):
+            pass
+
+    monkeypatch.setattr(webmain, "Settings", FakeSettings)
+    monkeypatch.setattr(
+        webmain,
+        "load_zotero_entries",
+        lambda *args, **kwargs: [
+            {
+                "title": "Alpha Paper",
+                "zotero_persistent_id": "1:AAA",
+                "zotero_item_key": "AAA",
+                "zotero_attachment_key": "ATT1",
+                "zotero_attachment_item_id": 10,
+                "zotero_parent_item_id": 1,
+                "attachment_path": str(pdf_path),
+            },
+            {
+                "title": "Beta Paper",
+                "zotero_persistent_id": "1:BBB",
+                "zotero_item_key": "BBB",
+                "zotero_attachment_key": "ATT2",
+                "zotero_attachment_item_id": 20,
+                "zotero_parent_item_id": 2,
+                "attachment_path": "",
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        webmain,
+        "summarize_mineru_notes_for_rows",
+        lambda rows, zotero_db_path: {
+            "rows_checked": len(rows),
+            "attachments_checked": len(rows),
+            "mineru_notes_attached": 1 if len(rows) == 2 else 0,
+            "mineru_notes_missing": len(rows) - (1 if len(rows) == 2 else 0),
+        },
+    )
+    monkeypatch.setattr(webmain, "GraphStore", FakeStore)
+
+    resp = client.post("/api/sync", json={"dry_run": True, "source_mode": "zotero_db", "run_ingest": False})
+    assert resp.status_code == 200
+    final = wait_for_status(client, "/api/sync/status")
+    assert final["status"] == "completed"
+    source_stats = final["result"]["source_stats"]
+    assert source_stats["zotero_mineru_notes_attached"] == 1
+    assert source_stats["zotero_mineru_notes_missing"] == 1
+    assert source_stats["zotero_mineru_notes_attached_for_ingest_candidates"] == 0
+    assert source_stats["zotero_mineru_notes_missing_for_ingest_candidates"] == 1
+
+
 def test_ingest_endpoint_runs_non_destructive(monkeypatch, tmp_path: Path, client):
     p = tmp_path / "a.pdf"
     p.write_text("x")

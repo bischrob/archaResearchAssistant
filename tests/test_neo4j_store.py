@@ -165,6 +165,34 @@ def test_link_article_citations_handles_missing_authors(monkeypatch):
         store.close()
 
 
+def test_ingest_articles_skips_suffix_only_author_nodes(monkeypatch):
+    fake_driver = _FakeDriver()
+    monkeypatch.setattr("src.rag.neo4j_store.GraphDatabase.driver", lambda *_args, **_kwargs: fake_driver)
+    monkeypatch.setattr("src.rag.neo4j_store.SentenceTransformer", _FakeSentenceTransformer)
+    store = GraphStore("bolt://unused", "neo4j", "pass")
+    try:
+        article = _mk_article(
+            article_id="a1",
+            author="Alice Example",
+            authors=["Alice Example", "Jr", "jr.", "Alice Example"],
+            year=2024,
+            chunks=[],
+        )
+        store.ingest_articles([article])
+    finally:
+        store.close()
+
+    session = fake_driver.sessions[0]
+    wrote_rows = [
+        kwargs
+        for query, kwargs in zip(session.tx_queries, session.tx_kwargs)
+        if "MERGE (p:Author {name_norm: $author_norm})" in query and "article_id" in kwargs
+    ]
+    assert len(wrote_rows) == 1
+    assert wrote_rows[0]["author_name"] == "Alice Example"
+    assert wrote_rows[0]["author_norm"] == "alice example"
+
+
 def test_graph_store_uses_sentence_transformers_when_requested(monkeypatch):
     fake_driver = _FakeDriver()
     neo4j_store._EMBEDDER_CACHE.clear()

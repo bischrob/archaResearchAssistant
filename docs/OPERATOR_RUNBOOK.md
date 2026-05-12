@@ -74,6 +74,14 @@ Run the anti-join sync plus ingest:
 ra sync ingest
 ```
 
+MinerU coverage is now included in sync results. The most useful fields are:
+
+- `zotero_mineru_notes_attached`
+- `zotero_mineru_notes_missing`
+- `zotero_mineru_notes_attached_for_ingest_candidates`
+- `zotero_mineru_notes_missing_for_ingest_candidates`
+- `zotero_mineru_notes_coverage_percent`
+
 Search Zotero-backed available PDFs:
 
 ```bash

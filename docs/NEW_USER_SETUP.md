@@ -131,7 +131,13 @@ ra --base-url http://127.0.0.1:8001 status
    - `Run ingest after sync = on`
    - `Skip already ingested PDFs = on`
 4. Click **Run Sync + Ingest**.
-5. Use **Search** after ingest completes.
+5. Check the sync result for MinerU note coverage fields:
+   - `zotero_mineru_notes_attached`
+   - `zotero_mineru_notes_missing`
+   - `zotero_mineru_notes_attached_for_ingest_candidates`
+   - `zotero_mineru_notes_missing_for_ingest_candidates`
+   - `zotero_mineru_notes_coverage_percent`
+6. Use **Search** after ingest completes.
 
 ### Zotero plugin workflow for linked PDFs
 

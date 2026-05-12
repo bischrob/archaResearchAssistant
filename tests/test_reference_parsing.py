@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.rag.config import Settings
 from src.rag.reference_parsing import (
+    _extract_authors_from_text,
     detect_reference_section_from_lines,
     detect_reference_sections_from_lines,
     parse_reference_entries,
@@ -126,3 +127,96 @@ def test_parse_reference_entries_splits_merged_author_year_entries() -> None:
     assert citations[0].title_guess == "First Title"
     assert citations[1].title_guess == "Second Title"
     assert any(f["kind"] == "split_merged_author_year_entry" for f in failures)
+
+
+def test_extract_authors_from_text_normalizes_inverted_single_author_name() -> None:
+    authors = _extract_authors_from_text(
+        "Morss, Noel 1931 The Ancient Culture of the Fremont River in Utah."
+    )
+    assert authors == ["Noel Morss"]
+
+
+def test_extract_authors_from_text_handles_mixed_inverted_and_direct_names() -> None:
+    authors = _extract_authors_from_text(
+        "Bender, Emily M., Timnit Gebru, Angelina McMillan-Major, and Shmargaret Shmitchell. 2021. On the Dangers of Stochastic Parrots."
+    )
+    assert authors == [
+        "Emily M. Bender",
+        "Timnit Gebru",
+        "Angelina McMillan-Major",
+        "Shmargaret Shmitchell",
+    ]
+
+
+def test_extract_authors_from_text_handles_multiple_inverted_authors_with_initials() -> None:
+    authors = _extract_authors_from_text(
+        "Linse, Angela R., Reilly, Michael V., Kohler, Timothy A., 1992. Excavations in Area 1 of Burnt Mesa Pueblo."
+    )
+    assert authors == [
+        "Angela R. Linse",
+        "Michael V. Reilly",
+        "Timothy A Kohler",
+    ]
+
+
+def test_extract_authors_from_text_handles_multiword_family_name_with_initial() -> None:
+    authors = _extract_authors_from_text(
+        "Bliege Bird, R., Smith, E.A., Bird, D.W., 2005. Signaling theory, strategic interaction, and symbolic capital."
+    )
+    assert authors == [
+        "R. Bliege Bird",
+        "E.A. Smith",
+        "D.W Bird",
+    ]
+
+
+def test_extract_authors_from_text_stops_before_place_publisher_leakage() -> None:
+    authors = _extract_authors_from_text(
+        "[55] Gardin, J.-C., Archaeological constructs : an aspect of theoretical archaeology, Cambridge; New York: Cambridge University Press, 1980"
+    )
+    assert authors == ["J.-C. Gardin"]
+
+
+def test_extract_authors_from_text_salvages_initials_before_editor_suffix() -> None:
+    authors = _extract_authors_from_text(
+        "[51] Trant, J., Curating collections knowledge: museums on the cyberinfrastructure, in: Marty, P.F, Jones, B.K. (Eds.), Museum Informatics: People, Information, and Technology in Museums, New York & London: Routledge, 2007"
+    )
+    assert authors == ["J. Trant"]
+
+
+def test_extract_authors_from_text_handles_abbreviated_given_initials() -> None:
+    authors = _extract_authors_from_text(
+        "[31] Adhikari, K., Reales, G., Smith, A.J.P., et al.: A genome-wide association study identifies multiple loci for variation in human ear morphology, 2015"
+    )
+    assert authors == [
+        "K. Adhikari",
+        "G. Reales",
+        "A.J.P. Smith",
+    ]
+
+
+def test_extract_authors_from_text_keeps_multiple_initial_authors_before_title_text() -> None:
+    authors = _extract_authors_from_text(
+        "[44] Viola, P., Jones, M.: Rapid object detection using a boosted cascade of simple features. Int. J. Comput. Vis. 57(2), 137-154 (2004)."
+    )
+    assert authors == [
+        "P. Viola",
+        "M. Jones",
+    ]
+
+
+def test_extract_authors_from_text_keeps_direct_initials_name_before_title_and_publisher() -> None:
+    authors = _extract_authors_from_text(
+        "[120] D.W. Thompson, On Growth and Form, Cambridge University Press, Cambridge, 1917."
+    )
+    assert authors == ["D.W. Thompson"]
+
+
+def test_extract_authors_from_text_drops_trailing_middle_initial_fragment() -> None:
+    authors = _extract_authors_from_text(
+        "Broughton, Jack, M., and Frank E. Bayham 2002 Showing Off, Foraging Models, and the Ascendance of Large Game Hunting in the California Middle Archaic."
+    )
+    assert authors == [
+        "Jack Broughton",
+        "Frank E. Bayham",
+    ]

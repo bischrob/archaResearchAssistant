@@ -9,6 +9,8 @@ The current recommended workflow is:
 3. Run Zotero-backed sync and ingest.
 4. Use query and ask flows for retrieval and grounded synthesis.
 
+Sync responses now also report MinerU note coverage so you can see how much of the Zotero attachment set is note-ingestible before or during ingest.
+
 ## Start Here
 
 - Setup guide: [docs/NEW_USER_SETUP.md](docs/NEW_USER_SETUP.md)
@@ -99,6 +101,14 @@ ra sync ingest
 ra query "community archives metadata"
 ra ask "What are the main tradeoffs in AI-generated archival metadata?"
 ```
+
+Useful sync output fields to watch:
+
+- `zotero_mineru_notes_attached`
+- `zotero_mineru_notes_missing`
+- `zotero_mineru_notes_attached_for_ingest_candidates`
+- `zotero_mineru_notes_missing_for_ingest_candidates`
+- `zotero_mineru_notes_coverage_percent`
 
 Useful item-level commands:
 

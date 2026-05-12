@@ -55,6 +55,26 @@ def _author_token_set(names: list[str]) -> set[str]:
     return out
 
 
+_AUTHOR_SUFFIX_ONLY = {"jr", "jr.", "sr", "sr."}
+
+
+def _clean_author_names(names: Iterable[str] | None) -> list[str]:
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw_name in names or []:
+        name = str(raw_name or "").strip()
+        if not name:
+            continue
+        if name.lower() in _AUTHOR_SUFFIX_ONLY:
+            continue
+        norm = name.lower()
+        if norm in seen:
+            continue
+        seen.add(norm)
+        cleaned.append(name)
+    return cleaned
+
+
 _EMBEDDER_CACHE_LOCK = threading.Lock()
 _EMBEDDER_CACHE: dict[tuple[str, str, int, bool], "SentenceTransformerEmbedder"] = {}
 
@@ -278,6 +298,7 @@ class GraphStore:
     def _ingest_article_tx(tx, article: ArticleDoc, article_embeddings: list[list[float]], should_cancel=None) -> None:
         if should_cancel and should_cancel():
             raise RuntimeError("Ingest cancelled by user.")
+        article_authors = _clean_author_names(article.authors)
         tx.run(
             """
             MERGE (a:Article {id: $id})
@@ -398,10 +419,7 @@ class GraphStore:
             article_id=article.article_id,
         )
 
-        for pos, author_name in enumerate(article.authors):
-            author_name = (author_name or "").strip()
-            if not author_name:
-                continue
+        for pos, author_name in enumerate(article_authors):
             tx.run(
                 """
                 MERGE (p:Author {name_norm: $author_norm})
@@ -542,6 +560,7 @@ class GraphStore:
             raise RuntimeError("Ingest cancelled by user.")
 
         for citation in article.citations:
+            citation_authors = _clean_author_names(citation.authors)
             tx.run(
                 """
                 MERGE (r:Reference {id: $id})
@@ -572,7 +591,7 @@ class GraphStore:
                 title_guess=citation.title_guess,
                 title_norm=citation.normalized_title,
                 author_tokens=citation.author_tokens or [],
-                authors=citation.authors or [],
+                authors=citation_authors,
                 doi=citation.doi,
                 source=citation.source,
                 type_guess=citation.type_guess,
@@ -584,10 +603,7 @@ class GraphStore:
                 needs_review=bool(citation.needs_review),
                 article_id=article.article_id,
             )
-            for pos, author_name in enumerate(citation.authors or []):
-                author_name = (author_name or "").strip()
-                if not author_name:
-                    continue
+            for pos, author_name in enumerate(citation_authors):
                 tx.run(
                     """
                     MERGE (p:Author {name_norm: $author_norm})
@@ -608,7 +624,7 @@ class GraphStore:
         target_profiles = {
             article_id: {
                 "doi": _normalize_doi(article.doi),
-                "author_tokens": _author_token_set(article.authors or ([article.author] if article.author else [])),
+                "author_tokens": _author_token_set(_clean_author_names(article.authors or ([article.author] if article.author else []))),
                 "year": article.year,
                 "title_norm": article.normalized_title or "",
             }

@@ -76,6 +76,21 @@ Notes:
 - It does not resolve unrelated remote URLs.
 - After updating `.env`, restart the API before retrying sync.
 
+## Sync result shows low MinerU note coverage
+
+The sync result now reports:
+
+- `zotero_mineru_notes_attached`
+- `zotero_mineru_notes_missing`
+- `zotero_mineru_notes_attached_for_ingest_candidates`
+- `zotero_mineru_notes_missing_for_ingest_candidates`
+
+If the candidate-specific values are low, the ingestable PDFs do not yet have matching MinerU child notes attached in Zotero. The usual fixes are:
+
+- push or regenerate MinerU child notes for the missing attachments
+- verify the note has the expected MinerU marker/body format
+- rerun `ra sync dry-run` before `ra sync ingest` to confirm the note counts improved
+
 ## Zotero plugin progress window has no obvious exit
 
 Current behavior:

@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.rag.zotero_notes import load_mineru_child_note_for_attachment
+from src.rag.zotero_notes import summarize_mineru_notes_for_rows
 
 
 def _init_db(path: Path) -> None:
@@ -112,3 +113,19 @@ def test_load_mineru_child_note_for_parent_item_with_body_marker(tmp_path: Path)
     note = load_mineru_child_note_for_attachment(row, zotero_db_path=str(db))
     assert note.note_item_key == "NOTEKEY"
     assert "LLM_FOR_ZOTERO_MINERU_NOTE_V1" in note.markdown_text
+
+
+def test_summarize_mineru_notes_for_rows_counts_attached_notes(tmp_path: Path) -> None:
+    db = tmp_path / "zotero.sqlite"
+    _init_db(db)
+    rows = [
+        {"zotero_attachment_item_id": 10, "zotero_attachment_key": "ATTACHKEY", "zotero_item_key": "PARENTKEY"},
+        {"zotero_attachment_item_id": 999, "zotero_attachment_key": "OTHERATTACH", "zotero_item_key": "OTHERPARENT"},
+    ]
+
+    summary = summarize_mineru_notes_for_rows(rows, zotero_db_path=str(db))
+
+    assert summary["rows_checked"] == 2
+    assert summary["attachments_checked"] == 2
+    assert summary["mineru_notes_attached"] == 1
+    assert summary["mineru_notes_missing"] == 1

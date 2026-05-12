@@ -27,6 +27,7 @@ from src.rag.pipeline import choose_pdfs, ingest_pdfs
 from src.rag.path_utils import resolve_input_path
 from src.rag.zotero_attachment_resolver import ZoteroAttachmentResolver
 from src.rag.zotero_metadata import load_zotero_entries
+from src.rag.zotero_notes import summarize_mineru_notes_for_rows
 from src.rag.zip_pdf_source import collect_source_pdfs
 from src.rag.retrieval import article_claim_match, article_claim_match_by_article_id
 from src.rag.search_graphrag import graphrag_retrieve
@@ -108,7 +109,7 @@ def _openai_api_key_set() -> bool:
     alias = os.getenv("OpenAPIKey", "").strip()
     return bool(primary or alias)
 
-app = FastAPI(title="archaResearch Asssistant", version="2026.03.26.015730")
+app = FastAPI(title="archaResearch Asssistant", version="2026.05.12.161211")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -775,6 +776,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             rows = load_zotero_entries(str(db_path), storage_root)
             total_rows = len(rows)
             jobs.set_progress("sync", 3.0, f"Loaded {total_rows} Zotero PDF attachment rows")
+            mineru_note_summary = summarize_mineru_notes_for_rows(rows, zotero_db_path=str(db_path))
 
             if bool(getattr(settings, "zotero_require_persistent_id", False)):
                 missing_pid_rows = [r for r in rows if not str(r.get("zotero_persistent_id") or "").strip()]
@@ -871,6 +873,7 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                     reconcile_summary = None
 
             ingest_candidates: list[Path] = []
+            ingest_candidate_rows_by_path: dict[str, dict[str, Any]] = {}
             path_issue_counts: dict[str, int] = {}
             path_issue_samples: dict[str, list[str]] = {}
             for idx, row in enumerate(missing_rows, start=1):
@@ -883,7 +886,9 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 candidate_raw = str(row.get("attachment_path") or "").strip()
                 if candidate_raw:
                     try:
-                        ingest_candidates.append(resolve_input_path(candidate_raw))
+                        resolved_candidate = resolve_input_path(candidate_raw)
+                        ingest_candidates.append(resolved_candidate)
+                        ingest_candidate_rows_by_path.setdefault(str(resolved_candidate), row)
                         continue
                     except Exception as exc:
                         issue_code = "attachment_path_resolution_error"
@@ -904,12 +909,16 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
             for p in ingest_candidates:
                 dedup[str(p)] = p
             ingest_candidates = sorted(dedup.values(), key=lambda p: str(p).lower())
+            ingest_candidate_rows = [ingest_candidate_rows_by_path[str(p)] for p in ingest_candidates if str(p) in ingest_candidate_rows_by_path]
             pdf_files = list(ingest_candidates)
             source_stats = {
                 "source_mode": "zotero_db",
                 "zotero_db_path": str(db_path),
                 "zotero_storage_root": storage_root,
                 "zotero_attachment_rows": total_rows,
+                "zotero_mineru_notes_rows_checked": mineru_note_summary["rows_checked"],
+                "zotero_mineru_notes_attached": mineru_note_summary["mineru_notes_attached"],
+                "zotero_mineru_notes_missing": mineru_note_summary["mineru_notes_missing"],
                 "zotero_unique_parent_items": len(zotero_by_pid),
                 "zotero_missing_detected_initial": initial_missing_count,
                 "zotero_missing_in_neo4j": len(missing_rows),
@@ -928,6 +937,28 @@ def sync_pdfs(req: SyncRequest, authorization: str | None = Header(default=None)
                 )
                 source_stats["zotero_reconcile_examples"] = list(reconcile_summary.get("examples", []))
                 source_stats["zotero_missing_in_neo4j_after_reconcile"] = len(missing_rows)
+
+            total_attachment_ids = {
+                int(row.get("zotero_attachment_item_id") or 0)
+                for row in rows
+                if int(row.get("zotero_attachment_item_id") or 0) > 0
+            }
+            total_mineru_attached = int(source_stats["zotero_mineru_notes_attached"])
+            ingest_candidate_note_summary = summarize_mineru_notes_for_rows(
+                ingest_candidate_rows,
+                zotero_db_path=str(db_path),
+            )
+            source_stats["zotero_mineru_notes_attached_for_ingest_candidates"] = int(
+                ingest_candidate_note_summary["mineru_notes_attached"]
+            )
+            source_stats["zotero_mineru_notes_missing_for_ingest_candidates"] = max(
+                0,
+                len(ingest_candidate_rows) - int(source_stats["zotero_mineru_notes_attached_for_ingest_candidates"]),
+            )
+            source_stats["zotero_mineru_notes_coverage_percent"] = round(
+                (total_mineru_attached / max(1, len(total_attachment_ids))) * 100.0,
+                2,
+            )
 
             ingest_summary: dict[str, Any] | None = None
             ingest_ran = bool(req.run_ingest and not req.dry_run)
